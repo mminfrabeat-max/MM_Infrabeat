@@ -1,0 +1,21 @@
+{
+  "name": "mm-infrabeat",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Procurement monitoring and approval dashboard for a cement manufacturer",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:web": "npm run dev --workspace web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

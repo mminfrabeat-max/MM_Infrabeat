@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Secrets: the SAP API key lives here and must never reach GitHub
+.env
+.env.local
+
+# Build output
+dist/
+web/dist/
+
+# Logs and OS noise
+*.log
+npm-debug.log*
+.DS_Store
