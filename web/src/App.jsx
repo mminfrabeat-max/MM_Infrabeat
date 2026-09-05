@@ -1,90 +1,114 @@
-// Milestone 1 screen. Its only job is to prove the full chain works:
-// browser -> Vite proxy -> Express backend -> back to the browser.
+// The shell: the top bar, the tabs, and which screen is currently showing.
 //
-// It also sets the pattern every later screen will follow: three states on screen
-// (loading, error, ready) so a failure shows a readable message instead of a blank page.
+// There is no routing library here. Which screen is visible is just a piece of state,
+// and switching tabs sets it. That is enough for a dashboard with six tabs, and it keeps
+// one fewer thing to learn in the project. If we later need shareable URLs, that is the
+// moment to add React Router, not before.
 
 import { useState, useEffect } from 'react';
+import { api } from './api.js';
+import { Icon } from './components/ui.jsx';
+import Today from './screens/Today.jsx';
+import Situations from './screens/Situations.jsx';
+import Approvals from './screens/Approvals.jsx';
+import Suppliers from './screens/Suppliers.jsx';
+import Stock from './screens/Stock.jsx';
+import Activity from './screens/Activity.jsx';
+
+const TABS = [
+  { key: 'today', label: 'Today', icon: 'chart' },
+  { key: 'situations', label: 'Problems', icon: 'alert' },
+  { key: 'approvals', label: 'Approvals', icon: 'doc' },
+  { key: 'suppliers', label: 'Suppliers', icon: 'truck' },
+  { key: 'stock', label: 'Stock risk', icon: 'box' },
+  { key: 'activity', label: 'Activity', icon: 'spark' }
+];
 
 export default function App() {
-  // useState gives a component a piece of memory that survives re-renders.
-  // We keep one object describing which of the three states we are in.
-  const [status, setStatus] = useState({ state: 'loading' });
+  const [tab, setTab] = useState('today');
+  // Which document the Approvals screen has open, if any. Kept here rather than inside
+  // Approvals so that a card on the Today screen can open a document directly.
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [health, setHealth] = useState(null);
 
-  // useEffect runs code after the component appears on screen. The empty array [] at the
-  // end means "run this once, when the component first mounts", not on every re-render.
+  // The top bar shows which data source is live. When we switch to SAP in milestone 4,
+  // this is how you tell at a glance which one you are looking at.
   useEffect(() => {
-    // If the component disappears before the network call finishes, we must not try to
-    // update its memory - React would warn about updating an unmounted component.
-    let cancelled = false;
-
-    async function loadHealth() {
-      try {
-        // Relative URL on purpose: the Vite proxy forwards it to port 3001.
-        const response = await fetch('/api/health');
-
-        // fetch only throws on network failure, NOT on 404 or 500. We have to check
-        // response.ok ourselves, otherwise a 500 would be treated as success.
-        if (!response.ok) {
-          throw new Error(`The backend replied with status ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (!cancelled) setStatus({ state: 'ready', data });
-      } catch (error) {
-        if (!cancelled) {
-          setStatus({
-            state: 'error',
-            message: `Could not reach the backend. ${error.message}`
-          });
-        }
-      }
-    }
-
-    loadHealth();
-    return () => {
-      cancelled = true;
-    };
+    api.health().then(setHealth).catch(() => setHealth(null));
   }, []);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // One navigation function passed down to every screen, so a screen never needs to know
+  // how navigation works, only that it can ask for another tab.
+  function navigate(nextTab, documentId = null) {
+    setTab(nextTab);
+    setSelectedDocument(documentId);
+    window.scrollTo(0, 0);
+  }
+
   return (
-    <div className="page">
-      <header className="page-header">
-        <h1>Procurement Dashboard</h1>
-        <p className="subtitle">Milestone 1 &mdash; connection check</p>
+    <>
+      <header className="shell">
+        <div className="shell-in">
+          <button className="brand" onClick={() => navigate('today')} type="button">
+            <span className="logo">NC</span>
+            <span>
+              <span className="b1">Procurement Dashboard</span>
+              <span className="b2">Northline Cement</span>
+            </span>
+          </button>
+
+          <span className="sp" />
+
+          {health && (
+            <span className={`sourcechip ${health.dataSource === 'sap' ? 'live' : ''}`}>
+              {health.dataSource === 'sap' ? 'Live data' : 'Demonstration data'}
+            </span>
+          )}
+
+          <button
+            className="iconbtn"
+            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            aria-label="Switch between light and dark"
+            type="button"
+          >
+            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={17} />
+          </button>
+
+          <span className="me" title="Rajeev Menon, head of procurement">RM</span>
+        </div>
       </header>
 
-      {status.state === 'loading' && <p className="muted">Checking the backend&hellip;</p>}
-
-      {status.state === 'error' && (
-        <div className="panel panel-error">
-          <h2>Backend unavailable</h2>
-          <p>{status.message}</p>
-          <p className="muted">
-            Is the backend running? It should be listening on http://localhost:3001
-          </p>
+      <nav className="nav">
+        <div className="nav-in" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className="navb"
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={() => navigate(t.key)}
+              type="button"
+            >
+              <Icon name={t.icon} size={15} />
+              {t.label}
+            </button>
+          ))}
         </div>
-      )}
+      </nav>
 
-      {status.state === 'ready' && (
-        <div className="panel panel-ok">
-          <h2>Connected</h2>
-          <p>
-            This box was filled in by the backend, not by the browser. If you can read
-            it, the whole chain works.
-          </p>
-          <dl className="facts">
-            <dt>Service</dt>
-            <dd>{status.data.service}</dd>
-            <dt>Data source</dt>
-            <dd>{status.data.dataSource}</dd>
-            <dt>SAP key loaded</dt>
-            <dd>{status.data.sapKeyLoaded ? 'yes' : 'no'}</dd>
-            <dt>Checked at</dt>
-            <dd>{new Date(status.data.checkedAt).toLocaleTimeString()}</dd>
-          </dl>
-        </div>
-      )}
-    </div>
+      <main className="wrap content">
+        {tab === 'today' && <Today onNavigate={navigate} />}
+        {tab === 'situations' && <Situations />}
+        {tab === 'approvals' && <Approvals selectedId={selectedDocument} onNavigate={navigate} />}
+        {tab === 'suppliers' && <Suppliers />}
+        {tab === 'stock' && <Stock />}
+        {tab === 'activity' && <Activity />}
+      </main>
+    </>
   );
 }

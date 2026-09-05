@@ -1,0 +1,92 @@
+{
+  "_source": "MIXED - see below",
+  "_realFields": "Material code, description, plant, quantity on hand and unit exist in the sandbox: API_PRODUCT_SRV (A_Product, A_ProductPlant) and API_MATERIAL_STOCK_SRV (A_MaterialStock). Reorder point and safety stock are fields on the plant view of the material.",
+  "_simulatedFields": "dailyUsage and leadTimeDays are SIMULATED here. Average consumption would come from historical goods issues and lead time from the purchasing info record, neither of which the sandbox exposes usefully. openOrderQuantity would come from open purchase order items but is fixed here so the demo is stable.",
+  "_note": "supplierName is the usual source of supply. Sunfield Packaging has no ten-order history yet, so it gets no reliability score. That is deliberate: real systems always have suppliers you cannot score.",
+  "materials": [
+    {
+      "code": "RM-1042",
+      "name": "Gypsum, imported",
+      "plant": "Sirohi",
+      "onHand": 1180,
+      "unit": "MT",
+      "safetyStock": 900,
+      "reorderPoint": 2400,
+      "openOrderQuantity": 0,
+      "dailyUsage": 265,
+      "leadTimeDays": 12,
+      "supplierId": "V-10008",
+      "supplierName": "Shreeji Minerals"
+    },
+    {
+      "code": "SP-1177",
+      "name": "Grinding media, 30mm",
+      "plant": "Kalol",
+      "onHand": 22,
+      "unit": "MT",
+      "safetyStock": 18,
+      "reorderPoint": 60,
+      "openOrderQuantity": 0,
+      "dailyUsage": 2.4,
+      "leadTimeDays": 21,
+      "supplierId": "V-10112",
+      "supplierName": "Bharat Bearings"
+    },
+    {
+      "code": "SP-2210",
+      "name": "Refractory bricks, kiln inlet",
+      "plant": "Durg",
+      "onHand": 340,
+      "unit": "MT",
+      "safetyStock": 250,
+      "reorderPoint": 600,
+      "openOrderQuantity": 500,
+      "dailyUsage": 41,
+      "leadTimeDays": 18,
+      "supplierId": "V-10024",
+      "supplierName": "Aditya Refractories"
+    },
+    {
+      "code": "PK-3301",
+      "name": "HDPE bags, 50kg",
+      "plant": "Sirohi",
+      "onHand": 96000,
+      "unit": "NOS",
+      "safetyStock": 60000,
+      "reorderPoint": 120000,
+      "openOrderQuantity": 200000,
+      "dailyUsage": 11500,
+      "leadTimeDays": 9,
+      "supplierId": null,
+      "supplierName": "Sunfield Packaging"
+    },
+    {
+      "code": "RM-1088",
+      "name": "Fly ash, dry",
+      "plant": "Sirohi",
+      "onHand": 3900,
+      "unit": "MT",
+      "safetyStock": 2000,
+      "reorderPoint": 4200,
+      "openOrderQuantity": 6000,
+      "dailyUsage": 410,
+      "leadTimeDays": 6,
+      "supplierId": "V-10008",
+      "supplierName": "Shreeji Minerals"
+    },
+    {
+      "code": "RM-1201",
+      "name": "Coal, imported",
+      "plant": "Durg",
+      "onHand": 14800,
+      "unit": "MT",
+      "safetyStock": 8000,
+      "reorderPoint": 12000,
+      "openOrderQuantity": 9000,
+      "dailyUsage": 980,
+      "leadTimeDays": 15,
+      "supplierId": "V-10008",
+      "supplierName": "Shreeji Minerals"
+    }
+  ]
+}

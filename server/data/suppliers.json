@@ -1,0 +1,34 @@
+{
+  "_source": "REAL - in the SAP sandbox this comes from API_BUSINESS_PARTNER, entity A_Supplier",
+  "_note": "contractRate is the agreed price for this supplier's main contract item. It is used for the rate trend chart. Individual documents carry their own contract rate for their own material.",
+  "suppliers": [
+    {
+      "id": "V-10024",
+      "name": "Aditya Refractories",
+      "category": "Refractories",
+      "contractRate": 41200,
+      "unit": "MT"
+    },
+    {
+      "id": "V-10008",
+      "name": "Shreeji Minerals",
+      "category": "Raw material",
+      "contractRate": 8600,
+      "unit": "MT"
+    },
+    {
+      "id": "V-10112",
+      "name": "Bharat Bearings",
+      "category": "Spares",
+      "contractRate": 18400,
+      "unit": "NOS"
+    },
+    {
+      "id": "V-10077",
+      "name": "Vindhya Logistics",
+      "category": "Freight",
+      "contractRate": 2350,
+      "unit": "TRIP"
+    }
+  ]
+}

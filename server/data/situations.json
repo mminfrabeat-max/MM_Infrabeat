@@ -1,0 +1,95 @@
+{
+  "_source": "SIMULATED - every field here is invented and none of it comes from the sandbox",
+  "_why": "A situation is a problem the system spotted, with its cause and a proposed fix. Producing these for real needs workflow work items and their error status (SWWWIHEAD), the approver substitution table (HRUS_D2), change documents (CDHDR / CDPOS) and blocked invoice data. The sandbox exposes none of that. Everything in this file is a plausible demo, so never present it to a customer as live data.",
+  "_fields": {
+    "severity": "high or medium, drives the colour on screen",
+    "canAutoFix": "whether the fix is safe and reversible enough for the system to apply it once the manager confirms",
+    "detectedAt": "clock time of this morning's run"
+  },
+  "situations": [
+    {
+      "id": "SIT-001",
+      "category": "Approval blocked",
+      "severity": "high",
+      "icon": "alert",
+      "title": "Approver away with no stand-in",
+      "detail": "S. Kulkarni has been marked away since 2 September. The approval for order 4500178342 has no stand-in, so it cannot move at all.",
+      "relatedTo": "4500178342",
+      "detectedAt": "07:14",
+      "cause": "No stand-in was recorded for this approver before the absence started.",
+      "proposedFix": "Name the recorded deputy A. Deshmukh as stand-in and send the approval to them.",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "SIT-002",
+      "category": "Approval error",
+      "severity": "high",
+      "icon": "wrench",
+      "title": "Approval failed to reach anyone",
+      "detail": "The approval for request 1000442190 failed because the system could not work out who owns the cost centre it should go to.",
+      "relatedTo": "1000442190",
+      "detectedAt": "06:58",
+      "cause": "No owner is recorded against cost centre 4100, so there was nobody to send it to.",
+      "proposedFix": "Read the owner from the cost centre record and restart the approval.",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "SIT-003",
+      "category": "Stock risk",
+      "severity": "high",
+      "icon": "box",
+      "title": "Stock runs out before the delivery can arrive",
+      "detail": "Gypsum at Sirohi has 4.5 days of cover against a 12 day lead time and nothing on order. Kiln feed stops before a replacement delivery could reach the plant.",
+      "relatedTo": "RM-1042",
+      "detectedAt": "06:40",
+      "cause": "A spike in consumption meant the reorder point was not reached at the last planning run.",
+      "proposedFix": "Raise a request for 4,400 MT with Shreeji Minerals and mark it for same-day approval.",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "SIT-004",
+      "category": "Supplier performance",
+      "severity": "medium",
+      "icon": "truck",
+      "title": "Supplier deliveries getting steadily later",
+      "detail": "Aditya Refractories has slipped from under a day late to eleven days late across the last ten orders, and is charging 6.3 percent above the contract rate.",
+      "relatedTo": "V-10024",
+      "detectedAt": "06:35",
+      "cause": "Trend across the supplier's last ten orders, not a single bad delivery.",
+      "proposedFix": "Attach the performance summary to order 4500178401 before approving and ask for a firm revised delivery date.",
+      "canAutoFix": false,
+      "status": "open"
+    },
+    {
+      "id": "SIT-005",
+      "category": "Compliance",
+      "severity": "medium",
+      "icon": "shield",
+      "title": "Order value raised after it was approved",
+      "detail": "Order 4500178120 was increased by 12 percent after approval, and the approval rules were not applied again to the new value.",
+      "relatedTo": "4500178120",
+      "detectedAt": "02:10",
+      "cause": "The change history shows the value was edited after the approval was recorded.",
+      "proposedFix": "Withdraw the approval and send the order through the approval rules again at its new value.",
+      "canAutoFix": false,
+      "status": "open"
+    },
+    {
+      "id": "SIT-006",
+      "category": "Invoice blocked",
+      "severity": "medium",
+      "icon": "doc",
+      "title": "Invoice blocked on a price difference",
+      "detail": "An invoice from Aditya Refractories has been blocked for 12 days over a 6.4 percent price difference against the order.",
+      "relatedTo": "5105600231",
+      "detectedAt": "06:44",
+      "cause": "Invoice price of 43,800 per MT against an order price of 41,200 per MT.",
+      "proposedFix": "Send it to the buyer with the contract rate and the last three invoice prices attached.",
+      "canAutoFix": true,
+      "status": "open"
+    }
+  ]
+}
