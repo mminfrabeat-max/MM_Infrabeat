@@ -1,4 +1,4 @@
-// The shell: the top bar, the tabs, and which screen is currently showing.
+// The shell: the sign-in gate, the top bar, the tabs, and which screen is showing.
 //
 // There is no routing library here. Which screen is visible is just a piece of state,
 // and switching tabs sets it. That is enough for a dashboard with six tabs, and it keeps
@@ -6,8 +6,9 @@
 // moment to add React Router, not before.
 
 import { useState, useEffect } from 'react';
-import { api } from './api.js';
-import { Icon } from './components/ui.jsx';
+import { api, setSignedOutHandler } from './api.js';
+import { Icon, Loading } from './components/ui.jsx';
+import Login from './screens/Login.jsx';
 import Today from './screens/Today.jsx';
 import Situations from './screens/Situations.jsx';
 import Approvals from './screens/Approvals.jsx';
@@ -25,6 +26,10 @@ const TABS = [
 ];
 
 export default function App() {
+  // 'checking' until we know, then either a session object or null.
+  // Starting at 'checking' matters: if we assumed signed out, the sign-in screen would
+  // flash on every page refresh before the answer came back.
+  const [session, setSession] = useState('checking');
   const [tab, setTab] = useState('today');
   // Which document the Approvals screen has open, if any. Kept here rather than inside
   // Approvals so that a card on the Today screen can open a document directly.
@@ -32,11 +37,27 @@ export default function App() {
   const [theme, setTheme] = useState('light');
   const [health, setHealth] = useState(null);
 
-  // The top bar shows which data source is live. When we switch to SAP in milestone 4,
-  // this is how you tell at a glance which one you are looking at.
+  // Ask once, on load, whether the browser already holds a valid session cookie. This is
+  // what stops a refresh from making you sign in again.
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null));
+    api
+      .session()
+      .then((result) => setSession(result.signedIn ? result : null))
+      .catch(() => setSession(null));
   }, []);
+
+  // If any screen's request comes back 401, the session has expired. Return the whole
+  // app to the sign-in screen at once, rather than leaving six broken tabs.
+  useEffect(() => {
+    setSignedOutHandler(() => setSession(null));
+  }, []);
+
+  // The top bar shows which data source is live. Only ask once signed in, since the
+  // health route is open but the answer is only shown inside the dashboard.
+  useEffect(() => {
+    if (!session || session === 'checking') return;
+    api.health().then(setHealth).catch(() => setHealth(null));
+  }, [session]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -48,6 +69,30 @@ export default function App() {
     setTab(nextTab);
     setSelectedDocument(documentId);
     window.scrollTo(0, 0);
+  }
+
+  async function handleSignOut() {
+    try {
+      await api.logout();
+    } finally {
+      // Clear the screen even if the request failed, so "sign out" always looks like it
+      // worked. The cookie expires on its own regardless.
+      setSession(null);
+      setTab('today');
+      setSelectedDocument(null);
+    }
+  }
+
+  if (session === 'checking') {
+    return (
+      <div className="loginpage">
+        <Loading what="your session" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login onSignedIn={setSession} />;
   }
 
   return (
@@ -79,7 +124,11 @@ export default function App() {
             <Icon name={theme === 'light' ? 'moon' : 'sun'} size={17} />
           </button>
 
-          <span className="me" title="Rajeev Menon, head of procurement">RM</span>
+          <button className="signout" onClick={handleSignOut} type="button" title={session.username}>
+            Sign out
+          </button>
+
+          <span className="me" title={session.username}>RM</span>
         </div>
       </header>
 

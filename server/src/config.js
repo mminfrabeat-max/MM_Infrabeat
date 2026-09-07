@@ -27,8 +27,24 @@ export const config = {
       process.env.SAP_BASE_URL ||
       'https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/',
     apiKey: process.env.SAP_API_KEY || ''
+  },
+
+  auth: {
+    username: process.env.AUTH_USERNAME || '',
+    // Never the password itself, only a hash of it. Generate one with:
+    //   node server/scripts/hash-password.js "the password"
+    passwordHash: process.env.AUTH_PASSWORD_HASH || '',
+    // Marks the session cookie as HTTPS-only. Must stay false on http://localhost or
+    // the browser will refuse to store the cookie and sign-in will silently fail.
+    // Set AUTH_SECURE_COOKIE=true when this is deployed behind HTTPS.
+    secureCookie: process.env.AUTH_SECURE_COOKIE === 'true'
   }
 };
+
+// Sign-in is only enforced when both settings are present. Missing either one is almost
+// always a half-finished .env rather than a deliberate choice, so the backend says so
+// loudly at startup instead of quietly serving the data to anyone who asks.
+export const authConfigured = Boolean(config.auth.username && config.auth.passwordHash);
 
 // Handy for the health check: tells us a key was loaded WITHOUT ever exposing it.
 // Never log config.sap.apiKey itself - terminal output ends up in screenshots and tickets.

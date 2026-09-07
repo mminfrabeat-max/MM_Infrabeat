@@ -5,20 +5,45 @@
 // server, and only this server holds the credentials and talks to SAP.
 
 import express from 'express';
-import { config, hasSapKey } from './config.js';
+import { config, hasSapKey, authConfigured } from './config.js';
+import { requireSignIn } from './auth.js';
 import { healthRouter } from './routes/health.js';
+import { authRouter } from './routes/auth.js';
 import { todayRouter } from './routes/today.js';
 import { approvalsRouter } from './routes/approvals.js';
 import { suppliersRouter } from './routes/suppliers.js';
 import { stockRouter } from './routes/stock.js';
 
+// Refuse to start rather than serve procurement data to anyone who finds the port.
+if (!authConfigured) {
+  console.error('');
+  console.error('[api] Cannot start: sign-in is not configured.');
+  console.error('[api] Your .env needs both of these:');
+  console.error('[api]   AUTH_USERNAME=you@example.com');
+  console.error('[api]   AUTH_PASSWORD_HASH=scrypt$...');
+  console.error('[api] Generate the hash with:');
+  console.error('[api]   node server/scripts/hash-password.js "your password"');
+  console.error('');
+  process.exit(1);
+}
+
 const app = express();
 
-// Lets the app read JSON request bodies (needed in milestone 5 for approve and reject).
+// Lets the app read JSON request bodies. The sign-in form needs this.
 app.use(express.json());
 
-// Everything the frontend calls lives under /api, so the Vite proxy has one clear prefix.
+// --- Open routes ------------------------------------------------------------
+// Two things must work before anyone is signed in: checking the backend is alive, and
+// signing in itself.
 app.use('/api', healthRouter);
+app.use('/api', authRouter);
+
+// --- Everything below requires a signed-in session --------------------------
+// One line, applied once. A new data route added after this point is protected by
+// default, which is the right way round: forgetting to protect something should be
+// impossible rather than merely unlikely.
+app.use('/api', requireSignIn);
+
 app.use('/api', todayRouter);
 app.use('/api', approvalsRouter);
 app.use('/api', suppliersRouter);
@@ -47,4 +72,5 @@ app.listen(config.port, () => {
   console.log(`[api] listening on http://localhost:${config.port}`);
   console.log(`[api] data source: ${config.dataSource}`);
   console.log(`[api] SAP API key loaded: ${hasSapKey ? 'yes' : 'no'}`);
+  console.log(`[api] sign-in required as: ${config.auth.username}`);
 });
