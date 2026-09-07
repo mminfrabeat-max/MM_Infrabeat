@@ -19,5 +19,9 @@ npm-debug.log*
 # The JSON files in server/data are the seed; rebuild the workbook with:
 #   node server/scripts/build-workbook.js
 server/data/procurement.xlsx
+
+# The SAP source-table dumps. Also generated, so also not committed. Rebuild with:
+#   node server/scripts/build-sap-dumps.js
+server/data/sap-source-tables.xlsx
 server/data/*.xlsx.tmp
 ~$*.xlsx
