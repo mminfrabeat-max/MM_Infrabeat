@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procurement dashboard | InfraBeat Technologies</title>
+<style>
+:root{
+  --f:"72","72full","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+
+  --bg:#EEF1F6;
+  --surface:#FFFFFF;
+  --surface-2:#F7F9FC;
+  --surface-3:#EEF2F7;
+  --border:#E1E7EE;
+  --border-2:#CDD7E2;
+  --ink:#0F1A26;
+  --ink-2:#5A6B7D;
+  --ink-3:#8695A6;
+
+  --primary:#0079A3;
+  --primary-2:#005E80;
+  --primary-soft:#E3F3FA;
+  --pos:#0B7D60;
+  --pos-soft:#E1F3EE;
+  --warn:#BE6A00;
+  --warn-soft:#FAEFE0;
+  --neg:#C8161D;
+  --neg-soft:#FBE8E9;
+  --violet:#EB1C24;
+  --violet-soft:#FDE8E9;
+
+  --hero-1:#062A3B;
+  --hero-2:#0A5470;
+  --hero-3:#009BC9;
+
+  --r-lg:16px; --r-md:12px; --r-sm:9px;
+  --sh-1:0 1px 2px rgba(15,26,38,.05);
+  --sh-2:0 1px 3px rgba(15,26,38,.06), 0 8px 24px rgba(15,26,38,.07);
+  --sh-3:0 2px 6px rgba(15,26,38,.08), 0 18px 40px rgba(15,26,38,.13);
+}
+html[data-theme="dark"]{
+  --bg:#0A1017;
+  --surface:#141C26;
+  --surface-2:#1A242F;
+  --surface-3:#212C3A;
+  --border:rgba(255,255,255,.09);
+  --border-2:rgba(255,255,255,.17);
+  --ink:#E9EFF5;
+  --ink-2:#9DAEBF;
+  --ink-3:#75879A;
+  --primary:#3FC2EA;
+  --primary-2:#21A6CF;
+  --primary-soft:rgba(63,194,234,.14);
+  --pos:#46CFA6;
+  --pos-soft:rgba(70,207,166,.13);
+  --warn:#EFA83C;
+  --warn-soft:rgba(239,168,60,.13);
+  --neg:#FF6E68;
+  --neg-soft:rgba(255,110,104,.13);
+  --violet:#FF6B70;
+  --violet-soft:rgba(255,107,112,.14);
+  --hero-1:#06161F; --hero-2:#0A3B4E; --hero-3:#007FA6;
+  --sh-2:0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  --sh-3:0 2px 6px rgba(0,0,0,.45), 0 18px 40px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;color:inherit;border:0;background:none}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+.n{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+svg{display:block}
+.wrap{max-width:1400px;margin:0 auto;padding:0 22px}
+
+/* ============ shell ============ */
+.shell{
+  position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--border);
+}
+.shell-in{max-width:1400px;margin:0 auto;padding:9px 22px;display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;padding:4px 8px;border-radius:var(--r-sm)}
+.brand:hover{background:var(--surface-2)}
+.wordmark{height:26px;width:auto;flex:none}
+.bdiv{width:1px;height:26px;background:var(--border-2);flex:none;margin:0 2px}
+.bstack{display:flex;flex-direction:column;gap:1px;text-align:left}
+.brand .b1{font-size:15.5px;font-weight:700;letter-spacing:-.2px;line-height:1.2}
+.brand .b2{font-size:11.6px;font-weight:600;color:var(--ink-3);letter-spacing:.2px;line-height:1.25}
+.sp{flex:1}
+.search{
+  display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:999px;padding:6px 13px;color:var(--ink-3);font-size:13px;min-width:190px;
+}
+.search:hover{border-color:var(--border-2)}
+.iconbtn{
+  width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--ink-2);position:relative;
+}
+.iconbtn:hover{background:var(--surface-2);color:var(--ink)}
+.dotc{
+  position:absolute;top:2px;right:1px;min-width:16px;height:16px;border-radius:8px;background:var(--neg);color:#fff;
+  font-size:10px;line-height:16px;font-weight:700;padding:0 4px;border:2px solid var(--surface);
+}
+.pillbtn{
+  display:flex;align-items:center;gap:7px;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;
+  background:linear-gradient(135deg,var(--primary),var(--violet));color:#fff;box-shadow:var(--sh-1);
+}
+.pillbtn:hover{filter:brightness(1.07)}
+.me{width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#0089B4,#00587A);color:#fff;display:grid;place-items:center;font-size:11.5px;font-weight:700;box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--border-2)}
+
+/* ============ nav ============ */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:53px;z-index:35}
+.nav-in{max-width:1400px;margin:0 auto;padding:0 22px;display:flex;gap:3px;overflow-x:auto}
+.nav-in::-webkit-scrollbar{height:0}
+.navb{
+  display:flex;align-items:center;gap:7px;padding:11px 13px 10px;font-size:13.3px;color:var(--ink-2);
+  border-bottom:2.5px solid transparent;white-space:nowrap;
+}
+.navb:hover{color:var(--ink)}
+.navb[aria-selected="true"]{color:var(--primary);border-bottom-color:var(--primary);font-weight:650}
+.navb .cnt{background:var(--surface-3);border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700;color:var(--ink-2)}
+.navb[aria-selected="true"] .cnt{background:var(--primary-soft);color:var(--primary)}
+
+/* ============ hero ============ */
+.hero{
+  position:relative;overflow:hidden;border-radius:var(--r-lg);margin:18px 0 14px;color:#fff;box-shadow:var(--sh-2);
+  background:
+    radial-gradient(760px 300px at 84% -40%, rgba(0,155,201,.40), transparent 62%),
+    radial-gradient(520px 260px at 12% 130%, rgba(235,28,36,.30), transparent 60%),
+    linear-gradient(120deg,var(--hero-1),var(--hero-2) 52%,var(--hero-3));
+}
+.hero-in{padding:22px 26px;display:grid;grid-template-columns:1fr auto;gap:22px;align-items:center}
+.live{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px 11px;font-size:11.8px;font-weight:600;letter-spacing:.1px}
+.pulse{width:7px;height:7px;border-radius:50%;background:#4FE0B0;box-shadow:0 0 0 0 rgba(79,224,176,.7);animation:pulse 2.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,224,176,.6)}70%{box-shadow:0 0 0 7px rgba(79,224,176,0)}100%{box-shadow:0 0 0 0 rgba(79,224,176,0)}}
+.hero h1{font-size:25px;font-weight:600;letter-spacing:-.5px;margin:11px 0 6px}
+.hero .lede{font-size:14.6px;line-height:1.62;color:rgba(255,255,255,.86);max-width:74ch;margin:0}
+.hchips{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px;margin-top:15px}
+.hchip{
+  display:flex;gap:9px;align-items:flex-start;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+  border-radius:var(--r-md);padding:9px 12px;text-align:left;color:#fff;transition:background .15s;min-width:0;
+}
+.hchip:hover{background:rgba(255,255,255,.19)}
+.hchip .r{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.9);color:var(--hero-1);display:grid;place-items:center;font-size:11.5px;font-weight:800;flex:none}
+.hchip.hot .r{background:#FF8087;color:#450308}
+.hchip .t{display:block;font-size:12.8px;font-weight:650;line-height:1.3}
+.hchip .s{display:block;font-size:11.8px;color:rgba(255,255,255,.76);margin-top:2px;line-height:1.35}
+.ring{display:flex;align-items:center;gap:15px}
+.ring .big{font-size:26px;font-weight:700;letter-spacing:-.7px}
+.ring .cap{font-size:12.2px;color:rgba(255,255,255,.76);max-width:19ch;margin-top:3px;line-height:1.4}
+.ring.saved{color:#fff;text-align:left;border-radius:var(--r-md);padding:8px;transition:background .15s}
+.ring.saved:hover{background:rgba(255,255,255,.11)}
+.ringcta{display:inline-block;margin-top:9px;font-size:12.3px;font-weight:600;color:#fff;border-bottom:1px solid rgba(255,255,255,.5);padding-bottom:1px}
+
+/* ============ tiles ============ */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(214px,1fr));gap:13px;margin-bottom:15px}
+.tile{
+  position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:14px 15px 12px;text-align:left;box-shadow:var(--sh-1);transition:transform .16s,box-shadow .16s,border-color .16s;
+}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:var(--border-2)}
+.tile .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;margin-bottom:10px}
+.tile .lab{font-size:12.4px;color:var(--ink-2);font-weight:500}
+.tile .val{font-size:30px;font-weight:700;letter-spacing:-1.2px;line-height:1.05;margin-top:5px;display:flex;align-items:baseline;gap:4px}
+.tile .val small{font-size:14px;font-weight:600;color:var(--ink-3);letter-spacing:0}
+.tile .foot{display:flex;align-items:center;gap:6px;font-size:11.9px;font-weight:600;margin-top:8px}
+.tile .spark{position:absolute;right:-2px;bottom:-2px;width:96px;opacity:.5;pointer-events:none}
+.pos{color:var(--pos)} .warn{color:var(--warn)} .neg{color:var(--neg)} .mut{color:var(--ink-3)} .pri{color:var(--primary)}
+.bg-pos{background:var(--pos-soft);color:var(--pos)}
+.bg-warn{background:var(--warn-soft);color:var(--warn)}
+.bg-neg{background:var(--neg-soft);color:var(--neg)}
+.bg-pri{background:var(--primary-soft);color:var(--primary)}
+.bg-vio{background:var(--violet-soft);color:var(--violet)}
+
+/* ============ cards ============ */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:13px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden;display:flex;flex-direction:column}
+.c3{grid-column:span 3} .c4{grid-column:span 4} .c5{grid-column:span 5}
+.c6{grid-column:span 6} .c7{grid-column:span 7} .c8{grid-column:span 8} .c12{grid-column:span 12}
+.chd{display:flex;align-items:center;gap:11px;padding:14px 17px 13px;border-bottom:1px solid var(--border)}
+.chd .ico{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none}
+.chd h2{font-size:14.6px;font-weight:650;margin:0;letter-spacing:-.1px}
+.chd .cs{font-size:12.1px;color:var(--ink-3);margin-top:1px}
+.chd .act{margin-left:auto;font-size:12.6px;color:var(--primary);font-weight:600;padding:4px 9px;border-radius:7px}
+.chd .act:hover{background:var(--primary-soft)}
+.cbd{padding:14px 17px 16px;flex:1}
+.cbd.flush{padding:0}
+
+/* ============ rows ============ */
+.row{display:flex;gap:12px;padding:13px 17px;border-bottom:1px solid var(--border);align-items:flex-start;width:100%;text-align:left;transition:background .12s}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.row .ico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none}
+.row .t1{font-size:13.5px;font-weight:650;letter-spacing:-.1px}
+.row .t2{font-size:12.4px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+.row .t3{font-size:12.1px;color:var(--ink-3);margin-top:5px;line-height:1.45}
+.row .rt{margin-left:auto;text-align:right;flex:none;padding-left:12px}
+.chipx{display:inline-flex;align-items:center;gap:5px;font-size:11.6px;font-weight:650;padding:3px 9px;border-radius:999px}
+.chipx.neg{background:var(--neg-soft);color:var(--neg)}
+.chipx.warn{background:var(--warn-soft);color:var(--warn)}
+.chipx.pos{background:var(--pos-soft);color:var(--pos)}
+.chipx.pri{background:var(--primary-soft);color:var(--primary)}
+.chipx.mut{background:var(--surface-3);color:var(--ink-2)}
+.scorepill{display:inline-flex;align-items:baseline;gap:3px;font-weight:800;font-size:17px;letter-spacing:-.4px}
+.scorepill small{font-size:11px;font-weight:600;color:var(--ink-3)}
+.bar{background:var(--surface-3);border-radius:999px;height:7px;overflow:hidden;margin-top:7px}
+.bar span{display:block;height:7px;border-radius:999px;transition:width .3s}
+
+/* ============ banner ============ */
+.banner{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-radius:var(--r-md);font-size:13.2px;margin-bottom:14px;border:1px solid;line-height:1.5}
+.banner .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none}
+.banner.info{background:var(--primary-soft);border-color:transparent;color:var(--ink)}
+.banner.warn{background:var(--warn-soft);border-color:transparent}
+.banner.err{background:var(--neg-soft);border-color:transparent}
+.banner.ok{background:var(--pos-soft);border-color:transparent}
+.banner b{font-weight:700}
+
+/* ============ table ============ */
+table{width:100%;border-collapse:collapse;font-size:13.2px}
+th{text-align:left;font-weight:600;color:var(--ink-3);font-size:11.8px;letter-spacing:.2px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+td{padding:13px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:0}
+.rt{text-align:right}
+.sub{font-size:12.1px;color:var(--ink-3);margin-top:3px}
+
+/* ============ buttons ============ */
+.btn{background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-sm);padding:7px 14px;font-size:13px;font-weight:600;color:var(--primary);transition:.14s}
+.btn:hover{background:var(--primary-soft);border-color:var(--primary)}
+.btn.emph{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.emph:hover{background:var(--primary-2)}
+.btn.rej{color:var(--neg);border-color:var(--neg)}
+.btn.rej:hover{background:var(--neg-soft)}
+.btn.q{border-color:transparent;background:var(--surface-3);color:var(--ink-2)}
+.btn.q:hover{background:var(--border);color:var(--ink)}
+.btn.sm{padding:4px 11px;font-size:12.2px}
+.btn[disabled]{opacity:.5;cursor:default}
+
+/* ============ object page ============ */
+.ohero{
+  border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh-2);margin-bottom:14px;color:#fff;
+  background:radial-gradient(600px 240px at 88% -50%, rgba(34,211,238,.26), transparent 60%),
+             linear-gradient(120deg,var(--hero-1),var(--hero-2) 60%,var(--hero-3));
+}
+.ohero-in{padding:20px 24px}
+.oback{display:inline-flex;align-items:center;gap:6px;font-size:12.6px;color:rgba(255,255,255,.8);margin-bottom:12px}
+.oback:hover{color:#fff}
+.otitle{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.oav{width:46px;height:46px;border-radius:13px;background:rgba(255,255,255,.16);display:grid;place-items:center;font-weight:700;font-size:15px;border:1px solid rgba(255,255,255,.2)}
+.otitle h1{font-size:21px;font-weight:650;margin:0;letter-spacing:-.4px}
+.otitle .os{font-size:12.9px;color:rgba(255,255,255,.78);margin-top:2px}
+.facets{display:flex;gap:0;flex-wrap:wrap;margin-top:18px;border-top:1px solid rgba(255,255,255,.14);padding-top:15px}
+.facet{padding-right:26px;margin-right:26px;border-right:1px solid rgba(255,255,255,.14)}
+.facet:last-child{border-right:0;margin-right:0;padding-right:0}
+.facet .fl{font-size:11.4px;color:rgba(255,255,255,.66)}
+.facet .fv{font-size:16px;font-weight:700;margin-top:3px;letter-spacing:-.3px}
+.kv{display:grid;grid-template-columns:158px 1fr;gap:9px 16px;font-size:13.1px}
+.sitlede{font-size:13.4px;line-height:1.55;margin:0 0 14px}
+.sitact{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.sitact .btn{display:flex;align-items:center;gap:7px}
+.kv .k{color:var(--ink-3)}
+.footerbar{
+  position:sticky;bottom:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:11px 16px;display:flex;gap:10px;align-items:center;margin-top:14px;box-shadow:var(--sh-2);flex-wrap:wrap;z-index:20;
+}
+
+/* ============ charts ============ */
+.c3grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cbox{border:1px solid var(--border);border-radius:var(--r-md);padding:12px 13px 9px;background:var(--surface-2)}
+.cbox .ct{font-size:12.3px;font-weight:650;display:flex;align-items:center;gap:6px}
+.cbox .cs{font-size:11.6px;color:var(--ink-3);margin:2px 0 9px}
+.cbox .cf{font-size:11.8px;font-weight:700;margin-top:7px;display:flex;align-items:center;gap:5px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px}
+.metric{border:1px solid var(--border);border-radius:var(--r-md);padding:12px 14px;background:var(--surface-2)}
+.metric .ml{font-size:11.6px;color:var(--ink-3);font-weight:600}
+.metric .mv{font-size:23px;font-weight:700;letter-spacing:-.7px;margin-top:3px}
+.metric .mn{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+
+/* ============ mail ============ */
+.mail{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden;max-width:790px}
+.mailtop{display:flex;align-items:center;gap:11px;padding:11px 17px;border-bottom:1px solid var(--border);background:var(--surface-2);font-size:12.4px;color:var(--ink-3)}
+.gm{width:24px;height:24px;border-radius:7px;background:#EA4335;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}
+.mailhd{padding:17px 20px 14px;border-bottom:1px solid var(--border)}
+.mailhd .sj{font-size:18px;font-weight:650;letter-spacing:-.3px;margin-bottom:12px}
+.mfrom{display:flex;gap:11px;align-items:center;font-size:12.6px;color:var(--ink-3)}
+.mfrom .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(140deg,var(--primary),var(--violet));color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px}
+.mailbd{padding:18px 20px 22px;font-size:13.5px;line-height:1.65}
+.mcard{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin:15px 0;box-shadow:var(--sh-1)}
+.mcard .mh{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:var(--surface-2)}
+.mcard .mb{padding:14px 15px}
+.mcard .mf{padding:12px 15px;border-top:1px solid var(--border);display:flex;gap:9px;flex-wrap:wrap;background:var(--surface-2)}
+.reco{margin-top:12px;padding:12px 14px;border-radius:var(--r-md);font-size:12.9px;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
+
+/* ============ timeline ============ */
+.tl{position:relative;padding-left:26px}
+.tl::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tli{position:relative;padding-bottom:17px}
+.tli:last-child{padding-bottom:0}
+.tli::before{content:"";position:absolute;left:-22px;top:4px;width:11px;height:11px;border-radius:50%;background:var(--primary);border:2.5px solid var(--surface);box-shadow:0 0 0 1.5px var(--primary)}
+.tli.ok::before{background:var(--pos);box-shadow:0 0 0 1.5px var(--pos)}
+.tli .tt{font-size:13.2px;font-weight:650}
+.tli .ts{font-size:12.3px;color:var(--ink-2);margin-top:3px;line-height:1.5}
+.tli .tm{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+
+/* ============ assistant ============ */
+.scrim{position:fixed;inset:0;background:rgba(8,14,22,.42);backdrop-filter:blur(2px);z-index:45;display:none}
+.scrim.open{display:block}
+.asst{
+  position:fixed;top:14px;right:14px;bottom:14px;width:min(420px,calc(100% - 28px));background:var(--surface);
+  border-radius:var(--r-lg);z-index:50;transform:translateX(calc(100% + 20px));transition:transform .26s cubic-bezier(.34,1.2,.4,1);
+  display:flex;flex-direction:column;box-shadow:var(--sh-3);overflow:hidden;
+}
+.asst.open{transform:none}
+.ahd{
+  padding:15px 17px;display:flex;align-items:center;gap:11px;color:#fff;
+  background:linear-gradient(120deg,var(--hero-2),var(--violet));
+}
+.ahd .ai{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.18);display:grid;place-items:center}
+.ahd h2{font-size:14.6px;margin:0;font-weight:650}
+.ahd .as{font-size:11.6px;opacity:.82}
+.ahd .x{margin-left:auto;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff}
+.ahd .x:hover{background:rgba(255,255,255,.18)}
+.abd{flex:1;overflow-y:auto;padding:16px 17px;background:var(--surface-2)}
+.msg{max-width:90%;padding:11px 14px;font-size:13.2px;line-height:1.55;margin-bottom:11px;white-space:pre-wrap;border-radius:14px}
+.msg.u{background:var(--primary);color:#fff;margin-left:auto;border-bottom-right-radius:5px}
+.msg.a{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:5px;box-shadow:var(--sh-1)}
+.msg.a b{font-weight:700}
+.achips{display:flex;gap:7px;flex-wrap:wrap;padding:11px 17px;border-top:1px solid var(--border)}
+.achip{background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:5px 12px;font-size:12.2px;font-weight:600}
+.achip:hover{background:var(--primary);color:#fff}
+.afoot{display:flex;gap:9px;padding:12px 17px;border-top:1px solid var(--border)}
+.afoot input{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:9px 15px;font-family:inherit;font-size:13.2px;color:var(--ink)}
+.afoot input:focus{border-color:var(--primary);outline:none;background:var(--surface)}
+.afoot .send{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;flex:none}
+.afoot .send:hover{background:var(--primary-2)}
+
+/* ============ consequence and outside feeds ============ */
+.conseq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.conseq{grid-template-columns:1fr}}
+.cq{border:1px solid var(--border);border-radius:var(--r-md);padding:13px 15px}
+.cq.yes{border-color:var(--pos);background:var(--pos-soft)}
+.cq.no{border-color:var(--warn);background:var(--warn-soft)}
+.cqh{display:flex;align-items:center;gap:7px;font-size:12.9px;font-weight:700;margin-bottom:6px}
+.cq.yes .cqh{color:var(--pos)}
+.cq.no .cqh{color:var(--warn)}
+.cqt{font-size:13.2px;line-height:1.56}
+.feed{display:flex;align-items:center;gap:8px;font-size:11.9px;color:var(--ink-3);margin-top:12px;padding-top:11px;border-top:1px solid var(--border)}
+.outside{background:var(--violet-soft);color:var(--violet);border-radius:999px;padding:2px 9px;font-size:11px;font-weight:700}
+.joined{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.joined .jl{display:flex;align-items:center;gap:6px;font-size:11.9px;color:var(--ink-3);font-weight:600}
+
+/* ============ time saved ============ */
+.logrow{display:flex;gap:13px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--border)}
+.logrow:last-child{border-bottom:0}
+.logrow .lt{font-size:12.6px;color:var(--ink-3);width:54px;flex:none}
+.logrow .lw{font-size:13.3px;flex:1;line-height:1.45}
+.logrow .lm{font-size:12.5px;color:var(--pos);font-weight:650;flex:none}
+.logempty{font-size:13.2px;color:var(--ink-2);line-height:1.55;padding:6px 0 2px}
+
+/* ============ teams ============ */
+.team{display:flex;gap:13px;padding:15px 17px;border-bottom:1px solid var(--border)}
+.team:last-child{border-bottom:0}
+.team .tav{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex:none;
+ background:linear-gradient(140deg,#0089B4,#00587A)}
+.team .tav.nudge{background:linear-gradient(140deg,#D08A2B,#A85F00)}
+.tname{display:flex;align-items:center;gap:9px;font-size:14.4px;font-weight:650;letter-spacing:-.1px}
+.tsub{font-size:12.6px;color:var(--ink-2);margin-top:2px}
+.tline{font-size:13.1px;margin-top:8px;line-height:1.5}
+.tline b{font-weight:650}
+.tline.fu{color:var(--warn)}
+.tmets{display:flex;gap:26px;flex-wrap:wrap;margin-top:12px}
+.tmet .v{font-size:15px;font-weight:700}
+.tmet .l{font-size:11.8px;color:var(--ink-3);margin-top:1px}
+.tacts{margin-left:auto;display:flex;gap:8px;flex:none;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end}
+.tacts .btn{display:flex;align-items:center;gap:7px}
+
+/* ============ profile ============ */
+.prof{position:fixed;right:18px;width:352px;max-width:calc(100vw - 24px);background:var(--surface);border:1px solid var(--border);
+ border-radius:var(--r-lg);box-shadow:var(--sh-3);z-index:62;display:none;overflow:hidden}
+.prof.open{display:block}
+.phd{display:flex;gap:12px;align-items:center;padding:16px 17px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.phd .pav{width:46px;height:46px;border-radius:50%;background:linear-gradient(140deg,#0089B4,#00587A);color:#fff;display:grid;
+ place-items:center;font-size:15px;font-weight:700;flex:none}
+.phd .pn{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.phd .pr{font-size:12.3px;color:var(--ink-2);margin-top:2px}
+.pbd{padding:6px 17px 12px;max-height:min(66vh,560px);overflow:auto}
+.psec{font-size:11.4px;font-weight:700;color:var(--ink-3);letter-spacing:.3px;margin:14px 0 7px}
+.prow{display:grid;grid-template-columns:112px 1fr;gap:10px;padding:5px 0;font-size:12.9px;line-height:1.45}
+.prow .k{color:var(--ink-3)}
+.pset{border-top:1px solid var(--border);padding:8px 9px 10px}
+.pitem{display:flex;align-items:center;gap:10px;width:100%;padding:9px 8px;border-radius:var(--r-sm);font-size:13.2px;color:var(--ink);text-align:left}
+.pitem:hover{background:var(--surface-2)}
+.pitem .pi{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;background:var(--surface-3);color:var(--ink-2)}
+.pitem .pv{margin-left:auto;font-size:12.2px;color:var(--ink-3)}
+.pitem.out{color:var(--neg)}
+.pitem.out .pi{background:var(--neg-soft);color:var(--neg)}
+.perr{font-size:12.4px;color:var(--neg);margin-top:8px;display:none}
+
+/* ============ write a mail ============ */
+.mscrim{position:fixed;inset:0;background:rgba(8,14,22,.45);backdrop-filter:blur(2px);z-index:60;display:none}
+.mscrim.open{display:block}
+.modal{position:fixed;z-index:61;left:50%;top:50%;transform:translate(-50%,-50%);width:min(640px,calc(100vw - 30px));
+ background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-3);display:none;overflow:hidden}
+.modal.open{display:block}
+.mhd{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--border);font-size:15.4px;font-weight:650}
+.mhd .x{margin-left:auto;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--ink-2);font-size:15px}
+.mhd .x:hover{background:var(--surface-2);color:var(--ink)}
+.mbd{padding:16px 18px;max-height:min(62vh,520px);overflow:auto}
+.mrow{margin-bottom:14px}
+.mlab{font-size:12.4px;font-weight:650;color:var(--ink-2);margin-bottom:6px}
+.minp,.mtxt{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);
+ padding:10px 12px;font-family:inherit;font-size:13.4px;color:var(--ink)}
+.mtxt{min-height:186px;line-height:1.6;resize:vertical}
+.mft{display:flex;gap:9px;padding:14px 18px;border-top:1px solid var(--border);background:var(--surface-2)}
+.mft .btn{display:flex;align-items:center;gap:7px}
+
+/* ============ toasts ============ */
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:60;display:flex;flex-direction:column;gap:9px;align-items:center;width:min(440px,calc(100% - 30px))}
+.toast{
+  display:flex;gap:11px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:12px 15px;font-size:13.1px;box-shadow:var(--sh-3);width:100%;
+  animation:rise .3s cubic-bezier(.2,.9,.3,1);
+}
+.toast .ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.content{padding-bottom:70px}
+@media (max-width:1180px){ .c3,.c4,.c5,.c6,.c7,.c8{grid-column:span 12} .hero-in{grid-template-columns:1fr} .c3grid{grid-template-columns:1fr} }
+@media (max-width:680px){
+  .wrap{padding:0 13px}
+  .hero h1{font-size:21px} .hero .lede{font-size:13.6px}
+  .hchip{max-width:none}
+  .facet{border-right:0;padding-right:0;margin-right:20px}
+  .hide-sm{display:none}
+  table{font-size:12.4px} th,td{padding:10px 9px}
+}
+@media (prefers-reduced-motion:reduce){ .asst{transition:none} .toast{animation:none} .pulse{animation:none} .tile:hover{transform:none} }
+/* additions */
+.terms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px}
+.trow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.2px}
+.trow:last-child{border-bottom:0}
+.trow .tk{color:var(--ink-3)}
+.trow .tv{font-weight:600;text-align:right}
+.trow .tv.mut{font-weight:400;color:var(--ink-2)}
+.prio{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.dem{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.dem span{font-size:11.6px;background:var(--surface-3);color:var(--ink-2);border-radius:999px;padding:3px 10px}
+.dem span b{color:var(--ink);font-weight:700}
+.sel{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 11px;font-size:13.4px;color:var(--ink);font-family:inherit}
+.sel:hover{border-color:var(--border-2)}
+.flagline{display:flex;gap:9px;align-items:center;font-size:12.6px;color:var(--ink-2);margin-top:10px}
+.stepline{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.stepline:last-child{border-bottom:0}
+.stepline .sd{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:12px;font-weight:800}
+.stepline .s1{font-size:13.4px;font-weight:650}
+.stepline .s2{font-size:12.4px;color:var(--ink-2);margin-top:3px}
+@media (max-width:760px){ .terms{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<header class="shell">
+  <div class="shell-in">
+    <button class="brand" id="btn-home">
+      <img class="wordmark" alt="InfraBeat" src="data:image/png;base64,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">
+      <span class="bdiv"></span>
+      <span class="bstack"><span class="b1">InfraBeat Technologies Pvt. Ltd.</span><span class="b2">Procurement dashboard</span></span>
+    </button>
+    <span class="sp"></span>
+    <select class="sel" id="plant" aria-label="Choose plant">
+      <option value="all">All plants</option>
+      <option value="Pune">Pune</option>
+      <option value="Mumbai">Mumbai</option>
+      <option value="Nagpur">Nagpur</option>
+    </select>
+    <button class="iconbtn" id="btn-theme" aria-label="Light or dark"><span id="i-theme"></span></button>
+    <button class="iconbtn" id="btn-notif" aria-label="Alerts"><span id="i-bell"></span><span class="dotc n" id="notif">0</span></button>
+    <button class="pillbtn" id="btn-asst"><span id="i-spark"></span>Ask</button>
+    <button class="me" id="me" title="Head of Procurement" aria-label="Your account">VN</button>
+  </div>
+</header>
+
+<nav class="nav"><div class="nav-in" id="nav" role="tablist"></div></nav>
+<main class="wrap content" id="view"></main>
+
+<aside class="prof" id="prof" aria-label="Your account">
+  <div class="phd"><span class="pav" id="p-av">VN</span>
+    <div><div class="pn" id="p-name"></div><div class="pr" id="p-role"></div></div>
+  </div>
+  <div class="pbd" id="p-body"></div>
+  <div class="pset">
+    <button class="pitem" id="p-pass"><span class="pi" id="i-pass"></span>Change password<span class="pv" id="p-passage"></span></button>
+    <button class="pitem" id="p-theme2"><span class="pi" id="i-theme2"></span>Appearance<span class="pv" id="p-themev"></span></button>
+    <button class="pitem" id="p-notif"><span class="pi" id="i-notif2"></span>Mail me a summary at 08:00<span class="pv" id="p-notifv"></span></button>
+    <button class="pitem out" id="p-out"><span class="pi" id="i-out"></span>Sign out</button>
+  </div>
+</aside>
+
+<div class="modal" id="pwmodal" role="dialog" aria-modal="true" aria-label="Change password">
+  <div class="mhd"><span id="i-pwhd"></span>Change password<button class="x" id="pw-close">&#10005;</button></div>
+  <div class="mbd">
+    <div class="mrow"><div class="mlab">Current password</div><input class="minp" type="password" id="pw-old"></div>
+    <div class="mrow"><div class="mlab">New password</div><input class="minp" type="password" id="pw-new"></div>
+    <div class="mrow" style="margin-bottom:0"><div class="mlab">Confirm new password</div><input class="minp" type="password" id="pw-two">
+      <div class="perr" id="pw-err"></div>
+      <div style="font-size:12.2px;color:var(--ink-3);margin-top:9px">At least 8 characters, with one number. The same password is used for SAP sign in.</div>
+    </div>
+  </div>
+  <div class="mft"><button class="btn emph" id="pw-save">Update password</button><button class="btn q" id="pw-cancel">Cancel</button></div>
+</div>
+
+<div class="modal" id="logmodal" role="dialog" aria-modal="true" aria-label="What you have done today">
+  <div class="mhd"><span id="i-loghd"></span>What you have done today<button class="x" id="log-close">&#10005;</button></div>
+  <div class="mbd" id="log-body"></div>
+  <div class="mft"><span id="log-sum" style="font-size:12.9px;color:var(--ink-2);align-self:center"></span>
+    <span style="flex:1"></span><button class="btn q" id="log-x">Close</button></div>
+</div>
+
+<div class="mscrim" id="mscrim"></div>
+<div class="modal" id="mailmodal" role="dialog" aria-modal="true" aria-label="Write a mail">
+  <div class="mhd"><span id="i-mailhd"></span>Write a mail<button class="x" id="mm-close">&#10005;</button></div>
+  <div class="mbd">
+    <div class="mrow"><div class="mlab">To</div><input class="minp" id="mm-to"></div>
+    <div class="mrow"><div class="mlab">Subject</div><input class="minp" id="mm-subj"></div>
+    <div class="mrow" style="margin-bottom:0"><div class="mlab">Message</div><textarea class="mtxt" id="mm-body"></textarea></div>
+  </div>
+  <div class="mft">
+    <button class="btn emph" id="mm-send"><span id="i-mailsend"></span>Send</button>
+    <button class="btn q" id="mm-app">Open in my mail app</button>
+    <button class="btn q" id="mm-cancel">Cancel</button>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="asst" id="asst" aria-hidden="true" aria-label="Ask">
+  <div class="ahd"><span class="ai" id="i-ai"></span>
+    <span><h2>Ask</h2><span class="as">about any order, vendor, material or contract</span></span>
+    <button class="x" id="asst-close" aria-label="Close">&times;</button></div>
+  <div class="abd" id="asst-body"></div>
+  <div class="achips" id="asst-chips"></div>
+  <div class="afoot"><input id="asst-input" placeholder="Type your question" aria-label="Ask">
+    <button class="send" id="asst-send" aria-label="Send"><span id="i-send"></span></button></div>
+</aside>
+<div class="toasts" id="toasts"></div>
+
+<script>
+(function(){
+"use strict";
+
+var P={
+ bell:'M12 3a5 5 0 0 0-5 5v3.5L5.5 14v1h13v-1L17 11.5V8a5 5 0 0 0-5-5Zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21Z',
+ spark:'M12 2.6l1.9 4.9 4.9 1.9-4.9 1.9L12 16.2l-1.9-4.9L5.2 9.4l4.9-1.9L12 2.6Zm6.4 10.2l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3Z',
+ alert:'M12 3.2 1.6 21h20.8L12 3.2Zm0 5.6c.6 0 1 .5 1 1.1l-.3 4.6a.7.7 0 0 1-1.4 0L11 9.9c0-.6.4-1.1 1-1.1Zm0 8.1a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Z',
+ check:'M9.6 16.4 5.2 12l-1.4 1.4 5.8 5.8L20.2 8.6 18.8 7.2 9.6 16.4Z',
+ clock:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6V6h-2v7.4l5 3 1-1.7-4-2.1Z',
+ box:'M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.3 6.3 3.2L12 10.6 5.7 7.5 12 4.3ZM5 9.3l6 3v7.1l-6-3v-7.1Zm14 0v7.1l-6 3v-7.1l6-3Z',
+ truck:'M3 6h11v8H3V6Zm12 3h3.2l2.8 3.2V17h-2a2.5 2.5 0 0 1-5 0h-1V9Zm-8.5 8a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm11 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z',
+ doc:'M6 2h8l4 4v16H6V2Zm7 1.5V7h3.5L13 3.5ZM8.5 11h7v1.6h-7V11Zm0 3.4h7V16h-7v-1.6Z',
+ mail:'M2.5 5.5h19v13h-19v-13Zm1.8 1.8 7.7 5.4 7.7-5.4H4.3Z',
+ chart:'M3 20h18v1.6H3V20Zm2-6h3v5H5v-5Zm5-5h3v10h-3V9Zm5-5h3v15h-3V4Z',
+ shield:'M12 2 4 5.2v6.3c0 5 3.4 9.4 8 10.5 4.6-1.1 8-5.5 8-10.5V5.2L12 2Zm-1 13.4-3.4-3.4L9 10.6l2 2 4-4 1.4 1.4-5.4 5.4Z',
+ up:'M12 5 5.6 11.4 7 12.8l4-4V19h2V8.8l4 4 1.4-1.4L12 5Z',
+ down:'M12 19l6.4-6.4L17 11.2l-4 4V5h-2v10.2l-4-4L5.6 12.6 12 19Z',
+ sun:'M12 6.5A5.5 5.5 0 1 0 12 17.5 5.5 5.5 0 0 0 12 6.5ZM11 1.5h2v3.2h-2V1.5Zm0 17.8h2v3.2h-2v-3.2ZM1.5 11h3.2v2H1.5v-2Zm17.8 0h3.2v2h-3.2v-2ZM4.2 5.6 5.6 4.2l2.3 2.3-1.4 1.4L4.2 5.6Zm11.9 11.9 1.4-1.4 2.3 2.3-1.4 1.4-2.3-2.3Zm2.3-13.3 1.4 1.4-2.3 2.3-1.4-1.4 2.3-2.3ZM4.2 18.4l2.3-2.3 1.4 1.4-2.3 2.3-1.4-1.4Z',
+ moon:'M20 14.6A8.6 8.6 0 0 1 9.4 4 8.6 8.6 0 1 0 20 14.6Z',
+ send:'M2.5 21 22 12 2.5 3v7l13 2-13 2v7Z',
+ wrench:'M20.8 6.3a5.5 5.5 0 0 1-7 7L6 21.1 2.9 18l7.8-7.8a5.5 5.5 0 0 1 7-7l-3.2 3.2 2.1 2.1 3.2-3.2Z',
+ eye:'M12 5C6.5 5 2.3 9.1 1 12c1.3 2.9 5.5 7 11 7s9.7-4.1 11-7c-1.3-2.9-5.5-7-11-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2.2a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6Z',
+ back:'M15.4 5 9 11.4l6.4 6.4 1.4-1.4-5-5 5-5L15.4 5Z',
+ file:'M4 3h11a3 3 0 0 1 3 3v15H7a3 3 0 0 1-3-3V3Zm3 3v11h9V6H7Zm2 2h5v1.6H9V8Zm0 3.4h5V13H9v-1.6Z',
+ phone:'M6.2 2.8 3.4 5.6c-.5.5-.6 1.2-.4 1.8 2 5.9 6.7 10.6 12.6 12.6.6.2 1.3.1 1.8-.4l2.8-2.8-4.6-2.3-1.8 1.8a15.5 15.5 0 0 1-6.7-6.7l1.8-1.8L6.2 2.8Z',
+ people:'M8.5 11a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Zm7.5.6a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6ZM8.5 13C5.4 13 2 14.5 2 17v2.6h13V17c0-2.5-3.4-4-6.5-4Zm7.5.6c-.6 0-1.2 0-1.8.2 1.1 1 1.8 2.2 1.8 3.6v2.2h6V17c0-2-2.8-3.4-6-3.4Z'
+};
+function ic(n,s,c){ return '<svg width="'+(s||16)+'" height="'+(s||16)+'" viewBox="0 0 24 24" fill="'+(c||"currentColor")+'"><path d="'+P[n]+'"/></svg>'; }
+
+/* ================= DATA ================= */
+var APPROVER_MAIL="mm.infrabeat@gmail.com";
+var APPROVER_NAME="Vaibhav Naik";
+var USER={role:"Head of Procurement",dept:"Central procurement",empId:"INF-2048",sapUser:"VNAIK",
+ mobile:"+91 98220 41756",ext:"4102",location:"Pune office, InfraBeat Technologies Pvt. Ltd.",
+ reportsTo:"Mr. Vikram Shah, Director, Operations",
+ release:"Release code 02, orders up to 5 crore",plants:"Pune, Mumbai and Nagpur",
+ lastLogin:"Today at 07:58, Pune office",prevLogin:"5 Sep at 18:20, mobile",
+ passwordAge:"changed 74 days ago",standIn:"None set",summaryMail:true};
+function firstName(){ return APPROVER_NAME.split(" ")[0]; }
+function greet(){ var h=new Date().getHours(); return h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
+
+var SUPPLIERS={
+ "Aditya Refractories":{code:"V-10024",gst:"22AACCA1234F1Z5",city:"Bhilai",contract:41200,uom:"MT",cat:"Refractories",sapScore:71,history:[
+  {po:"4500169011",month:"Nov 25",delay:-1,quality:99.2,rate:39800},{po:"4500170455",month:"Dec 25",delay:0,quality:98.8,rate:39800},
+  {po:"4500171882",month:"Dec 25",delay:2,quality:99.0,rate:40100},{po:"4500172640",month:"Jan 26",delay:1,quality:98.4,rate:40100},
+  {po:"4500173515",month:"Feb 26",delay:4,quality:98.9,rate:40600},{po:"4500174298",month:"Mar 26",delay:6,quality:97.9,rate:40900},
+  {po:"4500175106",month:"Apr 26",delay:5,quality:98.6,rate:41200},{po:"4500175933",month:"May 26",delay:9,quality:98.1,rate:42400},
+  {po:"4500176701",month:"Jun 26",delay:8,quality:97.6,rate:43100},{po:"4500177012",month:"Aug 26",delay:11,quality:97.8,rate:43800}]},
+ "Oman Mining LLC":{code:"V-20011",gst:"Not applicable, import vendor",iec:"IEC 0398765432",city:"Muscat, Oman",contract:8400,uom:"MT",cat:"Raw material, import",sapScore:86,history:[
+  {po:"4500168001",month:"Nov 25",delay:2,quality:99.0,rate:8200},{po:"4500169220",month:"Dec 25",delay:3,quality:98.9,rate:8200},
+  {po:"4500170410",month:"Jan 26",delay:1,quality:99.2,rate:8250},{po:"4500171600",month:"Jan 26",delay:4,quality:98.7,rate:8250},
+  {po:"4500172700",month:"Feb 26",delay:2,quality:99.1,rate:8300},{po:"4500173810",month:"Mar 26",delay:3,quality:99.0,rate:8300},
+  {po:"4500174900",month:"Apr 26",delay:2,quality:98.8,rate:8350},{po:"4500175800",month:"May 26",delay:5,quality:98.6,rate:8350},
+  {po:"4500176600",month:"Jun 26",delay:3,quality:99.1,rate:8400},{po:"4500177200",month:"Jul 26",delay:4,quality:99.0,rate:8400}]},
+ "Bharat Bearings":{code:"V-10112",gst:"24AAECB5678K1ZP",city:"Rajkot",contract:18400,uom:"NOS",cat:"Spares",sapScore:68,history:[
+  {po:"4500167940",month:"Oct 25",delay:3,quality:96.2,rate:17900},{po:"4500169188",month:"Nov 25",delay:5,quality:95.8,rate:17900},
+  {po:"4500170344",month:"Dec 25",delay:2,quality:97.1,rate:18100},{po:"4500171502",month:"Jan 26",delay:7,quality:94.9,rate:18100},
+  {po:"4500172788",month:"Feb 26",delay:4,quality:96.4,rate:18200},{po:"4500173611",month:"Mar 26",delay:6,quality:95.2,rate:18200},
+  {po:"4500174500",month:"Apr 26",delay:3,quality:97.0,rate:18400},{po:"4500175290",month:"May 26",delay:8,quality:94.4,rate:18400},
+  {po:"4500176155",month:"Jun 26",delay:5,quality:95.9,rate:18500},{po:"4500177501",month:"Aug 26",delay:4,quality:96.1,rate:18500}]},
+ "Vindhya Logistics":{code:"V-10077",gst:"22AAFCV9012M1Z8",city:"Raipur",contract:2350,uom:"TRIP",cat:"Freight",sapScore:88,history:[
+  {po:"4500168800",month:"Nov 25",delay:1,quality:98.0,rate:2300},{po:"4500169955",month:"Dec 25",delay:0,quality:98.4,rate:2300},
+  {po:"4500171100",month:"Jan 26",delay:2,quality:97.8,rate:2320},{po:"4500172255",month:"Feb 26",delay:1,quality:98.2,rate:2320},
+  {po:"4500173400",month:"Mar 26",delay:3,quality:97.5,rate:2340},{po:"4500174611",month:"Apr 26",delay:1,quality:98.1,rate:2340},
+  {po:"4500175700",month:"May 26",delay:2,quality:97.9,rate:2350},{po:"4500176500",month:"Jun 26",delay:0,quality:98.5,rate:2350},
+  {po:"4500176912",month:"Jul 26",delay:1,quality:98.3,rate:2350},{po:"4500177388",month:"Aug 26",delay:2,quality:98.0,rate:2360}]},
+ "Shreeji Minerals":{code:"V-10008",gst:"08AAGCS3344L1Z9",city:"Udaipur",contract:8600,uom:"MT",cat:"Raw material",sapScore:94,history:[
+  {po:"4500168220",month:"Nov 25",delay:0,quality:99.4,rate:8400},{po:"4500169740",month:"Dec 25",delay:1,quality:99.1,rate:8400},
+  {po:"4500170988",month:"Jan 26",delay:0,quality:99.5,rate:8450},{po:"4500171733",month:"Jan 26",delay:2,quality:98.9,rate:8450},
+  {po:"4500172901",month:"Feb 26",delay:0,quality:99.6,rate:8500},{po:"4500173988",month:"Mar 26",delay:-2,quality:99.3,rate:8500},
+  {po:"4500174822",month:"Apr 26",delay:1,quality:99.0,rate:8550},{po:"4500175610",month:"May 26",delay:0,quality:99.4,rate:8550},
+  {po:"4500176402",month:"Jun 26",delay:-1,quality:99.2,rate:8600},{po:"4500176880",month:"Jul 26",delay:0,quality:99.5,rate:8600}]}
+};
+
+/* documents waiting for approval, with the full commercial header */
+var DOCS=[
+ {doc:"4500178401",kind:"PO",docType:"NB, standard order",trade:"Domestic",incoterm:"DAP, Mumbai plant",
+  supplier:"Aditya Refractories",material:"Refractory bricks, kiln inlet",matno:"SP-2210",plant:"Mumbai",
+  qty:80,uom:"MT",rate:43800,basic:11640000,freight:185000,loading:42000,transport:"Road",
+  items:[
+   {pos:10,matno:"SP-2210",material:"Refractory bricks, kiln inlet",mtart:"ERSA",mtartText:"Spare part",matkl:"REF-01",matklText:"Refractories",qty:80,uom:"MT",rate:43800},
+   {pos:20,matno:"SP-2214",material:"Castable, cooler throat",mtart:"ERSA",mtartText:"Spare part",matkl:"REF-01",matklText:"Refractories",qty:45,uom:"MT",rate:128000},
+   {pos:30,matno:"SP-2231",material:"Insulation bricks",mtart:"ERSA",mtartText:"Spare part",matkl:"REF-02",matklText:"Insulation",qty:60,uom:"MT",rate:39600}],
+  payTerms:"45 days from invoice date",cashDisc:"2 percent if paid within 10 days",rebate:"1.5 percent per quarter above 2 crore",
+  hours:41,level:"Step 2 of 2, final",
+  prev:{name:"A. Deshmukh",level:"Step 1 of 2",when:"3 Sep, 11:40",note:"Rates checked against the last order"},
+  delivery:"22 Sep 2026",reason:"Waiting at the final step",status:"pending"},
+
+ {doc:"4500178342",kind:"PO",docType:"ZIMP, import order",trade:"Import",incoterm:"CIF, Mundra port",
+  supplier:"Oman Mining LLC",material:"Gypsum, imported",matno:"RM-1042",plant:"Pune",
+  qty:560,uom:"MT",rate:8600,basic:4816000,freight:0,loading:120000,transport:"Sea",
+  items:[
+   {pos:10,matno:"RM-1042",material:"Gypsum, imported",mtart:"ROH",mtartText:"Raw material",matkl:"RM-02",matklText:"Minerals",qty:560,uom:"MT",rate:8600}],
+  payTerms:"Letter of credit, 90 days usance",cashDisc:"None",rebate:"None",
+  hours:63,level:"Step 1 of 2",
+  prev:null,
+  vessel:{name:"MV Al Batinah",imo:"9432158",bl:"OMMU2210447",from:"Salalah, Oman",to:"Mundra",
+   pos:"18.2 N, 70.6 E, off Kandla",eta:"16 Sep",port:"4 days for customs and the inland leg",updated:"09:42",
+   source:"AIS vessel feed, outside SAP"},
+  delivery:"18 Sep 2026",reason:"Approver on leave, no stand-in was set",status:"pending"},
+
+ {doc:"1000442190",kind:"PR",docType:"ZP, requisition",trade:"Domestic",incoterm:"Not applicable on a requisition",
+  supplier:"Bharat Bearings",material:"Grinding media, 30mm",matno:"SP-1177",plant:"Nagpur",
+  qty:18,uom:"MT",rate:164000,basic:2952000,freight:28000,loading:9500,transport:"Road",
+  items:[
+   {pos:10,matno:"SP-1177",material:"Grinding media, 30mm",mtart:"ERSA",mtartText:"Spare part",matkl:"SP-14",matklText:"Grinding media",qty:18,uom:"MT",rate:164000}],
+  payTerms:"30 days from invoice date",cashDisc:"1 percent if paid within 7 days",rebate:"None",
+  hours:29,level:"Purchasing step",
+  prev:{name:"K. Raghavan",level:"Cost centre owner",when:"3 Sep, 09:15",note:"Budget confirmed for the quarter"},
+  delivery:"29 Sep 2026",reason:"Waiting for purchasing release",status:"pending"},
+
+ {doc:"4500178266",kind:"PO",docType:"ZSER, service order",trade:"Domestic",incoterm:"Not applicable on services",
+  supplier:"Vindhya Logistics",material:"Clinker movement, Mumbai to Pune",matno:"SV-4400",plant:"Mumbai",
+  qty:790,uom:"TRIP",rate:2360,basic:1864400,freight:0,loading:10600,transport:"Rail",
+  items:[
+   {pos:10,matno:"SV-4400",material:"Clinker movement, Mumbai to Pune",mtart:"DIEN",mtartText:"Service",matkl:"SV-20",matklText:"Freight services",qty:790,uom:"TRIP",rate:2360}],
+  payTerms:"15 days from invoice date",cashDisc:"None",rebate:"2 percent above 4 crore per year",
+  hours:19,level:"Step 1 of 1",
+  prev:{name:"A. Deshmukh",level:"Logistics head",when:"3 Sep, 16:05",note:"Rail rake availability confirmed"},
+  delivery:"Rolling, monthly",reason:"In the queue",status:"pending"},
+
+ {doc:"4500178455",kind:"PO",docType:"NB, standard order",trade:"Domestic",incoterm:"DAP, Nagpur plant",
+  supplier:"Bharat Bearings",material:"Roller bearings, mill",matno:"SP-3090",plant:"Nagpur",
+  qty:48,uom:"NOS",rate:19580,basic:939840,freight:12000,loading:4000,transport:"Road",
+  items:[
+   {pos:10,matno:"SP-3090",material:"Roller bearings, mill",mtart:"ERSA",mtartText:"Spare part",matkl:"SP-11",matklText:"Bearings",qty:48,uom:"NOS",rate:19580}],
+  payTerms:"30 days from invoice date",cashDisc:"1 percent if paid within 7 days",rebate:"None",
+  hours:8,level:"Step 1 of 1",
+  prev:{name:"S. Bose",level:"Maintenance head",when:"4 Sep, 07:50",note:"Replacement due at the next shutdown"},
+  delivery:"12 Oct 2026",reason:"In the queue",status:"pending"}
+];
+
+/* stock, with what each department needs */
+var STOCK=[
+ {material:"Gypsum, imported",code:"RM-1042",plant:"Pune",stock:1180,reorder:2400,safety:900,daily:265,uom:"MT",openPO:0,lead:12,kiln:true,supplier:"Oman Mining LLC",
+  needs:[{dept:"Kiln 1 operations",qty:1600,by:"12 Sep",who:"R. Iyer"},{dept:"Kiln 2 operations",qty:900,by:"18 Sep",who:"S. Bose"},{dept:"Quality lab",qty:20,by:"20 Sep",who:"M. Rao"}]},
+ {material:"Grinding media, 30mm",code:"SP-1177",plant:"Nagpur",stock:22,reorder:60,safety:18,daily:2.4,uom:"MT",openPO:0,lead:21,kiln:false,supplier:"Bharat Bearings",
+  needs:[{dept:"Cement mill 2",qty:40,by:"25 Sep",who:"P. Nair"},{dept:"Maintenance",qty:12,by:"30 Sep",who:"S. Bose"}]},
+ {material:"Refractory bricks",code:"SP-2210",plant:"Mumbai",stock:340,reorder:600,safety:250,daily:41,uom:"NOS",openPO:500,lead:18,kiln:true,supplier:"Aditya Refractories",
+  needs:[{dept:"October kiln shutdown",qty:700,by:"5 Oct",who:"Project team"},{dept:"Routine maintenance",qty:60,by:"22 Sep",who:"S. Bose"}]},
+ {material:"Coal, imported",code:"RM-1201",plant:"Mumbai",stock:14800,reorder:12000,safety:8000,daily:980,uom:"MT",openPO:9000,lead:15,kiln:true,supplier:"Oman Mining LLC",
+  needs:[{dept:"Kiln fuel, Mumbai",qty:22000,by:"28 Sep",who:"R. Iyer"}]},
+ {material:"HDPE bags, 50kg",code:"PK-3301",plant:"Pune",stock:96000,reorder:120000,safety:60000,daily:11500,uom:"NOS",openPO:200000,lead:9,kiln:false,supplier:"Sunfield Packaging",
+  needs:[{dept:"Packing plant",qty:240000,by:"30 Sep",who:"K. Menon"}]},
+ {material:"Fly ash, dry",code:"RM-1088",plant:"Pune",stock:3900,reorder:4200,safety:2000,daily:410,uom:"MT",openPO:6000,lead:6,kiln:true,supplier:"Shreeji Minerals",
+  needs:[{dept:"Blending",qty:8000,by:"25 Sep",who:"R. Iyer"}]}
+];
+
+/* open orders, requests and contracts */
+var OPENPO=[
+ {doc:"4500177012",supplier:"Aditya Refractories",plant:"Mumbai",material:"Castable, cooler",value:3400000,ordered:"12 Aug",due:"26 Aug",got:0,note:"Nothing received, 9 days past the date"},
+ {doc:"4500177388",supplier:"Vindhya Logistics",plant:"Mumbai",material:"Clinker freight",value:1250000,ordered:"20 Aug",due:"02 Sep",got:60,note:"Part delivered, rest still open"},
+ {doc:"4500177501",supplier:"Bharat Bearings",plant:"Nagpur",material:"Roller bearings",value:880000,ordered:"18 Aug",due:"31 Aug",got:0,note:"Vendor asked for two more weeks"},
+ {doc:"4500176880",supplier:"Shreeji Minerals",plant:"Pune",material:"Gypsum",value:5100000,ordered:"02 Aug",due:"14 Aug",got:100,note:"Fully received, invoice not yet booked"},
+ {doc:"4500177744",supplier:"Sunfield Packaging",plant:"Pune",material:"HDPE bags",value:1620000,ordered:"25 Aug",due:"05 Sep",got:0,note:"Within the normal window"},
+ {doc:"4500177900",supplier:"Oman Mining LLC",plant:"Pune",material:"Coal, imported",value:7350000,ordered:"10 Aug",due:"20 Sep",got:0,note:"In transit, vessel due at Mundra"}
+];
+
+var OPENPR=[
+ {doc:"1000442201",dept:"Kiln 1 operations",plant:"Pune",material:"Gypsum",value:4200000,days:6,note:"Released, buyer has not made the order yet"},
+ {doc:"1000442233",dept:"Logistics",plant:"Mumbai",material:"Freight, shutdown spares",value:944000,days:2,note:"Waiting for approval"},
+ {doc:"1000442190",dept:"Cement mill 2",plant:"Nagpur",material:"Grinding media",value:2952000,days:1,note:"Waiting for approval"},
+ {doc:"1000442255",dept:"Maintenance",plant:"Nagpur",material:"Mill liners",value:1780000,days:11,note:"Released 11 days ago, still no order"},
+ {doc:"1000442260",dept:"Packing plant",plant:"Pune",material:"HDPE bags",value:2400000,days:4,note:"Released, buyer working on it"}
+];
+
+var CONTRACTS=[
+ {doc:"4600001155",supplier:"Bharat Bearings",plant:"Nagpur",what:"Bearings and spares",target:24000000,used:0,to:"30 Sep 2026",daysLeft:26},
+ {doc:"4600001199",supplier:"Sunfield Packaging",plant:"Pune",what:"HDPE packing",target:30000000,used:11100000,to:"20 Sep 2026",daysLeft:16},
+ {doc:"4600001120",supplier:"Aditya Refractories",plant:"Mumbai",what:"Refractories",target:65000000,used:59200000,to:"31 Oct 2026",daysLeft:57},
+ {doc:"4600001088",supplier:"Shreeji Minerals",plant:"Pune",what:"Gypsum and fly ash",target:120000000,used:61000000,to:"31 Mar 2027",daysLeft:208},
+ {doc:"4600001102",supplier:"Vindhya Logistics",plant:"Mumbai",what:"Clinker freight",target:48000000,used:32400000,to:"31 Dec 2026",daysLeft:118}
+];
+
+var SITUATIONS=[
+ {id:"S1",sev:"neg",icon:"alert",title:"Sunil is on leave and no stand-in was set",
+  where:"Purchasing, Pune",object:"5 documents",
+  detail:"Five orders worth 1.1 crore stopped behind him. Nothing was technically wrong, the queue simply had nobody in it.",
+  who:"Mr. Sunil Kulkarni is away until 12 Sep. Mr. Anil Deshmukh is his listed deputy.",
+  stuck:"At the first approval step on five documents",
+  call:"Confirm that Anil takes his approvals until the 12th",
+  speakTo:"Mr. Anil Deshmukh",
+  followUp:"Check on 12 Sep that Sunil is back and the stand-in is removed",
+  joined:["Leave record, away until 12 Sep","Workflow substitute table, no deputy active","Five work items at his step, 1.1 crore"],
+  fix:"Move his work to Anil Deshmukh, his listed deputy, until the 12th",auto:true,status:"open"},
+
+ {id:"S2",sev:"neg",icon:"wrench",title:"A Nagpur request never reached anyone",
+  where:"Grinding unit, Nagpur",object:"PR 1000442190",
+  detail:"The request stopped before it started, because the system could not work out who owns cost centre 4100.",
+  who:"Mr. Prakash Nair is waiting for it. Mr. Kiran Raghavan owns the cost centre.",
+  stuck:"Between the request and the first approver",
+  call:"Ask Kiran Raghavan to confirm he is the owner on record",
+  speakTo:"Mr. Kiran Raghavan",
+  followUp:"Ask master data to fix the cost centre owner so it does not repeat",
+  joined:["Requisition 1000442190","Cost centre 4100 owner record","Release strategy, no agent found"],
+  fix:"Send it to Kiran Raghavan, the owner on the cost centre record",auto:true,status:"open"},
+
+ {id:"S3",sev:"neg",icon:"box",title:"Pune will run out of gypsum before the next load lands",
+  where:"Kiln 1 operations, Pune",object:"RM-1042",
+  detail:"Four days of stock, twelve days to bring more in, and three departments need 2,520 MT.",
+  who:"Mr. Prakash Nair raised the demand. Oman Mining LLC supplied the last load.",
+  stuck:"Nothing ordered yet, and the sea leg alone takes twelve days",
+  call:"Approve the order the same day it reaches you",
+  speakTo:"Mr. Anil Deshmukh, buyer for raw materials",
+  followUp:"Check on 15 Sep that the vessel is confirmed",
+  joined:["Stock at Pune, 1180 MT","Demand from three departments, 2520 MT","Import lead time, 12 days"],
+  fix:"Prepare the order now and mark it for same day approval",auto:true,status:"open"},
+
+ {id:"S4",sev:"warn",icon:"file",title:"A contract worth 2.4 crore has never been used",
+  where:"Contracts, Nagpur",object:"4600001155",
+  detail:"The Bharat Bearings spares contract expires in 26 days with nothing bought against it.",
+  who:"Bharat Bearings holds the contract. Mr. Sanjay Bose raises the spares demand.",
+  stuck:"26 days left, no release order placed",
+  call:"Decide whether to use it or let it lapse",
+  speakTo:"Mr. Sanjay Bose",
+  followUp:"Look at it again on 20 Sep, before the last week",
+  joined:["Contract 4600001155, 2.4 crore","Release orders against it, none","Validity, 26 days left"],
+  fix:"Ask the buyer whether to use it or let it lapse",auto:false,status:"open"},
+
+ {id:"S5",sev:"warn",icon:"truck",title:"Aditya Refractories keeps getting later",
+  where:"Vendor management, Mumbai",object:"Aditya Refractories",
+  detail:"They have gone from on time to eleven days late over their last ten orders, and are charging 6.3 percent above contract.",
+  who:"Vendor V-10024. Mr. Anil Deshmukh cleared their last order at step 1.",
+  stuck:"PO 4500178401 for 1.16 crore is waiting with you now",
+  call:"Look at the delivery record before you release the order",
+  speakTo:"Mr. Anil Deshmukh",
+  followUp:"Ask the vendor for a written recovery plan by 20 Sep",
+  joined:["Last ten deliveries, on time to 11 days late","Contract rate 41200 per MT","PO 4500178401 waiting with you"],
+  fix:"Put the record in front of the approver before the 1.16 crore order is released",auto:false,status:"open"},
+
+ {id:"S6",sev:"neg",icon:"file",title:"Nagpur is about to buy grinding media off contract",
+  where:"Contracts and stores, Nagpur",object:"4600001155 with PR 1000442190",
+  detail:"Each part of this looks normal on its own. Together, you are 26 days from losing an agreed rate and about to pay spot price for the same material.",
+  who:"Mr. Rahul Kamat holds the contract. Mr. Sanjay Bose raised the requisition.",
+  stuck:"The requisition is being sourced as a fresh enquiry, not as a release against the contract",
+  call:"Have the requisition converted into a release order on 4600001155",
+  speakTo:"Mr. Rahul Kamat",
+  followUp:"Check on 20 Sep that the release order is placed and the contract is being used",
+  joined:["Contract 4600001155, unused, expires in 26 days","Requisition 1000442190, 18 MT grinding media","Stock at Nagpur, 22 MT against a 60 MT reorder level"],
+  fix:"Convert PR 1000442190 into a release order against contract 4600001155",auto:true,status:"open"}
+];
+
+var TEAMS=[
+ {id:"T1",name:"Procurement desk",lead:"Mr. Anil Deshmukh",people:4,plant:"Pune",phone:"+91 98220 41712",
+  now:"Converting five requisitions into orders and chasing two vendors on late deliveries.",
+  follow:"Requisition 1000442255 has been open eleven days with no order placed.",
+  tasks:9,done:5,mails:3,reply:"4 h",seen:"today 09:20",state:"nudge"},
+ {id:"T2",name:"Raw materials buying",lead:"Mr. Prakash Nair",people:6,plant:"Pune",phone:"+91 98220 41748",
+  now:"Sourcing gypsum and fly ash cover for the next quarter.",
+  follow:"The Pune gypsum order is still not placed and stock covers four days.",
+  tasks:7,done:3,mails:4,reply:"1 day",seen:"yesterday 18:10",state:"nudge"},
+ {id:"T3",name:"Spares and refractories",lead:"Mr. Sanjay Bose",people:5,plant:"Mumbai",phone:"+91 98330 22194",
+  now:"Closing the shutdown spares list for the kiln inlet.",
+  follow:"Confirm the delivery date on PO 4500178401 before the shutdown window.",
+  tasks:6,done:5,mails:1,reply:"2 h",seen:"today 08:40",state:"ok"},
+ {id:"T4",name:"Logistics and freight",lead:"Mr. Kiran Raghavan",people:8,plant:"Mumbai",phone:"+91 98330 22107",
+  now:"Booking rakes for clinker movement from Mumbai to Pune.",
+  follow:"Next week's rake plan is not confirmed with the railway.",
+  tasks:5,done:4,mails:1,reply:"3 h",seen:"today 10:05",state:"ok"},
+ {id:"T5",name:"Packing materials",lead:"Ms. Meera Joshi",people:3,plant:"Pune",phone:"+91 98220 41766",
+  now:"Building HDPE bag cover for the festive dispatch peak.",
+  follow:"Bag stock at Pune is below the reorder level with 200000 on order.",
+  tasks:4,done:4,mails:0,reply:"2 h",seen:"today 09:55",state:"ok"},
+ {id:"T6",name:"Stores and receiving",lead:"Mr. Sunil Kulkarni",people:22,plant:"Nagpur",phone:"+91 97660 30188",
+  now:"Running with a stand-in while Sunil is on leave until 12 Sep.",
+  follow:"Five approvals worth 1.1 crore are still queued behind him.",
+  tasks:8,done:2,mails:5,reply:"5 days",seen:"2 Sep 17:40",state:"nudge"},
+ {id:"T7",name:"Contracts and vendor master",lead:"Mr. Rahul Kamat",people:4,plant:"Pune",phone:"+91 98220 41729",
+  now:"Renewing the bearings and packing contracts for the year.",
+  follow:"Contract 4600001155 worth 2.4 crore expires in 26 days with nothing used.",
+  tasks:3,done:2,mails:2,reply:"1 day",seen:"yesterday 16:20",state:"nudge"}
+];
+
+/* ================= STATE ================= */
+var state={tab:"overview",detail:null,plant:"all",notif:2,theme:"light",chat:[],
+ saved:{min:21},
+ actions:[{t:"08:05",what:"Checked every order, material and contract for you",min:15},
+          {t:"08:02",what:"Sent your 08:00 summary to your mail",min:6}],
+ fixed:{},libFilter:"All"};
+function act(what,mins){ state.saved.min+=mins; state.actions.unshift({t:now(),what:what,min:mins}); }
+
+/* ================= HELPERS ================= */
+function inr(v){ if(v>=10000000) return "\u20B9"+(v/10000000).toFixed(2)+" cr"; if(v>=100000) return "\u20B9"+(v/100000).toFixed(1)+" L"; return "\u20B9"+Math.round(v).toLocaleString("en-IN"); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function d1(n){ return Math.round(n*10)/10; }
+function pad(n){ return (n<10?"0":"")+n; }
+function now(){ var d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function plural(n,w,wp){ return n+" "+(n===1?w:(wp||w+"s")); }
+function initials(n){ var p=String(n).replace(/[.,]/g,"").split(/\s+/).filter(Boolean); return ((p[0]||"?").charAt(0)+(p[1]?p[1].charAt(0):"")).toUpperCase(); }
+function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function col(b){ return b==="neg"?cv("--neg"):b==="warn"?cv("--warn"):b==="pos"?cv("--pos"):cv("--primary"); }
+function byPlant(a){ return state.plant==="all"?a:a.filter(function(x){ return x.plant===state.plant; }); }
+function doc(id){ for(var i=0;i<DOCS.length;i++) if(DOCS[i].doc===id) return DOCS[i]; return null; }
+function pending(){ return byPlant(DOCS).filter(function(d){ return d.status==="pending"; }); }
+function total(d){ return d.basic + (d.freight||0) + (d.loading||0); }
+function items(d){ return d.items || [{pos:10,matno:d.matno,material:d.material,mtart:"",mtartText:"",matkl:"",matklText:"",qty:d.qty,uom:d.uom,rate:d.rate}]; }
+function itemValue(it){ return it.qty*it.rate; }
+function stockOf(d){ var m=null; STOCK.forEach(function(x){ if(x.code===d.matno) m=x; }); return m; }
+function contractOf(d){ var c=null; CONTRACTS.forEach(function(x){ if(x.supplier===d.supplier) c=x; }); return c; }
+function consequence(d,s){
+ var st=stockOf(d), c=contractOf(d), vs=s.vs, amt=Math.round(d.basic*vs/100), cover=st?Math.floor(st.stock/st.daily):null;
+ var yes="Goods are due "+d.delivery+". "+(vs>0
+  ? "The rate is "+vs+" percent above contract, "+inr(amt)+" more than the agreed price on this order"+
+    (c? ", and about "+inr(Math.round(c.target*vs/100))+" across the full "+inr(c.target)+" contract if every order goes at this rate." : ".")
+  : "The rate is at or below the contract rate, so nothing is lost on price.");
+ var no=st
+  ? "A re-quote takes about a week and the lead time is "+st.lead+" days, so the material would land roughly "+(7+st.lead)+
+    " days from now. "+d.plant+" has "+cover+" days of cover on "+st.material+" at today's use."
+  : "A re-quote takes about a week. There is no stock buffer on this one, so the "+String(d.material).toLowerCase()+" schedule moves with it.";
+ return {yes:yes,no:no};
+}
+function openSits(){ return SITUATIONS.filter(function(s){ return s.status==="open"; }); }
+
+/* supplier standing: SAP score, adjusted for trend and rate */
+function score(name){
+ var s=SUPPLIERS[name]; if(!s) return null;
+ var h=s.history,n=h.length;
+ var onTime=h.filter(function(x){return x.delay<=0;}).length;
+ var avgDelay=h.reduce(function(a,x){return a+Math.max(0,x.delay);},0)/n;
+ var avgQ=h.reduce(function(a,x){return a+x.quality;},0)/n;
+ var last=h[n-1].rate, vs=(last-s.contract)/s.contract*100;
+ var rec=h.slice(-3).reduce(function(a,x){return a+Math.max(0,x.delay);},0)/3;
+ var ear=h.slice(0,3).reduce(function(a,x){return a+Math.max(0,x.delay);},0)/3;
+ var worse=rec>ear+1, pen=(worse?14:0)+Math.round(Math.max(0,vs)*1.1);
+ var t=Math.max(0,s.sapScore-pen);
+ return {name:name,code:s.code,gst:s.gst,iec:s.iec,city:s.city,uom:s.uom,cat:s.cat,contract:s.contract,history:h,
+  sapScore:s.sapScore,pen:pen,total:t,onTimePct:Math.round(onTime/n*100),avgDelay:d1(avgDelay),avgQuality:d1(avgQ),
+  lastRate:last,vs:d1(vs),recent:d1(rec),earlier:d1(ear),trend:worse?"getting worse":(rec<ear-1?"improving":"steady"),
+  band:t>=80?"pos":t>=60?"warn":"neg",bandText:t>=80?"Good":t>=60?"Watch":"Problem"};
+}
+
+/* stock priority from real demand */
+function stockRow(m){
+ var need=m.needs.reduce(function(a,x){return a+x.qty;},0);
+ var have=m.stock+m.openPO;
+ var gap=need-have;
+ var cover=m.daily>0?have/m.daily:99;
+ var risky=cover<m.lead;
+ var urgency=(gap>0?60:0)+(risky?25:0)+(m.kiln?10:0)+Math.max(0,Math.round((1-cover/Math.max(m.lead,1))*20));
+ return {m:m,need:need,have:have,gap:gap,cover:d1(cover),risky:risky,urgency:urgency,
+  band:gap>0?"neg":risky?"warn":"pos",
+  firstBy:m.needs.slice().sort(function(a,b){return a.qty<b.qty?1:-1;})[0].by};
+}
+function stockRanked(){
+ return byPlant(STOCK).map(stockRow).sort(function(a,b){ return b.urgency-a.urgency; });
+}
+function shortList(){ return stockRanked().filter(function(r){ return r.gap>0 || r.risky; }); }
+
+/* ================= CHARTS ================= */
+function uid(){ return "g"+Math.random().toString(36).slice(2,9); }
+function spark(v,c,w,h){ w=w||96;h=h||40;
+ var mn=Math.min.apply(null,v),mx=Math.max.apply(null,v),rg=(mx-mn)||1,id=uid();
+ var p=v.map(function(x,i){ return [(i/(v.length-1))*w,h-4-((x-mn)/rg)*(h-12)]; });
+ var l=p.map(function(q,i){ return (i?"L":"M")+d1(q[0])+" "+d1(q[1]); }).join(" ");
+ return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1">'+
+  '<stop offset="0" stop-color="'+c+'" stop-opacity=".35"/><stop offset="1" stop-color="'+c+'" stop-opacity="0"/></linearGradient></defs>'+
+  '<path d="'+l+' L'+w+' '+h+' L0 '+h+' Z" fill="url(#'+id+')"/><path d="'+l+'" fill="none" stroke="'+c+'" stroke-width="1.8"/></svg>'; }
+function bars(v,o){ o=o||{}; var w=240,h=92,left=4,gap=3;
+ var mx=Math.max.apply(null,v.concat([1])),mn=Math.min.apply(null,v.concat([0])),rg=(mx-mn)||1,n=v.length,bw=(w-left*2)/n-gap;
+ var z=h-14-((0-mn)/rg)*(h-26);
+ var s='<svg viewBox="0 0 '+w+' '+h+'" width="100%" preserveAspectRatio="none"><line x1="0" y1="'+d1(z)+'" x2="'+w+'" y2="'+d1(z)+'" stroke="'+cv("--border-2")+'"/>';
+ v.forEach(function(x,i){ var y=h-14-((x-mn)/rg)*(h-26),t=Math.min(y,z),ht=Math.max(2.5,Math.abs(z-y));
+  var c=x<=0?cv("--pos"):(x>(o.limit||3)?cv("--neg"):cv("--warn"));
+  s+='<rect x="'+d1(left+i*((w-left*2)/n))+'" y="'+d1(t)+'" width="'+d1(bw)+'" height="'+d1(ht)+'" rx="2.5" fill="'+c+'"/>'; });
+ return s+'<text x="2" y="'+(h-2)+'" font-size="9" fill="'+cv("--ink-3")+'">10 orders ago</text><text x="'+(w-2)+'" y="'+(h-2)+'" text-anchor="end" font-size="9" fill="'+cv("--ink-3")+'">latest</text></svg>'; }
+function line(v,o){ o=o||{}; var w=240,h=92,id=uid(),n=v.length;
+ var mx=Math.max.apply(null,v),mn=Math.min.apply(null,v);
+ if(o.ref!==undefined){ mx=Math.max(mx,o.ref); mn=Math.min(mn,o.ref); }
+ var p2=(mx-mn)*0.18||1; mx+=p2; mn-=p2; var rg=(mx-mn)||1;
+ var p=v.map(function(x,i){ return [(i/(n-1))*(w-14)+7,h-14-((x-mn)/rg)*(h-28)]; });
+ var l=p.map(function(q,i){ return (i?"L":"M")+d1(q[0])+" "+d1(q[1]); }).join(" ");
+ var c=o.color||cv("--primary");
+ var s='<svg viewBox="0 0 '+w+' '+h+'" width="100%" preserveAspectRatio="none"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1">'+
+  '<stop offset="0" stop-color="'+c+'" stop-opacity=".28"/><stop offset="1" stop-color="'+c+'" stop-opacity="0"/></linearGradient></defs>';
+ if(o.ref!==undefined){ var ry=h-14-((o.ref-mn)/rg)*(h-28);
+  s+='<line x1="0" y1="'+d1(ry)+'" x2="'+w+'" y2="'+d1(ry)+'" stroke="'+cv("--ink-3")+'" stroke-dasharray="4 3"/><text x="3" y="'+d1(ry-4)+'" font-size="8.5" fill="'+cv("--ink-3")+'">contract rate</text>'; }
+ s+='<path d="'+l+' L'+d1(p[n-1][0])+' '+h+' L'+d1(p[0][0])+' '+h+' Z" fill="url(#'+id+')"/>';
+ s+='<path d="'+l+'" fill="none" stroke="'+c+'" stroke-width="2"/><circle cx="'+d1(p[n-1][0])+'" cy="'+d1(p[n-1][1])+'" r="3.4" fill="'+c+'" stroke="'+cv("--surface")+'" stroke-width="1.6"/></svg>';
+ return s; }
+function donut(pct,c,size,label,sub,sw){ size=size||96; var w=sw||8, r=(sw? size/2-sw/2-1 : size/2-8),cc=2*Math.PI*r,off=cc*(1-Math.max(0,Math.min(1,pct)));
+ return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">'+
+  '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="currentColor" stroke-opacity=".22" stroke-width="'+w+'"/>'+
+  '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round" stroke-dasharray="'+d1(cc)+'" stroke-dashoffset="'+d1(off)+'" transform="rotate(-90 '+size/2+' '+size/2+')"/>'+
+  (label?'<text x="'+size/2+'" y="'+(size/2+2)+'" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">'+label+'</text>':'')+
+  (sub?'<text x="'+size/2+'" y="'+(size/2+16)+'" text-anchor="middle" font-size="9" fill="currentColor" fill-opacity=".7">'+sub+'</text>':'')+'</svg>'; }
+function bar(p,c){ return '<div class="bar"><span style="width:'+Math.max(3,Math.min(100,p))+'%;background:'+c+'"></span></div>'; }
+
+/* ================= NAV ================= */
+var TABS=[
+ {k:"overview",n:"Overview",i:"chart"},
+ {k:"approvals",n:"Waiting for approval",i:"doc",c:function(){ return pending().length; }},
+ {k:"stock",n:"Stock risk",i:"box",c:function(){ return shortList().length; }},
+ {k:"open",n:"Open orders and contracts",i:"file",c:function(){ return contractFlags().length; }},
+ {k:"suppliers",n:"Vendors",i:"truck"},
+ {k:"team",n:"Team performance",i:"people",c:function(){ return byPlant(TEAMS).filter(function(t){ return t.state==="nudge"; }).length; }},
+ {k:"situations",n:"Problems found",i:"alert",c:function(){ return openSits().length; }},
+ {k:"email",n:"Approval by email",i:"mail"}
+];
+function renderNav(){
+ document.getElementById("nav").innerHTML=TABS.map(function(t){
+  var c=t.c?t.c():0;
+  return '<button class="navb" role="tab" data-tab="'+t.k+'" aria-selected="'+(state.tab===t.k)+'">'+ic(t.i,15)+t.n+(c?'<span class="cnt n">'+c+'</span>':'')+'</button>';
+ }).join("");
+ Array.prototype.forEach.call(document.querySelectorAll(".navb"),function(b){
+  b.addEventListener("click",function(){ state.tab=b.getAttribute("data-tab"); state.detail=null; window.scrollTo(0,0); render(); });
+ });
+ document.getElementById("notif").textContent=state.notif;
+ document.getElementById("notif").style.display=state.notif?"block":"none";
+}
+
+/* ================= BUILDERS ================= */
+function tile(o){ return '<button class="tile" data-go="'+o.go+'">'+spark(o.trend,col(o.cls==="mut"?"pri":o.cls))+
+ '<span class="ico bg-'+(o.cls==="mut"?"pri":o.cls)+'">'+ic(o.icon,16)+'</span><div class="cap">'+o.label+'</div>'+
+ '<div class="v n">'+o.value+(o.unit?'<small>'+o.unit+'</small>':'')+'</div><div class="s n">'+o.sub+'</div>'+
+ '<div class="st '+o.cls+'"><span class="pill"></span>'+o.foot+'</div></button>'; }
+function card(o){ return '<section class="card '+o.span+'"><div class="chd"><span class="ico bg-'+(o.tone||"pri")+'">'+ic(o.icon,16)+'</span>'+
+ '<div><h2>'+o.title+'</h2><div class="cs">'+o.sub+'</div></div>'+(o.action?'<button class="act" data-go="'+o.actionGo+'">'+o.action+'</button>':'')+
+ '</div><div class="cbd'+(o.flush?" flush":"")+'">'+o.body+'</div></section>'; }
+function banner(k,i,h){ return '<div class="banner '+k+'"><span class="ico bg-'+(k==="err"?"neg":k==="warn"?"warn":k==="ok"?"pos":"pri")+'">'+ic(i,14)+'</span><div>'+h+'</div></div>'; }
+function tradeChip(d){ return d.trade==="Import" ? '<span class="chipx pri">Import</span>' : '<span class="chipx mut">Domestic</span>'; }
+function statusChip(d){ if(d.status==="approved") return '<span class="chipx pos">'+ic("check",12)+' Approved</span>';
+ if(d.status==="rejected") return '<span class="chipx neg">Sent back</span>'; return '<span class="chipx warn">'+ic("clock",12)+' Waiting</span>'; }
+function contractRow(c){
+ var pct=Math.round(c.used/c.target*100);
+ var flag = c.used===0 ? "unused" : (c.daysLeft<=30 ? "expiring" : (pct>=90 ? "nearly used" : "ok"));
+ return {c:c,pct:pct,left:c.target-c.used,flag:flag,
+  band: flag==="unused"?"neg":flag==="expiring"?"warn":flag==="nearly used"?"warn":"pos"};
+}
+function contractFlags(){ return byPlant(CONTRACTS).map(contractRow).filter(function(r){ return r.flag!=="ok"; }); }
+
+/* ================= VIEWS ================= */
+function vOverview(){
+ var pend=pending(), short=shortList(), po=byPlant(OPENPO), pr=byPlant(OPENPR), cf=contractFlags();
+ var value=pend.reduce(function(a,d){ return a+total(d); },0);
+ var poVal=po.reduce(function(a,x){ return a+x.value; },0);
+ var prVal=pr.reduce(function(a,x){ return a+x.value; },0);
+ var worst=short[0];
+ var unusedC=cf.filter(function(r){ return r.flag==="unused"; })[0];
+
+ var h='<section class="hero"><div class="hero-in"><div>'+
+  '<span class="live"><span class="pulse"></span>Checked at 8:00 this morning</span>'+
+  '<h1>'+greet()+', '+firstName()+'. '+(pend.length? plural(pend.length,"order")+' waiting for you':'Nothing is waiting for you')+(state.plant==="all"?"":" at "+state.plant)+'</h1>'+
+  '<p class="lede">'+(pend.length? inr(value)+' is waiting for you to approve. ':'')+
+  (short.length? plural(short.length,"material")+' will run short. '+worst.m.material+' at '+worst.m.plant+' runs out first. ':'Every plant has enough stock. ')+
+  (cf.length? cf.length+(cf.length===1?' contract needs':' contracts need')+' a look'+(unusedC?', one of '+inr(unusedC.c.target)+' never used.':'.') : 'All contracts are fine.')+'</p>'+
+  '<div class="hchips">'+pend.slice(0,3).map(function(d,i){
+   return '<button class="hchip'+(i===0?" hot":"")+'" data-doc="'+d.doc+'"><span class="r">'+(i+1)+'</span>'+
+    '<span><span class="t">'+d.kind+' '+d.doc+', '+inr(total(d))+'</span><span class="s">'+esc(d.supplier)+', '+d.trade.toLowerCase()+', waiting '+d.hours+' h</span></span></button>';
+  }).join("")+'</div></div>'+
+  '<button class="ring saved" data-log="1"><span style="color:#fff">'+donut(Math.min(1,state.saved.min/90),"#4FE0B0",104,state.saved.min,"min saved")+'</span>'+
+  '<div><div class="big n">'+plural(state.actions.length,"action")+'</div>'+
+  '<div class="cap">done from here today instead of in SAP</div>'+
+  '<span class="ringcta">See everything you did</span></div></button></div></section>';
+
+ h+='<div class="tiles">'+
+  tile({go:"approvals",icon:"doc",label:"Waiting for approval",value:pend.length,sub:inr(value),cls:pend.filter(function(d){return d.hours>24;}).length?"neg":"pos",
+   foot:pend.filter(function(d){return d.hours>24;}).length+" over a day old",trend:[3,4,4,5,4,6,5]})+
+  tile({go:"stock",icon:"box",label:"Materials short",value:short.length,sub:short.length?"first need by "+short[0].firstBy:"none",cls:short.length?"neg":"pos",
+   foot:short.length?"less than what plants asked for":"all covered",trend:[1,1,2,2,2,3,2]})+
+  tile({go:"open",icon:"truck",label:"Ordered, not received",value:po.length,sub:inr(poVal),cls:"warn",foot:po.filter(function(x){return x.got<100;}).length+" still open",trend:[5,5,6,6,6,7,6]})+
+  tile({go:"open",icon:"file",label:"Requests not yet ordered",value:pr.length,sub:inr(prVal),cls:"warn",foot:"buyers have not converted them",trend:[3,4,4,5,5,5,5]})+
+  tile({go:"open",icon:"file",label:"Contracts to look at",value:cf.length,sub:"unused or expiring",cls:"neg",foot:"one has never been used",trend:[1,1,2,2,2,3,3]})+
+  tile({go:"situations",icon:"alert",label:"Problems found",value:openSits().length,sub:"already checked for you",cls:"warn",
+   foot:openSits().filter(function(s){return s.auto;}).length+" I can fix",trend:[2,3,3,4,4,5,5]})+
+ '</div><div class="grid">';
+
+ h+=card({span:"c7",icon:"doc",tone:"warn",title:"Waiting for your approval",sub:"the header details you need to decide",flush:true,
+  body:'<table><thead><tr><th>Order</th><th>Type</th><th>Vendor</th><th class="rt">Total value</th><th>Waiting</th><th>Approved before by</th></tr></thead><tbody>'+
+   pend.slice().sort(function(a,b){return b.hours-a.hours;}).map(function(d){
+    return '<tr data-doc="'+d.doc+'"><td><b>'+d.kind+' '+d.doc+'</b><div class="sub">'+esc(d.material)+', '+esc(d.matno)+', '+d.plant+'</div></td>'+
+     '<td>'+tradeChip(d)+'<div class="sub">'+esc(d.docType.split(",")[0])+'</div></td>'+
+     '<td>'+esc(d.supplier)+'</td><td class="rt n"><b>'+inr(total(d))+'</b></td>'+
+     '<td><span class="chipx '+(d.hours>48?"neg":d.hours>24?"warn":"mut")+'">'+d.hours+' h</span></td>'+
+     '<td class="sub">'+(d.prev?esc(d.prev.name)+'<br>'+esc(d.prev.when):"You are the first")+'</td></tr>';
+   }).join("")+'</tbody></table>'});
+
+ h+=card({span:"c5",icon:"box",tone:short.length?"neg":"pos",title:"Stock against what plants asked for",sub:"most urgent first",flush:true,
+  body:stockRanked().slice(0,5).map(function(r,i){
+   return '<div class="row"><span class="prio bg-'+r.band+'">'+(i+1)+'</span><span style="flex:1">'+
+    '<span class="t1">'+esc(r.m.material)+', '+r.m.plant+'</span>'+
+    '<span class="t2">'+r.m.needs.length+' departments asked for '+r.need.toLocaleString("en-IN")+' '+r.m.uom+
+    ', we have '+r.have.toLocaleString("en-IN")+'</span>'+bar(Math.min(100,r.have/r.need*100),col(r.band))+'</span>'+
+    '<span class="rt">'+(r.gap>0?'<span class="chipx neg">short '+r.gap.toLocaleString("en-IN")+'</span>':'<span class="chipx pos">covered</span>')+
+    '<div class="t3" style="margin-top:6px">'+r.cover+' days left</div></span></div>';
+  }).join("")});
+ return h+'</div>';
+}
+
+function vApprovals(){
+ if(state.detail) return vDetail(doc(state.detail));
+ var pend=byPlant(DOCS);
+ var h=banner("info","eye","Open any order to see the full header: value, vendor and GST, payment terms, freight and loading, transport, discounts and rebate, incoterms, and who approved it before you.");
+ h+='<section class="card c12"><div class="cbd flush"><table><thead><tr>'+
+  '<th>Order</th><th>Document type</th><th>Domestic or import</th><th>Vendor</th><th>Plant</th><th class="rt">Total value</th>'+
+  '<th>Transport</th><th>Waiting</th><th>Approved before by</th><th>Status</th></tr></thead><tbody>'+
+  pend.map(function(d){
+   return '<tr data-doc="'+d.doc+'"><td><b>'+d.kind+' '+d.doc+'</b><div class="sub">'+esc(d.material)+', '+esc(d.matno)+'</div></td>'+
+    '<td class="sub">'+esc(d.docType)+'</td><td>'+tradeChip(d)+'<div class="sub">'+esc(d.incoterm.split(",")[0])+'</div></td>'+
+    '<td>'+esc(d.supplier)+'</td><td>'+d.plant+'</td><td class="rt n"><b>'+inr(total(d))+'</b></td>'+
+    '<td class="sub">'+d.transport+'</td>'+
+    '<td><span class="chipx '+(d.hours>48?"neg":d.hours>24?"warn":"mut")+'">'+d.hours+' h</span></td>'+
+    '<td class="sub">'+(d.prev?esc(d.prev.name):"first step")+'</td><td>'+statusChip(d)+'</td></tr>';
+  }).join("")+'</tbody></table></div></section>';
+ return h;
+}
+
+function vDetail(d){
+ if(!d) return banner("err","alert","Order not found.");
+ var s=score(d.supplier);
+ var h='<section class="ohero"><div class="ohero-in">'+
+  '<button class="oback" data-go="approvals">'+ic("back",14)+'Back to the list</button>'+
+  '<div class="otitle"><span class="oav">'+initials(d.supplier)+'</span>'+
+  '<div><h1>'+d.kind+' '+d.doc+'</h1><div class="os">'+esc(d.material)+' &middot; '+esc(d.supplier)+' &middot; '+d.plant+' plant &middot; '+esc(d.docType)+'</div></div>'+
+  '<span style="margin-left:auto">'+statusChip(d)+'</span></div>'+
+  '<div class="facets">'+
+   facet("Total value",inr(total(d)))+facet(items(d).length>1?"Items":"Quantity",items(d).length>1?items(d).length+" lines":d.qty+" "+d.uom)+facet("Rate",items(d).length>1?"per item below":"\u20B9"+d.rate.toLocaleString("en-IN"))+
+   facet("Type",d.trade)+facet("Transport",d.transport)+facet("Delivery",d.delivery)+facet("Waiting",d.hours+" h")+
+  '</div></div></section>';
+
+ h+=banner(s.band==="neg"?"err":s.band==="warn"?"warn":"ok","spark","<b>Before you approve.</b> "+advice(d,s));
+
+ h+='<div class="grid">';
+ if(d.status==="pending"){ var cq=consequence(d,s);
+  h+=card({span:"c12",icon:"spark",tone:"warn",title:"What happens either way",sub:"the same decision, priced both ways",
+   body:'<div class="conseq">'+
+    '<div class="cq yes"><div class="cqh">'+ic("check",13)+'If you approve</div><div class="cqt">'+cq.yes+'</div></div>'+
+    '<div class="cq no"><div class="cqh">'+ic("back",13)+'If you send it back</div><div class="cqt">'+cq.no+'</div></div>'+
+   '</div>'});
+ }
+ h+=card({span:"c7",icon:"doc",tone:"pri",title:"Order header",sub:"everything you need in one place",
+  body:'<div class="terms">'+
+   '<div>'+
+    trow("Order number",d.kind+" "+d.doc)+
+    trow("Document type",d.docType)+
+    trow("Domestic or import",d.trade)+
+    trow("Incoterm",d.incoterm)+
+    trow("Mode of transport",d.transport)+
+    trow("Delivery date",d.delivery)+
+    trow("Plant",d.plant)+
+   '</div><div>'+
+    trow("Vendor",d.supplier+" ("+s.code+"), "+s.city)+
+    trow("GST number",s.gst+(s.iec?", "+s.iec:""))+
+    trow("Payment terms",d.payTerms)+
+    trow("Cash discount",d.cashDisc)+
+    trow("Supplier rebate",d.rebate)+
+    trow("Vendor standing",s.total+" out of 100, "+s.bandText.toLowerCase())+
+    trow("Contract rate","\u20B9"+s.contract.toLocaleString("en-IN")+" per "+s.uom+", this order is "+(d.rate>s.contract?"+":"")+d1((d.rate-s.contract)/s.contract*100)+"%")+
+   '</div></div>'+
+   '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">'+
+   '<div class="terms"><div>'+
+    trow("Basic value",inr(d.basic))+
+    trow("Freight charges",d.freight?inr(d.freight):(d.trade==="Import"?"Included in CIF price":"Not applicable"))+
+   '</div><div>'+
+    trow("Loading charges",d.loading?inr(d.loading):"Not applicable")+
+    trow("Total payable",inr(total(d)),true)+
+   '</div></div></div>'});
+
+ h+=card({span:"c5",icon:"people",tone:"pri",title:"Who has approved so far",sub:"and who it is with now",
+  body:(d.prev
+    ? '<div class="stepline"><span class="sd bg-pos">'+ic("check",13)+'</span><div><div class="s1">'+esc(d.prev.name)+'</div>'+
+      '<div class="s2">'+esc(d.prev.level)+', approved '+esc(d.prev.when)+'</div>'+
+      '<div class="s2" style="font-style:italic">"'+esc(d.prev.note)+'"</div></div></div>'
+    : '<div class="stepline"><span class="sd bg-pri">1</span><div><div class="s1">No one yet</div>'+
+      '<div class="s2">You are the first approval on this order</div></div></div>')+
+   (d.status==="pending"
+    ? '<div class="stepline"><span class="sd bg-warn">'+ic("clock",13)+'</span><div><div class="s1">'+esc(APPROVER_NAME)+' (you), now</div>'+
+      '<div class="s2">'+esc(d.level)+', waiting '+d.hours+' hours</div><div class="s2">'+esc(d.reason)+'</div></div></div>'
+    : '<div class="stepline"><span class="sd bg-'+(d.status==="approved"?"pos":"neg")+'">'+ic(d.status==="approved"?"check":"alert",13)+'</span><div>'+
+      '<div class="s1">'+esc(APPROVER_NAME)+' (you)</div>'+
+      '<div class="s2">'+esc(d.level)+', '+(d.status==="approved"?"approved":"sent back")+' at '+esc(d.actedAt||now())+'</div></div></div>')+
+   '<div class="flagline">'+ic("shield",14)+'Approved under your own name, as if you had done it in SAP.</div>'});
+
+ if(d.vessel){ var vst=stockOf(d), vcov=vst?Math.floor(vst.stock/vst.daily):null;
+  h+=card({span:"c12",icon:"truck",tone:"warn",title:"Where the shipment is",sub:"live position, not a note somebody typed",
+   body:'<div class="terms"><div>'+
+    trow("Vessel",d.vessel.name+", IMO "+d.vessel.imo)+
+    trow("Bill of lading",d.vessel.bl)+
+    trow("Route",d.vessel.from+" to "+d.vessel.to)+
+   '</div><div>'+
+    trow("Position now",d.vessel.pos)+
+    trow("ETA "+d.vessel.to,d.vessel.eta+", against "+d.delivery+" on the order")+
+    trow("After it lands",d.vessel.port)+
+   '</div></div>'+
+   (vst? '<div class="cq no" style="margin-top:14px"><div class="cqh">'+ic("alert",13)+'What this means</div>'+
+    '<div class="cqt">The load reaches '+d.plant+' around 20 Sep. '+d.plant+' has '+vcov+' days of cover on '+esc(vst.material)+
+    ' at today\'s use, so the gap is real and the order cannot wait for the next approval round.</div></div>':'')+
+   '<div class="feed"><span class="outside">Outside SAP</span>'+esc(d.vessel.source)+', as of '+esc(d.vessel.updated)+' today. SAP holds the order, not the ship.</div>'});
+ }
+ h+=card({span:"c12",icon:"box",tone:"pri",title:"Items on this order",sub:items(d).length+" line"+(items(d).length===1?"":"s")+", with material type and material group",flush:true,
+  body:'<table><thead><tr><th>Item</th><th>Material</th><th>Material number</th><th>Material type</th><th>Material group</th>'+
+   '<th class="rt">Quantity</th><th class="rt">Rate</th><th class="rt">Value</th></tr></thead><tbody>'+
+   items(d).map(function(it){
+    return '<tr><td class="n">'+it.pos+'</td><td><b>'+esc(it.material)+'</b></td><td class="n">'+esc(it.matno)+'</td>'+
+     '<td>'+(it.mtart?'<span class="chipx mut">'+esc(it.mtart)+'</span><div class="sub">'+esc(it.mtartText)+'</div>':'<span class="sub">not maintained</span>')+'</td>'+
+     '<td>'+(it.matkl?esc(it.matkl)+'<div class="sub">'+esc(it.matklText)+'</div>':'<span class="sub">not maintained</span>')+'</td>'+
+     '<td class="rt n">'+it.qty.toLocaleString("en-IN")+' '+it.uom+'</td>'+
+     '<td class="rt n">\u20B9'+it.rate.toLocaleString("en-IN")+'</td>'+
+     '<td class="rt n"><b>'+inr(itemValue(it))+'</b></td></tr>';
+   }).join("")+
+   '<tr><td></td><td colspan="6"><b>Basic value, all items</b><div class="sub">freight and loading are shown in the order header</div></td>'+
+   '<td class="rt n"><b>'+inr(d.basic)+'</b></td></tr>'+
+   '</tbody></table>'});
+
+ h+=card({span:"c12",icon:"truck",tone:s.band,title:"How this vendor has performed",sub:"their last ten orders with us",
+  body:charts(s)});
+ h+='</div>';
+
+ if(d.status==="pending"){
+  h+='<div class="footerbar"><span style="font-size:12.5px;color:var(--ink-3)">'+ic("shield",13)+' Approving as '+esc(APPROVER_NAME)+'</span>'+
+   '<span style="flex:1"></span><button class="btn q" data-mail="'+d.doc+'">'+ic("mail",13)+' Send to my mail</button>'+
+   '<button class="btn rej" data-reject="'+d.doc+'">Send back</button>'+
+   '<button class="btn emph" data-approve="'+d.doc+'">'+ic("check",13)+' Approve</button></div>';
+ }
+ return h;
+}
+function trow(k,v,strong){ return '<div class="trow"><span class="tk">'+k+'</span><span class="tv'+(strong?"":"")+'" style="'+(strong?"font-size:15px":"")+'">'+esc(v)+'</span></div>'; }
+function facet(l,v){ return '<div class="facet"><div class="fl">'+l+'</div><div class="fv n">'+v+'</div></div>'; }
+
+function advice(d,s){
+ var extra = d.trade==="Import" ? " This is an import order on "+d.incoterm.split(",")[0]+" terms, so the price includes freight to the port and the loading charge is ours." : "";
+ if(s.band==="pos") return esc(s.name)+" delivers on time "+s.onTimePct+" percent of the time and the rate matches contract. Nothing here needs a second look."+extra;
+ if(s.band==="warn") return esc(s.name)+" is on average "+s.avgDelay+" days late. Approve, but ask the buyer to add a delivery condition before the order goes out."+extra;
+ return esc(s.name)+" has gone from "+s.earlier+" days late to "+s.recent+" days late over their last ten orders, and is charging "+s.vs+
+  " percent above the contract rate, which is "+inr(d.basic*s.vs/100)+" on this order. Approve the quantity if you must, but get the rate fixed and a firm date first."+extra;
+}
+function charts(s){
+ return '<div class="c3grid">'+
+  cbox("truck","Delivery",s.onTimePct+" percent on time, "+s.avgDelay+" days late on average",bars(s.history.map(function(x){return x.delay;}),{limit:3}),
+   s.trend==="getting worse"?"neg":"pos",s.earlier+" days before, "+s.recent+" days now")+
+  cbox("check","Quality",s.avgQuality+" percent accepted",line(s.history.map(function(x){return x.quality;}),{color:cv("--pos")}),
+   s.avgQuality<97?"warn":"pos","last load "+s.history[s.history.length-1].quality+" percent")+
+  cbox("chart","Rate","\u20B9"+s.lastRate.toLocaleString("en-IN")+" per "+s.uom,
+   line(s.history.map(function(x){return x.rate;}),{color:s.vs>0?cv("--neg"):cv("--primary"),ref:s.contract}),
+   s.vs>0?"neg":"pos",(s.vs>0?"+":"")+s.vs+" percent against contract")+'</div>';
+}
+function cbox(i,t,sub,svg,cls,foot){ return '<div class="cbox"><div class="ct">'+ic(i,13)+t+'</div><div class="cs">'+sub+'</div>'+svg+'<div class="cf '+cls+'">'+foot+'</div></div>'; }
+
+function vStock(){
+ var rows=stockRanked(), short=rows.filter(function(r){ return r.gap>0||r.risky; });
+ var h = short.length
+  ? banner("err","box","<b>"+plural(short.length,"material")+" cannot cover what the plants have asked for.</b> The list is ordered by how urgent it is: how much is short, how soon it is needed, how long a new load takes, and whether the kiln runs on it.")
+  : banner("ok","check","Every material covers what the plants have asked for.");
+
+ h+='<section class="card c12"><div class="cbd flush"><table><thead><tr>'+
+  '<th>Priority</th><th>Material</th><th>Plant</th><th class="rt">In stock</th><th class="rt">On order</th>'+
+  '<th class="rt">Departments need</th><th class="rt">Short by</th><th>Needed from</th><th>Stock lasts</th><th></th></tr></thead><tbody>'+
+  rows.map(function(r,i){
+   return '<tr><td><span class="prio bg-'+r.band+'">'+(i+1)+'</span></td>'+
+    '<td><b>'+esc(r.m.material)+'</b><div class="sub">'+r.m.code+', from '+esc(r.m.supplier)+(r.m.kiln?' <span class="chipx neg">kiln runs on this</span>':'')+'</div>'+
+    '<div class="dem">'+r.m.needs.map(function(n){ return '<span>'+esc(n.dept)+' <b>'+n.qty.toLocaleString("en-IN")+'</b> by '+n.by+'</span>'; }).join("")+'</div></td>'+
+    '<td>'+r.m.plant+'</td>'+
+    '<td class="rt n">'+r.m.stock.toLocaleString("en-IN")+' '+r.m.uom+'</td>'+
+    '<td class="rt n">'+(r.m.openPO?r.m.openPO.toLocaleString("en-IN"):"\u2013")+'</td>'+
+    '<td class="rt n"><b>'+r.need.toLocaleString("en-IN")+'</b><div class="sub">'+r.m.needs.length+' departments</div></td>'+
+    '<td class="rt n">'+(r.gap>0?'<span class="chipx neg">'+r.gap.toLocaleString("en-IN")+'</span>':'<span class="chipx pos">nil</span>')+'</td>'+
+    '<td class="sub">'+r.firstBy+'</td>'+
+    '<td><span class="chipx '+(r.risky?"neg":"pos")+'">'+r.cover+' days</span><div class="sub">new load takes '+r.m.lead+' days</div></td>'+
+    '<td class="rt">'+((r.gap>0||r.risky)?'<button class="btn sm emph" data-pr="'+r.m.code+'">Raise request</button>':'<span class="sub">nothing needed</span>')+'</td></tr>';
+  }).join("")+'</tbody></table></div></section>';
+
+ h+='<div style="margin-top:13px;font-size:12.6px;color:var(--ink-3);max-width:96ch">Priority is worked out from four things: how much short we are against what departments asked for, '+
+  'how many days of stock are left, how long a new load takes to arrive, and whether the kiln depends on the material. Change the plant at the top to see one plant only.</div>';
+ return h;
+}
+
+function vOpen(){
+ var po=byPlant(OPENPO), pr=byPlant(OPENPR), cons=byPlant(CONTRACTS).map(contractRow);
+ var poVal=po.reduce(function(a,x){return a+x.value;},0), prVal=pr.reduce(function(a,x){return a+x.value;},0);
+ var flags=cons.filter(function(r){ return r.flag!=="ok"; });
+
+ var h=banner("info","file","Everything already in motion: what has been ordered and not received, what has been asked for and not ordered, and how the contracts are being used.");
+
+ h+='<div class="tiles">'+
+  tile({go:"open",icon:"truck",label:"Ordered, not received",value:po.length,sub:inr(poVal),cls:"warn",foot:po.filter(function(x){return x.got===0;}).length+" with nothing delivered",trend:[6,6,5,6,6,7,6]})+
+  tile({go:"open",icon:"file",label:"Asked for, not ordered",value:pr.length,sub:inr(prVal),cls:"warn",foot:pr.filter(function(x){return x.days>5;}).length+" older than 5 days",trend:[4,4,5,5,5,5,5]})+
+  tile({go:"open",icon:"doc",label:"Contracts running",value:cons.length,sub:inr(cons.reduce(function(a,r){return a+r.c.target;},0))+" agreed",cls:"pri",foot:inr(cons.reduce(function(a,r){return a+r.left;},0))+" still to use",trend:[5,5,5,5,5,5,5]})+
+  tile({go:"open",icon:"alert",label:"Contracts to act on",value:flags.length,sub:"unused or expiring",cls:"neg",foot:"see the list below",trend:[1,1,2,2,2,3,3]})+
+ '</div>';
+
+ h+='<div class="grid">';
+ h+=card({span:"c12",icon:"doc",tone:"neg",title:"Contracts",sub:"how much has been agreed, how much used, and when it runs out",flush:true,
+  body:'<table><thead><tr><th>Contract</th><th>Vendor</th><th>Covers</th><th class="rt">Agreed value</th><th class="rt">Used</th>'+
+   '<th class="rt">Left</th><th>Valid until</th><th>Status</th></tr></thead><tbody>'+
+   cons.sort(function(a,b){ return a.c.daysLeft-b.c.daysLeft; }).map(function(r){
+    return '<tr><td><b>'+r.c.doc+'</b><div class="sub">'+r.c.plant+'</div></td><td>'+esc(r.c.supplier)+'</td>'+
+     '<td class="sub">'+esc(r.c.what)+'</td><td class="rt n">'+inr(r.c.target)+'</td>'+
+     '<td class="rt n">'+inr(r.c.used)+'<div class="sub">'+r.pct+' percent</div>'+bar(r.pct,col(r.band))+'</td>'+
+     '<td class="rt n">'+inr(r.left)+'</td>'+
+     '<td>'+r.c.to+'<div class="sub">'+r.c.daysLeft+' days left</div></td>'+
+     '<td>'+(r.flag==="unused"?'<span class="chipx neg">never used</span>':
+             r.flag==="expiring"?'<span class="chipx warn">expiring soon</span>':
+             r.flag==="nearly used"?'<span class="chipx warn">nearly used up</span>':'<span class="chipx pos">fine</span>')+'</td></tr>';
+   }).join("")+'</tbody></table>'});
+
+ h+=card({span:"c7",icon:"truck",tone:"warn",title:"Ordered but not received",sub:"money committed, goods not in",flush:true,
+  body:'<table><thead><tr><th>Order</th><th>Vendor</th><th class="rt">Value</th><th>Due</th><th>Received</th></tr></thead><tbody>'+
+   po.map(function(x){
+    return '<tr><td><b>'+x.doc+'</b><div class="sub">'+esc(x.material)+', '+x.plant+'</div><div class="sub">'+esc(x.note)+'</div></td>'+
+     '<td>'+esc(x.supplier)+'</td><td class="rt n">'+inr(x.value)+'</td><td class="sub">'+x.due+'</td>'+
+     '<td><span class="chipx '+(x.got===100?"pos":x.got>0?"warn":"neg")+'">'+x.got+' percent</span></td></tr>';
+   }).join("")+'</tbody></table>'});
+
+ h+=card({span:"c5",icon:"file",tone:"warn",title:"Asked for but not ordered",sub:"requests sitting with buyers",flush:true,
+  body:'<table><thead><tr><th>Request</th><th class="rt">Value</th><th>Age</th></tr></thead><tbody>'+
+   pr.slice().sort(function(a,b){return b.days-a.days;}).map(function(x){
+    return '<tr><td><b>'+x.doc+'</b><div class="sub">'+esc(x.dept)+', '+x.plant+'</div><div class="sub">'+esc(x.note)+'</div></td>'+
+     '<td class="rt n">'+inr(x.value)+'</td><td><span class="chipx '+(x.days>5?"neg":"mut")+'">'+x.days+' d</span></td></tr>';
+   }).join("")+'</tbody></table>'});
+ return h+'</div>';
+}
+
+function vSuppliers(){
+ var h=banner("info","truck","The score comes from SAP's own vendor evaluation. We adjust it for direction, because a vendor who used to be good and is slipping matters more than the average shows.");
+ h+='<div class="grid">';
+ Object.keys(SUPPLIERS).forEach(function(n){
+  var s=score(n);
+  h+='<section class="card c6"><div class="chd"><span class="ico bg-'+s.band+'">'+ic("truck",16)+'</span>'+
+   '<div><h2>'+esc(n)+'</h2><div class="cs">'+s.code+', '+esc(s.cat)+', '+esc(s.city)+'</div></div>'+
+   '<span class="rt" style="margin-left:auto;text-align:right"><span class="scorepill '+s.band+'">'+s.total+'<small>/100</small></span>'+
+   '<div class="cs">'+s.bandText+'</div></span></div><div class="cbd">'+
+   '<div class="metrics" style="margin-bottom:13px">'+
+    met("On time",s.onTimePct+"%",s.avgDelay+" days late on average",s.onTimePct>=80?"pos":s.onTimePct>=50?"warn":"neg")+
+    met("Quality",s.avgQuality+"%","accepted when it arrives",s.avgQuality>=98?"pos":"warn")+
+    met("Rate",(s.vs>0?"+":"")+s.vs+"%","against contract",s.vs>2?"neg":s.vs>0?"warn":"pos")+
+   '</div>'+charts(s)+
+   '<div style="margin-top:12px;font-size:12.6px;color:var(--ink-3)">GST '+esc(s.gst)+(s.iec?", "+esc(s.iec):"")+'. Trend is '+s.trend+'.</div>'+
+   '</div></section>';
+ });
+ return h+'</div>';
+}
+function met(l,v,n,cls){ return '<div class="metric"><div class="ml">'+l+'</div><div class="mv n '+cls+'">'+v+'</div><div class="mn">'+n+'</div></div>'; }
+
+function vTeams(){
+ var T=byPlant(TEAMS), sum=function(f){ return T.reduce(function(a,t){ return a+t[f]; },0); };
+ var nudge=T.filter(function(t){ return t.state==="nudge"; });
+ var h=banner("info","people","What each team is working on, what they owe you, and what you owe them. Call or send a reminder straight from the row. Reply time is how long that team usually takes to answer your mail.");
+ h+='<div class="tiles">'+
+  tile({go:"team",icon:"people",label:"Teams",value:T.length,sub:sum("people")+" people",cls:"pri",foot:state.plant==="all"?"across all three plants":"at "+state.plant,trend:[7,7,7,7,7,7,7]})+
+  tile({go:"team",icon:"doc",label:"Tasks with them",value:sum("tasks"),sub:sum("done")+" completed",cls:"warn",foot:"given by you this month",trend:[30,33,36,38,40,41,42]})+
+  tile({go:"team",icon:"mail",label:"Mails awaiting reply",value:sum("mails"),sub:"from your teams",cls:sum("mails")?"neg":"pos",foot:"oldest is five days",trend:[8,10,11,13,14,15,16]})+
+  tile({go:"team",icon:"alert",label:"Need a nudge",value:nudge.length,sub:nudge.length===1?"team":"teams",cls:nudge.length?"warn":"pos",foot:"slow to reply or blocked",trend:[2,2,3,3,4,4,4]})+
+ '</div><div class="grid">';
+
+ h+=card({span:"c12",icon:"people",tone:"pri",title:"What each team is doing",sub:"from their mails, their tasks and what they last told you",flush:true,
+  body:T.map(function(t){
+   var f=t.lead.split(" ")[1]||t.lead;
+   return '<div class="team"><span class="tav'+(t.state==="nudge"?" nudge":"")+'">'+initials(t.lead.replace(/^(Mr|Ms|Mrs)\.?\s+/,""))+'</span>'+
+    '<div style="flex:1;min-width:260px">'+
+     '<div class="tname">'+esc(t.name)+'<span class="chipx '+(t.state==="nudge"?"warn":"pos")+'">'+(t.state==="nudge"?"needs a nudge":"on track")+'</span></div>'+
+     '<div class="tsub">'+esc(t.lead)+', '+t.people+' people, '+t.plant+'</div>'+
+     '<div class="tline"><b>Doing now:</b> '+esc(t.now)+'</div>'+
+     '<div class="tline fu"><b>Follow up:</b> '+esc(t.follow)+'</div>'+
+     '<div class="tmets">'+
+      '<div class="tmet"><div class="v n">'+t.tasks+'</div><div class="l">tasks with them</div></div>'+
+      '<div class="tmet"><div class="v n">'+t.done+'</div><div class="l">completed</div></div>'+
+      '<div class="tmet"><div class="v n">'+t.mails+'</div><div class="l">mails awaiting reply</div></div>'+
+      '<div class="tmet"><div class="v n">'+esc(t.reply)+'</div><div class="l">usual reply time</div></div>'+
+      '<div class="tmet"><div class="v">'+esc(t.seen)+'</div><div class="l">last update</div></div>'+
+     '</div>'+
+    '</div>'+
+    '<div class="tacts">'+
+     '<button class="btn emph" data-tmail="'+t.id+'">'+ic("mail",13)+' Send reminder</button>'+
+     '<button class="btn q" data-tcall="'+t.id+'">'+ic("phone",13)+' Call '+esc(f)+'</button>'+
+     '<button class="btn q" data-ttask="'+t.id+'">'+ic("doc",13)+' Add task</button>'+
+    '</div></div>';
+  }).join("")});
+ return h+'</div>';
+}
+
+function vSituations(){
+ var h=banner("info","spark","Problems found while checking this morning. Where the fix is safe and can be undone, I can do it once you say so.");
+ h+='<div class="grid">';
+ SITUATIONS.forEach(function(s){
+  var done=s.status==="fixed";
+  h+='<section class="card c6"><div class="chd"><span class="ico bg-'+(done?"pos":s.sev)+'">'+ic(done?"check":s.icon,16)+'</span>'+
+   '<div><h2>'+esc(s.title)+'</h2><div class="cs">'+esc(s.where||s.object)+'</div></div>'+
+   '<span class="chipx '+(done?"pos":s.auto?"pri":"warn")+'" style="margin-left:auto">'+(done?"Done":(s.auto?"I can fix this":"Needs your call"))+'</span></div>'+
+   '<div class="cbd"><p class="sitlede">'+esc(s.detail)+'</p>'+
+   '<div class="kv">'+
+    '<span class="k">Who is involved</span><span>'+esc(s.who)+'</span>'+
+    '<span class="k">Where it is stuck</span><span>'+esc(s.stuck)+'</span>'+
+    '<span class="k">Call you need to make</span><span style="font-weight:650">'+esc(s.call)+'</span>'+
+    '<span class="k">Who to speak to</span><span>'+esc(s.speakTo)+'</span>'+
+    '<span class="k">Follow up</span><span>'+esc(s.followUp)+'</span>'+
+   '</div>'+
+   (s.joined? '<div class="joined"><span class="jl">'+ic("eye",13)+' Found by joining</span>'+
+     s.joined.map(function(j){ return '<span class="chipx mut">'+esc(j)+'</span>'; }).join("")+'</div>':'')+
+   '<div class="sitact">'+(done
+    ? '<span class="chipx pos">'+ic("check",12)+' Fixed at '+esc(s.fixedAt||"")+'</span>'
+    : '<button class="btn emph" data-fix="'+s.id+'">'+(s.auto?"Go ahead and fix it":"Mark as handled")+'</button>'+
+      '<button class="btn q" data-sitmail="'+s.id+'">'+ic("mail",13)+' Mail '+esc(s.speakTo.split(",")[0])+'</button>'+
+      '<button class="btn q" data-sittask="'+s.id+'">'+ic("doc",13)+' Follow up task</button>')+
+   '</div></div></section>';
+ });
+ return h+'</div>';
+}
+
+function vEmail(){
+ var pend=byPlant(DOCS).filter(function(d){return d.status==="pending";});
+ var d=pend[0]||DOCS[0], s=score(d.supplier);
+ var h=banner("info","mail","This is what arrives at <b>"+APPROVER_MAIL+"</b>. The full header travels with it, so the decision can be made from the phone.");
+ h+='<div style="display:flex;gap:9px;margin-bottom:13px;flex-wrap:wrap">'+DOCS.map(function(x){
+  return '<button class="btn '+(x.doc===d.doc?"emph":"q")+' sm" data-maildoc="'+x.doc+'">'+x.kind+' '+x.doc+'</button>';
+ }).join("")+'</div>';
+ h+='<div class="mail"><div class="mailtop"><span class="gm">M</span>Inbox<span style="flex:1"></span><span class="n">'+now()+'</span></div>'+
+  '<div class="mailhd"><div class="sj">Approval needed: '+d.kind+' '+d.doc+', '+esc(d.supplier)+', '+inr(total(d))+'</div>'+
+  '<div class="mfrom"><span class="av">PA</span><div><div style="color:var(--ink);font-size:13.2px;font-weight:600">Procurement dashboard</div>'+
+  '<div>to '+APPROVER_MAIL+'</div></div></div></div><div class="mailbd">'+
+  '<p style="margin:0 0 12px">'+d.kind+' '+d.doc+' has been waiting '+d.hours+' hours. '+
+  (d.prev?esc(d.prev.name)+' approved it at '+esc(d.prev.level).toLowerCase()+' on '+esc(d.prev.when)+'.':'You are the first approver.')+'</p>'+
+  '<div class="mcard"><div class="mh"><div><div style="font-size:13.8px;font-weight:650">'+esc(d.material)+'</div>'+
+  '<div class="sub">'+esc(d.supplier)+', '+d.plant+' plant, '+d.trade.toLowerCase()+', '+esc(d.incoterm)+'</div></div>'+
+  '<div style="text-align:right"><div style="font-size:16px;font-weight:700" class="n">'+inr(total(d))+'</div>'+
+  '<div class="sub n">'+d.qty+' '+d.uom+' at \u20B9'+d.rate.toLocaleString("en-IN")+'</div></div></div>'+
+  '<div class="mb"><div class="terms">'+
+   '<div>'+trow("Document type",d.docType)+trow("Transport",d.transport)+trow("Payment terms",d.payTerms)+trow("GST number",s.gst)+'</div>'+
+   '<div>'+trow("Freight",d.freight?inr(d.freight):"included")+trow("Loading",d.loading?inr(d.loading):"nil")+
+   trow("Cash discount",d.cashDisc)+trow("Rebate",d.rebate)+'</div></div>'+
+  '<div style="margin-top:12px">'+charts(s)+'</div>'+
+  '<div class="reco" style="background:var(--'+(s.band==="neg"?"neg":s.band==="warn"?"warn":"pos")+'-soft)">'+
+  '<span style="flex:none">'+ic("spark",15)+'</span><div><b>Before you approve.</b> '+advice(d,s)+'</div></div></div>'+
+  '<div class="mf">'+(d.status==="pending"
+   ? '<button class="btn emph" data-mailapprove="'+d.doc+'">'+ic("check",13)+' Approve</button>'+
+     '<button class="btn rej" data-mailreject="'+d.doc+'">Send back</button>'
+   : '<span class="chipx '+(d.status==="approved"?"pos":"neg")+'">'+(d.status==="approved"?"Approved":"Sent back")+' at '+esc(d.actedAt||"")+'</span>')+
+  '</div></div></div></div>';
+ return h;
+}
+
+/* ================= ACTIONS ================= */
+function toast(k,i,m){ var host=document.getElementById("toasts"),el=document.createElement("div");
+ el.className="toast"; el.innerHTML='<span class="ico bg-'+k+'">'+ic(i,14)+'</span><div>'+m+'</div>';
+ host.appendChild(el); setTimeout(function(){ el.remove(); },4600); }
+function approve(id,via){ var d=doc(id); if(!d||d.status!=="pending") return;
+ d.status="approved"; d.actedAt=now(); state.notif++;
+ act("Approved "+d.kind+" "+d.doc+", "+inr(total(d)),12);
+ toast("pos","check","<b>"+d.kind+" "+d.doc+" approved</b> for "+inr(total(d))+", under your name."+(via==="mail"?" Sent from your mail.":"")); render(); }
+function reject(id){ var d=doc(id); if(!d||d.status!=="pending") return;
+ d.status="rejected"; d.actedAt=now(); state.notif++;
+ act("Sent back "+d.kind+" "+d.doc+" to the buyer",12);
+ toast("neg","alert","<b>"+d.kind+" "+d.doc+" sent back</b> to the buyer with your reason and the contract rate."); render(); }
+function fixIt(id){ SITUATIONS.forEach(function(s){ if(s.id===id&&s.status==="open"){ s.status="fixed"; s.fixedAt=now();
+  act("Fixed: "+s.title,20); toast("pos","check","<b>Done.</b> "+esc(s.fix)+"."); } }); render(); }
+function raise(code){ var m=null; STOCK.forEach(function(x){ if(x.code===code) m=x; });
+ if(!m) return; var r=stockRow(m); var qty=Math.max(r.gap, m.reorder-m.stock);
+ m.openPO+=qty; act("Prepared a request for "+m.material+" at "+m.plant,18);
+ toast("pri","box","<b>Request prepared</b> for "+qty.toLocaleString("en-IN")+" "+m.uom+" of "+esc(m.material)+", ready for the buyer."); render(); }
+
+/* ================= WHAT YOU DID ================= */
+function openLog(){
+ var a=state.actions;
+ document.getElementById("log-body").innerHTML = a.length
+  ? a.map(function(x){ return '<div class="logrow"><span class="lt n">'+esc(x.t)+'</span><span class="lw">'+esc(x.what)+
+     '</span><span class="lm n">+'+x.min+' min</span></div>'; }).join("")
+  : '<div class="logempty">Nothing yet today. Approve an order, fix a problem or send a mail from here, and each one will be listed with the time it saved you.</div>';
+ document.getElementById("log-sum").textContent=plural(a.length,"action")+", "+state.saved.min+" minutes saved";
+ document.getElementById("logmodal").classList.add("open");
+ document.getElementById("mscrim").classList.add("open");
+}
+
+/* ================= YOUR ACCOUNT ================= */
+function profBody(){
+ return '<div class="psec">Contact</div>'+
+  prow("Email",APPROVER_MAIL)+prow("Mobile",USER.mobile)+prow("Extension",USER.ext)+
+  '<div class="psec">In SAP</div>'+
+  prow("Employee ID",USER.empId)+prow("SAP user",USER.sapUser)+prow("Authorisation",USER.release)+prow("Plants",USER.plants)+
+  '<div class="psec">Work</div>'+
+  prow("Location",USER.location)+prow("Reports to",USER.reportsTo)+prow("Stand-in",USER.standIn)+
+  '<div class="psec">Sign in</div>'+
+  prow("This session",USER.lastLogin)+prow("Before that",USER.prevLogin);
+}
+function prow(k,v){ return '<div class="prow"><span class="k">'+k+'</span><span>'+esc(v)+'</span></div>'; }
+function renderProf(){
+ document.getElementById("p-name").textContent=APPROVER_NAME;
+ document.getElementById("p-role").textContent=USER.role+", "+USER.dept;
+ document.getElementById("p-av").textContent=initials(APPROVER_NAME);
+ document.getElementById("p-body").innerHTML=profBody();
+ document.getElementById("p-passage").textContent=USER.passwordAge;
+ document.getElementById("p-themev").textContent=state.theme==="light"?"Light":"Dark";
+ document.getElementById("p-notifv").textContent=USER.summaryMail?"On":"Off";
+}
+function openProf(){ renderProf(); document.getElementById("prof").classList.add("open"); }
+function closeProf(){ document.getElementById("prof").classList.remove("open"); }
+
+/* ================= WRITE A MAIL ================= */
+function mailId(name){ return String(name).split(",")[0].replace(/^(Mr|Ms|Mrs)\.?\s+/i,"").trim().toLowerCase().replace(/\s+/g,".")+"@infrabeat.com"; }
+var mailFor=null;
+function openMail(o){ mailFor=o;
+ document.getElementById("mm-to").value=o.to;
+ document.getElementById("mm-subj").value=o.subject;
+ document.getElementById("mm-body").value=o.body;
+ document.getElementById("mailmodal").classList.add("open");
+ document.getElementById("mscrim").classList.add("open");
+ document.getElementById("mm-body").focus();
+}
+function closeMail(){ document.getElementById("mailmodal").classList.remove("open");
+ document.getElementById("pwmodal").classList.remove("open");
+ document.getElementById("logmodal").classList.remove("open");
+ document.getElementById("mscrim").classList.remove("open"); }
+function mailOnSituation(x){
+ openMail({name:x.speakTo.split(",")[0], to:mailId(x.speakTo), subject:x.title,
+  body:"Hello "+x.speakTo.split(",")[0]+",\n\n"+x.detail+"\n\nWhat I need: "+x.call+
+   "\n\nWhere it is stuck: "+x.stuck+"\n\nI will follow up: "+x.followUp+
+   "\n\nThanks,\n"+APPROVER_NAME+"\nHead of Procurement, InfraBeat Technologies Pvt. Ltd."});
+}
+
+/* ================= ASK ================= */
+var CHIPS=["What is waiting for me?","What will run out first?","Which contracts should I look at?","Can I trust Aditya?","Show only Pune"];
+function reply(q){
+ var t=q.toLowerCase(), m=t.match(/(45001\d{5}|10004\d{5})/);
+ if(/pune|mumbai|nagpur|all plant/.test(t)){
+  var p = /mumbai/.test(t)?"Mumbai":/pune/.test(t)?"Pune":/nagpur/.test(t)?"Nagpur":"all";
+  state.plant=p; document.getElementById("plant").value=p; render();
+  return "Showing "+(p==="all"?"all plants":p)+" only. Everything on every screen now follows that.";
+ }
+ if(m){ var d=doc(m[1]); if(!d) return "I cannot find "+m[1]+".";
+  var s=score(d.supplier); state.tab="approvals"; state.detail=d.doc; render();
+  return "<b>"+d.kind+" "+d.doc+"</b>\n"+d.material+", "+d.supplier+", "+d.plant+" plant.\n"+
+   d.trade+" order, "+d.docType+", "+d.incoterm+", by "+d.transport.toLowerCase()+".\n"+
+   "Total "+inr(total(d))+", freight "+(d.freight?inr(d.freight):(d.trade==="Import"?"included in the CIF price":"not applicable"))+
+   ", loading "+(d.loading?inr(d.loading):"nil")+".\n"+
+   "Payment "+d.payTerms+". "+(d.prev?"Approved before by "+d.prev.name+" on "+d.prev.when+".":"You are the first approver.");
+ }
+ if(/(run out|stock|short|material|need)/.test(t)){
+  var sh=shortList();
+  if(!sh.length) return "Every material covers what the plants have asked for.";
+  return "<b>"+plural(sh.length,"material")+" short:</b>\n"+sh.map(function(r){
+   return "\u2022 "+r.m.material+" at "+r.m.plant+". "+r.m.needs.length+" departments want "+r.need.toLocaleString("en-IN")+" "+r.m.uom+
+    ", we have "+r.have.toLocaleString("en-IN")+", first needed by "+r.firstBy;
+  }).join("\n");
+ }
+ if(/(contract)/.test(t)){
+  var f=contractFlags();
+  return "<b>"+plural(f.length,"contract")+" to look at:</b>\n"+f.map(function(r){
+   return "\u2022 "+r.c.doc+", "+r.c.supplier+", "+inr(r.c.target)+" agreed, "+r.pct+" percent used, "+r.c.daysLeft+" days left. "+
+    (r.flag==="unused"?"Never used at all.":r.flag==="expiring"?"Expiring soon with "+inr(r.left)+" unused.":"Nearly used up.");
+  }).join("\n");
+ }
+ if(/(open|received|ordered|pending order)/.test(t)){
+  var po=byPlant(OPENPO), pr=byPlant(OPENPR);
+  return "Ordered but not received: "+po.length+" orders worth "+inr(po.reduce(function(a,x){return a+x.value;},0))+".\n"+
+   "Asked for but not ordered: "+pr.length+" requests worth "+inr(pr.reduce(function(a,x){return a+x.value;},0))+".";
+ }
+ var found=null; Object.keys(SUPPLIERS).forEach(function(n){ if(t.indexOf(n.toLowerCase().split(" ")[0])>=0) found=n; });
+ if(found){ var s2=score(found);
+  return "<b>"+found+"</b>, "+s2.total+" out of 100, "+s2.bandText.toLowerCase()+".\nOn time "+s2.onTimePct+" percent, "+
+   s2.avgDelay+" days late on average, trend "+s2.trend+".\nQuality "+s2.avgQuality+" percent accepted.\nRate "+(s2.vs>0?"+":"")+s2.vs+
+   " percent against contract.\nGST "+s2.gst+".";
+ }
+ if(/(wait|approv|need me|today)/.test(t)){
+  var p=pending();
+  if(!p.length) return "Nothing is waiting for you.";
+  return "<b>"+plural(p.length,"order")+" waiting, "+inr(p.reduce(function(a,d){return a+total(d);},0))+" in total:</b>\n"+
+   p.map(function(d){ return "\u2022 "+d.kind+" "+d.doc+", "+d.supplier+", "+inr(total(d))+", "+d.hours+" hours"; }).join("\n");
+ }
+ return "Ask me what is waiting for you, what will run out, which contracts to look at, about any vendor, or say show only Pune.";
+}
+function say(w,t){ state.chat.push({who:w,text:t});
+ var b=document.getElementById("asst-body");
+ b.innerHTML=state.chat.map(function(m){ return '<div class="msg '+(m.who==="u"?"u":"a")+'">'+(m.who==="u"?esc(m.text):m.text)+'</div>'; }).join("");
+ b.scrollTop=b.scrollHeight; }
+function ask(q){ if(!q) return; say("u",q); var r=reply(q); setTimeout(function(){ say("a",r); },220); }
+
+/* ================= RENDER ================= */
+function render(){
+ renderNav();
+ var map={overview:vOverview,approvals:vApprovals,stock:vStock,open:vOpen,suppliers:vSuppliers,team:vTeams,situations:vSituations,email:vEmail};
+ document.getElementById("view").innerHTML=(map[state.tab]||vOverview)();
+ wire();
+}
+function on(sel,attr,fn){ Array.prototype.forEach.call(document.querySelectorAll(sel),function(el){
+ el.addEventListener("click",function(e){ e.stopPropagation(); fn(el.getAttribute(attr),el); }); }); }
+function wire(){
+ on("[data-go]","data-go",function(v){ state.tab=v; state.detail=null; window.scrollTo(0,0); render(); });
+ on("[data-doc]","data-doc",function(v){ state.tab="approvals"; state.detail=v; window.scrollTo(0,0); render(); });
+ on("[data-approve]","data-approve",function(v){ approve(v,"dash"); });
+ on("[data-reject]","data-reject",reject);
+ on("[data-mail]","data-mail",function(v){ state.tab="email"; state.detail=null; toast("pri","mail","Sent to "+APPROVER_MAIL+" with the full header."); render(); });
+ on("[data-maildoc]","data-maildoc",function(v){ var i=DOCS.map(function(x){return x.doc;}).indexOf(v);
+  if(i>0){ var d=DOCS.splice(i,1)[0]; DOCS.unshift(d); } render(); });
+ on("[data-mailapprove]","data-mailapprove",function(v){ approve(v,"mail"); });
+ on("[data-mailreject]","data-mailreject",reject);
+ on("[data-log]","data-log",function(){ openLog(); });
+ on("[data-fix]","data-fix",fixIt);
+ on("[data-tmail]","data-tmail",function(v){ TEAMS.forEach(function(t){ if(t.id===v) openMail({name:t.lead,to:mailId(t.lead),
+  subject:"Follow up, "+t.name,
+  body:"Hello "+t.lead+",\n\n"+t.follow+"\n\nI can see your team is on: "+t.now+
+   "\n\nCould you send me where this stands today, or tell me what you need from my side to move it.\n\nThanks,\n"+
+   APPROVER_NAME+"\nHead of Procurement, InfraBeat Technologies Pvt. Ltd."}); }); });
+ on("[data-tcall]","data-tcall",function(v){ TEAMS.forEach(function(t){ if(t.id===v){ act("Called "+t.lead+", "+t.name,3);
+  toast("pri","phone","<b>Calling "+esc(t.lead)+"</b> on "+esc(t.phone)+". Their usual reply time by mail is "+esc(t.reply)+"."); } }); });
+ on("[data-ttask]","data-ttask",function(v){ TEAMS.forEach(function(t){ if(t.id===v){ t.tasks+=1; act("Added a task for "+t.name,4);
+  toast("pos","check","<b>Task added for "+esc(t.name)+".</b> "+esc(t.follow)); render(); } }); });
+ on("[data-sitmail]","data-sitmail",function(v){ SITUATIONS.forEach(function(x){ if(x.id===v) mailOnSituation(x); }); });
+ on("[data-sittask]","data-sittask",function(v){ SITUATIONS.forEach(function(x){ if(x.id===v){
+  act("Follow up task: "+x.title,4); toast("pri","doc","<b>Follow up task created.</b> "+esc(x.followUp)+"."); } }); });
+ on("[data-pr]","data-pr",raise);
+}
+
+/* ================= BOOT ================= */
+document.getElementById("me").title=APPROVER_NAME+", "+USER.role;
+document.getElementById("me").textContent=initials(APPROVER_NAME);
+document.getElementById("i-bell").innerHTML=ic("bell",17);
+document.getElementById("i-spark").innerHTML=ic("spark",15);
+document.getElementById("i-theme").innerHTML=ic("moon",17);
+document.getElementById("i-ai").innerHTML=ic("spark",16);
+document.getElementById("i-send").innerHTML=ic("send",15);
+
+document.getElementById("plant").addEventListener("change",function(e){
+ state.plant=e.target.value; state.detail=null; render();
+ toast("pri","box",state.plant==="all"?"Showing all plants.":"Showing "+state.plant+" only.");
+});
+document.getElementById("btn-home").addEventListener("click",function(){ state.tab="overview"; state.detail=null; window.scrollTo(0,0); render(); });
+document.getElementById("btn-notif").addEventListener("click",function(){ state.notif=0; toast("pri","mail","Today's summary went to "+APPROVER_MAIL+" at 08:02."); render(); });
+function toggleTheme(){
+ state.theme=state.theme==="light"?"dark":"light";
+ document.documentElement.setAttribute("data-theme",state.theme);
+ document.getElementById("i-theme").innerHTML=ic(state.theme==="light"?"moon":"sun",17); render();
+}
+document.getElementById("btn-theme").addEventListener("click",toggleTheme);
+document.getElementById("i-mailhd").innerHTML=ic("mail",18);
+document.getElementById("i-pwhd").innerHTML=ic("shield",18);
+document.getElementById("i-loghd").innerHTML=ic("clock",18);
+document.getElementById("log-close").addEventListener("click",closeMail);
+document.getElementById("log-x").addEventListener("click",closeMail);
+document.getElementById("i-pass").innerHTML=ic("shield",14);
+document.getElementById("i-theme2").innerHTML=ic("moon",14);
+document.getElementById("i-notif2").innerHTML=ic("mail",14);
+document.getElementById("i-out").innerHTML=ic("back",14);
+
+var prof=document.getElementById("prof");
+document.getElementById("me").addEventListener("click",function(e){
+ e.stopPropagation(); prof.classList.contains("open")?closeProf():openProf();
+});
+prof.addEventListener("click",function(e){ e.stopPropagation(); });
+document.addEventListener("click",closeProf);
+document.getElementById("p-theme2").addEventListener("click",function(){ toggleTheme(); renderProf(); });
+document.getElementById("p-notif").addEventListener("click",function(){
+ USER.summaryMail=!USER.summaryMail; renderProf();
+ toast("pri","mail",USER.summaryMail?"<b>Summary mail on.</b> It goes to "+APPROVER_MAIL+" at 08:00 every working day."
+  :"<b>Summary mail off.</b> Nothing will be sent at 08:00.");
+});
+document.getElementById("p-out").addEventListener("click",function(){
+ closeProf(); toast("pri","shield","<b>Signed out</b> of this demo. Reload the page to sign back in.");
+});
+document.getElementById("p-pass").addEventListener("click",function(){
+ closeProf();
+ ["pw-old","pw-new","pw-two"].forEach(function(id){ document.getElementById(id).value=""; });
+ document.getElementById("pw-err").style.display="none";
+ document.getElementById("pwmodal").classList.add("open");
+ document.getElementById("mscrim").classList.add("open");
+ document.getElementById("pw-old").focus();
+});
+document.getElementById("pw-close").addEventListener("click",closeMail);
+document.getElementById("pw-cancel").addEventListener("click",closeMail);
+document.getElementById("pw-save").addEventListener("click",function(){
+ var o=document.getElementById("pw-old").value, n=document.getElementById("pw-new").value,
+     t=document.getElementById("pw-two").value, e=document.getElementById("pw-err"), msg="";
+ if(!o) msg="Enter your current password.";
+ else if(n.length<8 || !/[0-9]/.test(n)) msg="The new password needs at least 8 characters and one number.";
+ else if(n!==t) msg="The two new passwords do not match.";
+ else if(n===o) msg="The new password has to be different from the current one.";
+ if(msg){ e.textContent=msg; e.style.display="block"; return; }
+ USER.passwordAge="changed today"; closeMail();
+ toast("pos","check","<b>Password updated.</b> Use the new one the next time you sign in to SAP.");
+});
+document.getElementById("i-mailsend").innerHTML=ic("send",13);
+document.getElementById("mm-close").addEventListener("click",closeMail);
+document.getElementById("mm-cancel").addEventListener("click",closeMail);
+document.getElementById("mscrim").addEventListener("click",closeMail);
+document.getElementById("mm-send").addEventListener("click",function(){
+ var to=document.getElementById("mm-to").value, nm=mailFor?mailFor.name:to;
+ closeMail(); act("Mailed "+nm,6);
+ toast("pos","check","<b>Sent to "+esc(nm)+"</b> at "+esc(to)+". A copy is in your sent items."); render();
+});
+document.getElementById("mm-app").addEventListener("click",function(){
+ var to=document.getElementById("mm-to").value,
+     sj=encodeURIComponent(document.getElementById("mm-subj").value),
+     bd=encodeURIComponent(document.getElementById("mm-body").value);
+ try{ window.open("mailto:"+to+"?subject="+sj+"&body="+bd,"_blank"); }catch(e){}
+ closeMail(); toast("pri","mail","<b>Handed to your mail app</b> with the draft filled in.");
+});
+
+var asst=document.getElementById("asst"), scrim=document.getElementById("scrim");
+function openAsst(){ asst.classList.add("open"); scrim.classList.add("open"); asst.setAttribute("aria-hidden","false");
+ if(!state.chat.length) say("a",greet()+", "+firstName()+". Ask me what is waiting for you, what will run out, or say show only Pune.");
+ document.getElementById("asst-input").focus(); }
+function closeAsst(){ asst.classList.remove("open"); scrim.classList.remove("open"); asst.setAttribute("aria-hidden","true"); }
+document.getElementById("btn-asst").addEventListener("click",openAsst);
+document.getElementById("asst-close").addEventListener("click",closeAsst);
+scrim.addEventListener("click",closeAsst);
+document.getElementById("asst-send").addEventListener("click",function(){ var i=document.getElementById("asst-input"); ask(i.value.trim()); i.value=""; });
+document.getElementById("asst-input").addEventListener("keydown",function(e){ if(e.key==="Enter"){ ask(this.value.trim()); this.value=""; } });
+document.getElementById("asst-chips").innerHTML=CHIPS.map(function(c){ return '<button class="achip">'+esc(c)+'</button>'; }).join("");
+Array.prototype.forEach.call(document.querySelectorAll("#asst-chips .achip"),function(b){ b.addEventListener("click",function(){ ask(b.textContent); }); });
+document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ closeAsst(); closeMail(); closeProf(); } });
+
+var shellEl=document.querySelector(".shell"), navEl=document.querySelector(".nav");
+function fitNav(){ navEl.style.top=shellEl.offsetHeight+"px"; document.getElementById("prof").style.top=(shellEl.offsetHeight+8)+"px"; }
+fitNav(); window.addEventListener("resize",fitNav);
+
+render();
+})();
+</script>
+</body>
+</html>

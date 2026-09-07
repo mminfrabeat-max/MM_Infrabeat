@@ -1,0 +1,69 @@
+// Small functions that pick things out of the dashboard payload.
+//
+// These live here rather than inside screens for one reason: the plant selector at the top
+// of the page changes what nearly every screen shows, and the filtering rule needs to be
+// written once. A screen that filtered its own way would quietly disagree with the tile
+// count next to it.
+//
+// Nothing here decides anything. The business rules are all in the backend; these only
+// choose which rows to look at.
+
+export function byPlant(rows, plant) {
+  if (!rows) return [];
+  if (plant === 'all') return rows;
+  return rows.filter((r) => r.plant === plant);
+}
+
+export function pendingDocuments(documents, plant) {
+  return byPlant(documents, plant).filter((d) => d.status === 'pending');
+}
+
+export function overdueDocuments(documents, plant, hours = 24) {
+  return pendingDocuments(documents, plant)
+    .filter((d) => d.hoursWaiting > hours)
+    .sort((a, b) => b.hoursWaiting - a.hoursWaiting);
+}
+
+export function sumTotals(documents) {
+  return documents.reduce((sum, d) => sum + d.total, 0);
+}
+
+export function sumValues(rows) {
+  return rows.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
+}
+
+// Materials that are short against real demand, or that run out before a new load lands.
+export function shortMaterials(materials, plant) {
+  return byPlant(materials, plant).filter((m) => m.shortBy > 0 || m.runsOutFirst);
+}
+
+export function contractsToWatch(contracts, plant) {
+  return byPlant(contracts, plant).filter((c) => c.needsAttention);
+}
+
+export function openSituations(situations, plant) {
+  return byPlant(situations, plant).filter((s) => s.status === 'open');
+}
+
+export function teamsNeedingNudge(teams, plant) {
+  return byPlant(teams, plant).filter((t) => t.state === 'nudge');
+}
+
+// The vendor with the lowest standing among those actually visible at this plant. Falls
+// back to the overall worst when no document at this plant names a scored vendor.
+export function weakestVendor(suppliers) {
+  const scored = (suppliers || []).filter((s) => s.scored);
+  if (scored.length === 0) return null;
+  return scored.reduce((worst, s) => (s.total < worst.total ? s : worst));
+}
+
+export function findDocument(documents, id) {
+  return (documents || []).find((d) => d.id === id) || null;
+}
+
+// The stock row for a document's material at that document's plant, used to price what
+// happens if the order is sent back.
+export function materialFor(materials, document) {
+  if (!document) return null;
+  return (materials || []).find((m) => m.code === document.materialCode) || null;
+}

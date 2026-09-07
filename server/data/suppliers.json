@@ -1,25 +1,38 @@
 {
-  "_source": "REAL - in the SAP sandbox this comes from API_BUSINESS_PARTNER, entity A_Supplier",
-  "_note": "contractRate is the agreed price for this supplier's main contract item. It is used for the rate trend chart. Individual documents carry their own contract rate for their own material.",
+  "_source": "MIXED - identity is REAL, the score is partly simulated",
+  "_realFields": "id, name, category, city, gst, iec exist in the sandbox via API_BUSINESS_PARTNER (A_Supplier) plus A_BusinessPartnerAddress and A_BusinessPartnerTaxNumber.",
+  "_simulatedFields": "sapScore stands for SAP's own vendor evaluation (transaction ME61 / table ELBK). The sandbox exposes no evaluation data, so this is invented. contractRate is the agreed price for the supplier's main contract item.",
   "suppliers": [
     {
       "id": "V-10024",
       "name": "Aditya Refractories",
       "category": "Refractories",
+      "city": "Bhilai",
+      "gst": "22AACCA1234F1Z5",
+      "iec": null,
+      "sapScore": 71,
       "contractRate": 41200,
       "unit": "MT"
     },
     {
-      "id": "V-10008",
-      "name": "Shreeji Minerals",
-      "category": "Raw material",
-      "contractRate": 8600,
+      "id": "V-20011",
+      "name": "Oman Mining LLC",
+      "category": "Raw material, import",
+      "city": "Muscat, Oman",
+      "gst": "Not applicable, import vendor",
+      "iec": "IEC 0398765432",
+      "sapScore": 86,
+      "contractRate": 8400,
       "unit": "MT"
     },
     {
       "id": "V-10112",
       "name": "Bharat Bearings",
       "category": "Spares",
+      "city": "Rajkot",
+      "gst": "24AAECB5678K1ZP",
+      "iec": null,
+      "sapScore": 68,
       "contractRate": 18400,
       "unit": "NOS"
     },
@@ -27,8 +40,23 @@
       "id": "V-10077",
       "name": "Vindhya Logistics",
       "category": "Freight",
+      "city": "Raipur",
+      "gst": "22AAFCV9012M1Z8",
+      "iec": null,
+      "sapScore": 88,
       "contractRate": 2350,
       "unit": "TRIP"
+    },
+    {
+      "id": "V-10008",
+      "name": "Shreeji Minerals",
+      "category": "Raw material",
+      "city": "Udaipur",
+      "gst": "08AAGCS3344L1Z9",
+      "iec": null,
+      "sapScore": 94,
+      "contractRate": 8600,
+      "unit": "MT"
     }
   ]
 }

@@ -1,31 +1,34 @@
-// Turning numbers into something a manager reads without effort.
+// Turning numbers and names into something a manager reads without effort.
 //
-// The backend has its own small copy of money() for sentences it writes. See the note
-// at the top of server/src/domain/format.js for why two copies is the right trade.
+// The backend has its own small copy of money() for the sentences it writes. Two small
+// copies is deliberate: the alternative is the backend sending half-built sentences with
+// placeholders for the frontend to fill in, which is far more code.
 
-// Indian numbering: 1 crore = 10,000,000 and 1 lakh = 100,000.
-// Short form here ("1.09 cr") because these appear in tables and tiles where space is tight.
-export function money(value) {
-  if (value === null || value === undefined) return '–';
-  if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} cr`;
-  if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
-  return `₹${Math.round(value).toLocaleString('en-IN')}`;
+// Indian numbering: 1 crore = 10,000,000 and 1 lakh = 100,000. Short form, because these
+// appear in tables and tiles where space is tight.
+export function inr(value) {
+  if (value === null || value === undefined || value === '') return '–';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '–';
+  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} cr`;
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
+  return `₹${Math.round(n).toLocaleString('en-IN')}`;
 }
 
-// The exact figure, for places where rounding to crores would hide what matters,
-// such as a unit price.
+// The exact figure, for places where rounding to crores would hide what matters, such as
+// a unit price.
 export function rupees(value) {
   if (value === null || value === undefined) return '–';
-  return `₹${value.toLocaleString('en-IN')}`;
+  return `₹${Number(value).toLocaleString('en-IN')}`;
 }
 
-export function number(value) {
-  if (value === null || value === undefined) return '–';
-  return value.toLocaleString('en-IN');
+export function num(value) {
+  if (value === null || value === undefined || value === '') return '–';
+  return Number(value).toLocaleString('en-IN');
 }
 
 // Always shows the sign, because "+6.3%" and "6.3%" mean different things here.
-export function signedPercent(value) {
+export function signed(value) {
   if (value === null || value === undefined) return '–';
   return `${value > 0 ? '+' : ''}${value}%`;
 }
@@ -35,15 +38,50 @@ export function plural(count, word, pluralWord) {
   return `${count} ${count === 1 ? word : many}`;
 }
 
-// "Order" and "Request" rather than the two-letter codes used inside SAP.
-export function documentTypeLabel(type) {
-  return type === 'request' ? 'Request' : 'Order';
-}
-
-// Initials for the small round avatars, e.g. "Aditya Refractories" becomes "AR".
+// "Aditya Refractories" becomes "AR". Titles are stripped so "Mr. Anil Deshmukh" is "AD".
 export function initials(name) {
-  const parts = String(name).replace(/[.,]/g, '').split(/\s+/).filter(Boolean);
+  const parts = String(name)
+    .replace(/^(Mr|Ms|Mrs)\.?\s+/i, '')
+    .replace(/[.,]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
   const first = (parts[0] || '?').charAt(0);
   const second = parts[1] ? parts[1].charAt(0) : '';
   return (first + second).toUpperCase();
+}
+
+export function clock() {
+  const d = new Date();
+  const pad = (n) => (n < 10 ? '0' : '') + n;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
+
+export function firstName(fullName) {
+  return String(fullName).replace(/^(Mr|Ms|Mrs)\.?\s+/i, '').split(' ')[0];
+}
+
+// Turns a person's name into the company mail address the demo assumes.
+export function mailAddressFor(name) {
+  return (
+    String(name)
+      .split(',')[0]
+      .replace(/^(Mr|Ms|Mrs)\.?\s+/i, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '.') + '@infrabeat.com'
+  );
+}
+
+// The backend speaks in business words (good / watch / risk). The stylesheet speaks in
+// colours (pos / warn / neg). This is the one place that translates between them.
+export function bandTone(band) {
+  if (band === 'good') return 'pos';
+  if (band === 'watch') return 'warn';
+  if (band === 'risk') return 'neg';
+  return 'mut';
 }

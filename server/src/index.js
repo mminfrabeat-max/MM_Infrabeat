@@ -10,11 +10,8 @@ import { requireSignIn } from './auth.js';
 import { verifyMail, mailConfigured } from './mailer.js';
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
-import { todayRouter } from './routes/today.js';
-import { approvalsRouter } from './routes/approvals.js';
-import { decisionsRouter } from './routes/decisions.js';
-import { suppliersRouter } from './routes/suppliers.js';
-import { stockRouter } from './routes/stock.js';
+import { dashboardRouter } from './routes/dashboard.js';
+import { actionsRouter } from './routes/actions.js';
 
 // Refuse to start rather than serve procurement data to anyone who finds the port.
 if (!authConfigured) {
@@ -31,44 +28,36 @@ if (!authConfigured) {
 
 const app = express();
 
-// Lets the app read JSON request bodies. The sign-in form needs this.
 app.use(express.json());
 
-// --- Open routes ------------------------------------------------------------
+// --- Open routes -------------------------------------------------------------
 // Two things must work before anyone is signed in: checking the backend is alive, and
 // signing in itself.
 app.use('/api', healthRouter);
 app.use('/api', authRouter);
 
-// --- Everything below requires a signed-in session --------------------------
-// One line, applied once. A new data route added after this point is protected by
-// default, which is the right way round: forgetting to protect something should be
-// impossible rather than merely unlikely.
+// --- Everything below requires a signed-in session ---------------------------
+// One line, applied once. A route added after this point is protected by default, which is
+// the right way round: forgetting to protect something should be impossible rather than
+// merely unlikely.
 app.use('/api', requireSignIn);
 
-app.use('/api', todayRouter);
-app.use('/api', approvalsRouter);
-app.use('/api', decisionsRouter);
-app.use('/api', suppliersRouter);
-app.use('/api', stockRouter);
+app.use('/api', dashboardRouter);
+app.use('/api', actionsRouter);
 
-// Any unknown /api/... URL returns JSON, not an HTML error page. Without this, fetch()
-// in the browser would try to parse HTML as JSON and give you a confusing error.
+// Any unknown /api/... URL returns JSON, not an HTML error page. Without this, fetch() in
+// the browser would try to parse HTML as JSON and give you a confusing error.
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Not found', path: req.originalUrl });
 });
 
 // Express error handler. It must take exactly these four arguments - that is how Express
 // recognises it as an error handler rather than a normal route.
-// Any error thrown in a route lands here, so the browser gets a readable message
-// instead of a hung request.
 app.use((err, req, res, next) => {
   console.error('[api] unhandled error:', err.message);
   // The message is written for a person to read, so it is safe to show on screen.
   // Never put a stack trace or a credential in here - this text reaches the browser.
-  res.status(500).json({
-    error: err.message || 'Something went wrong on the server'
-  });
+  res.status(500).json({ error: err.message || 'Something went wrong on the server' });
 });
 
 app.listen(config.port, async () => {
@@ -80,13 +69,13 @@ app.listen(config.port, async () => {
   // Check the mail credentials now, while you are looking at the terminal, rather than
   // discovering they are wrong on the first approval of the day.
   if (!mailConfigured()) {
-    console.log('[api] email: not configured, approvals will save but send nothing');
+    console.log('[api] email: not configured, actions will save but send nothing');
   } else {
     const result = await verifyMail();
-    if (result.ok) {
-      console.log(`[api] email: ready, sending as ${config.mail.user}`);
-    } else {
-      console.log(`[api] email: NOT WORKING - ${result.reason}`);
-    }
+    console.log(
+      result.ok
+        ? `[api] email: ready, sending as ${config.mail.user}`
+        : `[api] email: NOT WORKING - ${result.reason}`
+    );
   }
 });

@@ -5,14 +5,16 @@
 
 import { useState } from 'react';
 import { api } from '../api.js';
+import { COMPANY, PRODUCT } from '../brand.js';
 import { Icon } from '../components/ui.jsx';
+import { Wordmark, WordmarkFallback } from '../components/shell-bits.jsx';
 
 export default function Login({ onSignedIn }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
-  // Tracks whether a sign-in is in flight, so the button can be disabled. Without this,
-  // an impatient double-click sends the request twice.
+  // Tracks whether a sign-in is in flight so the button can be disabled. Without this, an
+  // impatient double-click sends the request twice.
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(event) {
@@ -20,10 +22,8 @@ export default function Login({ onSignedIn }) {
     event.preventDefault();
     setError(null);
     setBusy(true);
-
     try {
-      const session = await api.login(username, password);
-      onSignedIn(session);
+      onSignedIn(await api.login(username, password));
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -34,17 +34,19 @@ export default function Login({ onSignedIn }) {
     <div className="loginpage">
       <form className="logincard" onSubmit={handleSubmit}>
         <div className="loginbrand">
-          <span className="logo">NC</span>
-          <div>
-            <div className="b1">Procurement Dashboard</div>
-            <div className="b2">Northline Cement</div>
-          </div>
+          <Wordmark />
+          <WordmarkFallback />
+          <span className="bdiv" />
+          <span className="bstack">
+            <span className="b1" style={{ fontSize: 13.5 }}>{COMPANY}</span>
+            <span className="b2">{PRODUCT}</span>
+          </span>
         </div>
 
         <h1>Sign in</h1>
         <p className="muted loginlede">
-          This dashboard shows live purchasing and supplier information, so it is not open
-          to everyone.
+          This dashboard shows live purchasing, vendor and contract information, so it is not
+          open to everyone.
         </p>
 
         {error && (
@@ -61,7 +63,6 @@ export default function Login({ onSignedIn }) {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
-            // Puts the cursor here when the page opens, so you can just start typing.
             autoFocus
             required
           />
@@ -82,9 +83,7 @@ export default function Login({ onSignedIn }) {
           {busy ? 'Checking…' : 'Sign in'}
         </button>
 
-        <p className="loginfoot">
-          Five wrong attempts locks the account for ten minutes.
-        </p>
+        <p className="loginfoot">Five wrong attempts locks the account for ten minutes.</p>
       </form>
     </div>
   );

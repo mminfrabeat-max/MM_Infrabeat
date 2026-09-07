@@ -1,89 +1,97 @@
-// Stock risk: what runs out, and whether ordering today would even arrive in time.
+// Stock risk, ordered by how urgent each material actually is.
 //
-// The distinction this screen exists to make: being below the reorder point is a
-// planning signal, but cover shorter than the lead time is the one that stops production.
-// A manager watching only the first number gets surprised by the second.
+// The idea this screen exists to carry: a material can sit above its reorder point and
+// still be short, because the reorder point never knew that three departments between them
+// would want 2,520 tonnes this month. Demand comes first, the master data second.
 
-import { useApi } from '../useApi.js';
-import { api } from '../api.js';
-import { number, plural } from '../format.js';
-import { Card, Banner, Chip, Loading, ErrorPanel } from '../components/ui.jsx';
+import { inr, num, plural, bandTone } from '../format.js';
+import { byPlant, shortMaterials } from '../selectors.js';
+import { Card, Banner, Chip } from '../components/ui.jsx';
 import { Meter, toneColour } from '../components/charts.jsx';
 
-export default function Stock() {
-  const { state, data, error, reload } = useApi(api.stock);
-
-  if (state === 'loading') return <Loading what="stock levels" />;
-  if (state === 'error') return <ErrorPanel message={error} onRetry={reload} />;
-
-  const { materials, atRiskCount } = data;
+export default function Stock({ data, plant, canDecide, onRaiseRequest, busyCode }) {
+  const rows = byPlant(data.materials, plant);
+  const short = shortMaterials(data.materials, plant);
 
   return (
     <>
-      {atRiskCount > 0 ? (
-        <Banner kind="err" icon="alert">
-          <b>{plural(atRiskCount, 'material')} will run out before a delivery could arrive.</b>{' '}
-          Cover is shorter than the supplier's lead time, so an order raised today is
-          already too late. Below the reorder point is a warning; this is the one that
-          stops production.
+      {short.length > 0 ? (
+        <Banner kind="err" icon="box">
+          <b>{plural(short.length, 'material')} cannot cover what the plants have asked for.</b>{' '}
+          The list is ordered by how urgent it is: how much is short, how soon it is needed,
+          how long a new load takes, and whether the kiln runs on it.
         </Banner>
       ) : (
         <Banner kind="ok" icon="check">
-          Every material has more cover than its delivery lead time.
+          Every material covers what the plants have asked for.
         </Banner>
       )}
 
-      <Card span="c12" flush icon="box" tone={atRiskCount > 0 ? 'neg' : 'pos'} title="Stock against lead time" subtitle="most urgent first">
+      <Card span="c12" flush icon="box" tone={short.length ? 'neg' : 'pos'} title="Materials" subtitle="most urgent first">
         <table>
           <thead>
             <tr>
+              <th>Priority</th>
               <th>Material</th>
               <th>Plant</th>
               <th className="rt">In stock</th>
-              <th className="rt">Safety level</th>
-              <th className="rt">Reorder at</th>
               <th className="rt">On order</th>
-              <th className="rt">Used per day</th>
-              <th>Cover</th>
-              <th className="rt">Lead time</th>
-              <th>Suggested</th>
+              <th className="rt">Departments need</th>
+              <th className="rt">Short by</th>
+              <th>Needed from</th>
+              <th>Stock lasts</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {materials.map((m) => (
+            {rows.map((m, i) => (
               <tr key={`${m.code}-${m.plant}`}>
+                <td><span className={`prio bg-${bandTone(m.band)}`}>{i + 1}</span></td>
                 <td>
                   <b>{m.name}</b>
-                  <div className="sub">{m.code}, usually from {m.supplierName}</div>
+                  <div className="sub">
+                    {m.code}, from {m.supplierName}
+                    {m.kiln && <> <Chip tone="neg">kiln runs on this</Chip></>}
+                  </div>
+                  <div className="dem">
+                    {m.needs.map((n) => (
+                      <span key={n.dept}>
+                        {n.dept} <b>{num(n.quantity)}</b> by {n.by}
+                      </span>
+                    ))}
+                  </div>
                 </td>
                 <td>{m.plant}</td>
-                <td className={`rt n ${m.belowReorderPoint ? 'warn' : ''}`}>
-                  {number(m.onHand)} {m.unit}
+                <td className="rt n">{num(m.onHand)} {m.unit}</td>
+                <td className="rt n">{m.openOrderQuantity ? num(m.openOrderQuantity) : '–'}</td>
+                <td className="rt n">
+                  <b>{num(m.totalNeeded)}</b>
+                  <div className="sub">{plural(m.needs.length, 'department')}</div>
                 </td>
-                <td className="rt n">{number(m.safetyStock)}</td>
-                <td className="rt n">{number(m.reorderPoint)}</td>
-                <td className="rt n">{m.openOrderQuantity ? number(m.openOrderQuantity) : '–'}</td>
-                <td className="rt n">{number(m.dailyUsage)}</td>
-                <td className="covercell">
-                  <Chip tone={m.willRunOut ? 'neg' : m.belowReorderPoint ? 'warn' : 'pos'}>
-                    {m.daysOfCover} days
-                  </Chip>
+                <td className="rt n">
+                  {m.shortBy > 0 ? <Chip tone="neg">{num(m.shortBy)}</Chip> : <Chip tone="pos">nil</Chip>}
+                </td>
+                <td className="sub">{m.neededFrom || '–'}</td>
+                <td>
+                  <Chip tone={m.runsOutFirst ? 'neg' : 'pos'}>{m.daysOfCover} days</Chip>
                   <Meter
                     percent={Math.min(100, (m.daysOfCover / Math.max(m.leadTimeDays, 1)) * 100)}
-                    colour={toneColour(m.willRunOut ? 'neg' : m.belowReorderPoint ? 'warn' : 'pos')}
+                    colour={toneColour(m.runsOutFirst ? 'neg' : 'pos')}
                   />
-                  {m.openOrderQuantity > 0 && (
-                    <div className="sub">{m.daysOfCoverWithoutOrders} d if that delivery slips</div>
-                  )}
+                  <div className="sub">new load takes {m.leadTimeDays} days</div>
                 </td>
-                <td className="rt n">{m.leadTimeDays} d</td>
-                <td>
-                  {m.needsOrderNow ? (
-                    <span className="suggestcell">
-                      Order {number(m.suggestedOrderQuantity)} {m.unit}
-                    </span>
+                <td className="rt">
+                  {m.shortBy > 0 || m.runsOutFirst ? (
+                    <button
+                      className="btn sm emph"
+                      onClick={() => onRaiseRequest(m)}
+                      disabled={!canDecide || busyCode === m.code}
+                      type="button"
+                    >
+                      {busyCode === m.code ? 'Raising…' : 'Raise request'}
+                    </button>
                   ) : (
-                    <span className="sub">no action</span>
+                    <span className="sub">nothing needed</span>
                   )}
                 </td>
               </tr>
@@ -93,10 +101,9 @@ export default function Stock() {
       </Card>
 
       <p className="footnote">
-        Cover is what is in stock plus what is already on order, divided by average daily
-        use. The suggested quantity brings stock back to the reorder point and covers
-        consumption while the delivery is in transit. Raising an order from this screen
-        arrives in milestone 5.
+        Priority is worked out from four things: how much short we are against what departments
+        asked for, how many days of stock are left, how long a new load takes to arrive, and
+        whether the kiln depends on the material. Change the plant at the top to see one plant only.
       </p>
     </>
   );

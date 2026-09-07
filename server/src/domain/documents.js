@@ -1,101 +1,128 @@
-// Joins a purchase document to its supplier's score, and turns the two together into a
-// recommendation the manager can act on without opening the ERP system.
+// Joins a purchase document to its vendor's standing, and turns the two into something a
+// head of department can act on without opening SAP.
 //
-// The recommendation is a business rule, so it lives here rather than in the browser.
-// It never says "approve" flatly on a bad supplier and never blocks on a good one: the
-// point is to put the supplier's recent behaviour in front of the person signing.
+// Two pieces of writing happen here, and both are business rules rather than presentation:
+//
+//   advice        what to watch before approving
+//   consequence   the same decision priced BOTH ways
+//
+// The second is the one that earns its place. Every dashboard tells you what is wrong.
+// Almost none tell you what happens if you do nothing about it, which is the half of the
+// decision a manager is actually weighing.
 
 import { money, rupees } from './format.js';
 
-// Anything waiting longer than this is treated as overdue on the Today screen.
 export const OVERDUE_HOURS = 24;
 
 function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
-// How far this document's price sits above the agreed rate for THIS material.
-// Note it uses the document's own contract rate, not the supplier's headline rate: a
-// supplier sells several materials and each has its own agreed price.
-function ratePosition(document) {
-  if (!document.contractRate) return null;
-  const percent =
-    ((document.rate - document.contractRate) / document.contractRate) * 100;
-  return round1(percent);
+// What the company actually pays: the goods plus getting them here.
+export function totalValue(document) {
+  return document.basic + (document.freight || 0) + (document.loading || 0);
 }
 
-function buildRecommendation(document, score, percentOverContract) {
-  // No history means no opinion. Saying so is more useful than a fake reassurance.
+// Older documents may carry no item list. Build a single line from the header so every
+// screen can assume items always exist.
+export function itemsOf(document) {
+  if (document.items && document.items.length > 0) return document.items;
+  return [
+    {
+      pos: 10,
+      materialCode: document.materialCode,
+      material: document.material,
+      type: '',
+      typeText: '',
+      group: '',
+      groupText: '',
+      quantity: document.quantity,
+      unit: document.unit,
+      rate: document.rate
+    }
+  ];
+}
+
+function buildAdvice(document, score) {
+  const importNote =
+    document.trade === 'Import'
+      ? ` This is an import order on ${document.incoterm.split(',')[0]} terms, so the price includes freight to the port and the loading charge is ours.`
+      : '';
+
   if (!score || !score.scored) {
-    return {
-      verdict: 'check',
-      text:
-        `There are no completed orders for ${document.heldWith ? 'this supplier' : 'this supplier'} yet, ` +
-        `so there is no delivery record to judge them on. Check the rate against the agreed price before approving.`
-    };
+    return `There are no completed orders for this vendor yet, so there is no delivery record to judge them on. Check the rate against the agreed price before approving.${importNote}`;
   }
 
   if (score.band === 'good') {
-    return {
-      verdict: 'approve',
-      text:
-        `${score.name} hit the promised date on ${score.onTimePercent} percent of the last ten orders, ` +
-        `quality ${score.averageQuality} percent, and the price matches the agreed rate. ` +
-        `Nothing here needs a second look.`
-    };
+    return `${score.name} delivers on time ${score.onTimePercent} percent of the time and the rate matches contract. Nothing here needs a second look.${importNote}`;
   }
 
   if (score.band === 'watch') {
-    return {
-      verdict: 'approve with a condition',
-      text:
-        `${score.name} runs ${score.averageDaysLate} days late on average and quality is ` +
-        `${score.averageQuality} percent. Worth approving, but ask the buyer to agree a ` +
-        `late delivery penalty before the order goes out.`
-    };
+    return `${score.name} is on average ${score.averageDaysLate} days late. Approve, but ask the buyer to add a delivery condition before the order goes out.${importNote}`;
   }
 
-  return {
-    verdict: 'hold',
-    text:
-      `${score.name} has slipped from ${score.earlierDaysLate} days late to ` +
-      `${score.recentDaysLate} days late over the last ten orders` +
-      (percentOverContract > 0
-        ? `, and is charging ${percentOverContract} percent above the agreed rate of ${rupees(document.contractRate)} per ${document.unit}`
-        : '') +
-      `. Approving at ${money(document.value)} locks that in. Approve the quantity, but ` +
-      `reopen the price against the agreement and get a firm delivery date first.`
-  };
+  return (
+    `${score.name} has gone from ${score.earlierDaysLate} days late to ${score.recentDaysLate} days late over their last ten orders, ` +
+    `and is charging ${score.percentOverContract} percent above the contract rate, which is ` +
+    `${money(document.basic * score.percentOverContract / 100)} on this order. ` +
+    `Approve the quantity if you must, but get the rate fixed and a firm date first.${importNote}`
+  );
 }
 
-// One document plus everything needed to decide on it.
-export function enrichDocument(document, scoresById) {
+// The same decision, priced both ways. Needs the stock position and the contract, because
+// "send it back" is only cheap if you have the cover to wait.
+function buildConsequence(document, score, material, contract) {
+  const over = score?.scored ? score.percentOverContract : 0;
+  const overAmount = Math.round(document.basic * over / 100);
+  const coverDays = material ? Math.floor(material.onHand / material.dailyUsage) : null;
+
+  const ifApproved =
+    `Goods are due ${document.deliveryDate}. ` +
+    (over > 0
+      ? `The rate is ${over} percent above contract, ${money(overAmount)} more than the agreed price on this order` +
+        (contract
+          ? `, and about ${money(Math.round(contract.target * over / 100))} across the full ${money(contract.target)} contract if every order goes at this rate.`
+          : '.')
+      : 'The rate is at or below the contract rate, so nothing is lost on price.');
+
+  const ifSentBack = material
+    ? `A re-quote takes about a week and the lead time is ${material.leadTimeDays} days, so the material would land roughly ` +
+      `${7 + material.leadTimeDays} days from now. ${document.plant} has ${coverDays} days of cover on ${material.name} at today's use.`
+    : `A re-quote takes about a week. There is no stock buffer on this one, so the ${String(document.material).toLowerCase()} schedule moves with it.`;
+
+  return { ifApproved, ifSentBack };
+}
+
+export function enrichDocument(document, scoresById, materials = [], contracts = []) {
   const score = scoresById[document.supplierId] || null;
-  const percentOverContract = ratePosition(document);
+  const material = materials.find((m) => m.code === document.materialCode) || null;
+  const contract = contracts.find((c) => c.supplierName === (score ? score.name : null)) || null;
+
+  const percentOverContract = score?.scored
+    ? round1(((document.rate - score.contractRate) / score.contractRate) * 100)
+    : null;
 
   return {
     ...document,
-    supplierName: score ? score.name : 'Unknown supplier',
+    items: itemsOf(document),
+    total: totalValue(document),
+    supplierName: score ? score.name : 'Unknown vendor',
     supplierScore: score,
     percentOverContract,
     isOverdue: document.hoursWaiting > OVERDUE_HOURS,
-    recommendation: buildRecommendation(document, score, percentOverContract)
+    advice: buildAdvice(document, score),
+    consequence: buildConsequence(document, score, material, contract)
   };
 }
 
-export function enrichAllDocuments(documents, scoresById) {
-  return documents.map((d) => enrichDocument(d, scoresById));
+export function enrichAllDocuments(documents, scoresById, materials, contracts) {
+  return documents.map((d) => enrichDocument(d, scoresById, materials, contracts));
 }
 
-export function pendingDocuments(documents) {
-  return documents.filter((d) => d.status === 'pending');
-}
-
-// Longest wait first. That is the order a manager should work through them.
 export function byLongestWait(documents) {
   return [...documents].sort((a, b) => b.hoursWaiting - a.hoursWaiting);
 }
 
-export function totalValue(documents) {
-  return documents.reduce((sum, d) => sum + d.value, 0);
+export function sumTotals(documents) {
+  return documents.reduce((sum, d) => sum + totalValue(d), 0);
 }

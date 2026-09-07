@@ -1,0 +1,27 @@
+{
+  "_source": "MIXED",
+  "_realFields": "Open orders, open requisitions and contracts all exist in the sandbox: A_PurchaseOrder with A_PurchaseOrderItem (filtered on not yet delivered), A_PurchaseRequisitionHeader, and outline agreements. Contract consumption is a standard field on the agreement item.",
+  "_simulatedFields": "The 'note' on each row is a plain-language summary a person would write, not a stored field. 'received' as a percentage would be worked out by comparing goods receipts against the ordered quantity.",
+  "openOrders": [
+    { "id": "4500177012", "supplierName": "Aditya Refractories", "plant": "Mumbai", "material": "Castable, cooler", "value": 3400000, "ordered": "12 Aug", "due": "26 Aug", "receivedPercent": 0, "note": "Nothing received, 9 days past the date" },
+    { "id": "4500177388", "supplierName": "Vindhya Logistics", "plant": "Mumbai", "material": "Clinker freight", "value": 1250000, "ordered": "20 Aug", "due": "02 Sep", "receivedPercent": 60, "note": "Part delivered, rest still open" },
+    { "id": "4500177501", "supplierName": "Bharat Bearings", "plant": "Nagpur", "material": "Roller bearings", "value": 880000, "ordered": "18 Aug", "due": "31 Aug", "receivedPercent": 0, "note": "Vendor asked for two more weeks" },
+    { "id": "4500176880", "supplierName": "Shreeji Minerals", "plant": "Pune", "material": "Gypsum", "value": 5100000, "ordered": "02 Aug", "due": "14 Aug", "receivedPercent": 100, "note": "Fully received, invoice not yet booked" },
+    { "id": "4500177744", "supplierName": "Sunfield Packaging", "plant": "Pune", "material": "HDPE bags", "value": 1620000, "ordered": "25 Aug", "due": "05 Sep", "receivedPercent": 0, "note": "Within the normal window" },
+    { "id": "4500177900", "supplierName": "Oman Mining LLC", "plant": "Pune", "material": "Coal, imported", "value": 7350000, "ordered": "10 Aug", "due": "20 Sep", "receivedPercent": 0, "note": "In transit, vessel due at Mundra" }
+  ],
+  "openRequests": [
+    { "id": "1000442201", "dept": "Kiln 1 operations", "plant": "Pune", "material": "Gypsum", "value": 4200000, "ageDays": 6, "note": "Released, buyer has not made the order yet" },
+    { "id": "1000442233", "dept": "Logistics", "plant": "Mumbai", "material": "Freight, shutdown spares", "value": 944000, "ageDays": 2, "note": "Waiting for approval" },
+    { "id": "1000442190", "dept": "Cement mill 2", "plant": "Nagpur", "material": "Grinding media", "value": 2952000, "ageDays": 1, "note": "Waiting for approval" },
+    { "id": "1000442255", "dept": "Maintenance", "plant": "Nagpur", "material": "Mill liners", "value": 1780000, "ageDays": 11, "note": "Released 11 days ago, still no order" },
+    { "id": "1000442260", "dept": "Packing plant", "plant": "Pune", "material": "HDPE bags", "value": 2400000, "ageDays": 4, "note": "Released, buyer working on it" }
+  ],
+  "contracts": [
+    { "id": "4600001155", "supplierName": "Bharat Bearings", "plant": "Nagpur", "covers": "Bearings and spares", "target": 24000000, "used": 0, "validTo": "30 Sep 2026", "daysLeft": 26 },
+    { "id": "4600001199", "supplierName": "Sunfield Packaging", "plant": "Pune", "covers": "HDPE packing", "target": 30000000, "used": 11100000, "validTo": "20 Sep 2026", "daysLeft": 16 },
+    { "id": "4600001120", "supplierName": "Aditya Refractories", "plant": "Mumbai", "covers": "Refractories", "target": 65000000, "used": 59200000, "validTo": "31 Oct 2026", "daysLeft": 57 },
+    { "id": "4600001088", "supplierName": "Shreeji Minerals", "plant": "Pune", "covers": "Gypsum and fly ash", "target": 120000000, "used": 61000000, "validTo": "31 Mar 2027", "daysLeft": 208 },
+    { "id": "4600001102", "supplierName": "Vindhya Logistics", "plant": "Mumbai", "covers": "Clinker freight", "target": 48000000, "used": 32400000, "validTo": "31 Dec 2026", "daysLeft": 118 }
+  ]
+}

@@ -1,75 +1,79 @@
-// Works out which materials will run out, and how urgent each one is.
+// Which materials are short, and in what order to deal with them.
 //
-// The important idea here is that "below the reorder point" and "will actually run out"
-// are different questions, and only the second one stops production.
+// The change that matters here: we no longer compare stock against a reorder point sitting
+// in a master record. We compare it against what departments have actually asked for, by
+// when. A material can be above its reorder point and still be short, because three
+// departments between them want more than the reorder point ever assumed.
 //
-// Below reorder point  = a planning signal. Time to think about ordering.
-// Cover < lead time    = a problem. Even if you order today, the delivery arrives after
-//                        you have run out.
-//
-// A manager who only watches the reorder point gets surprised. That is why the screens
-// lead with cover against lead time.
+// Priority is worked out from four things, in the order a plant manager would weigh them:
+//   1. Are we short against real demand at all
+//   2. Will a new load arrive after we have run out
+//   3. Does the kiln stop without it
+//   4. How tight the days of cover are against the lead time
+
+const SHORT_WEIGHT = 60;
+const RUNS_OUT_WEIGHT = 25;
+const KILN_WEIGHT = 10;
+const TIGHTNESS_WEIGHT = 20;
 
 function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
-// How many days of production the current position supports, counting what is already
-// on order. A material with no consumption never runs out, so it gets a large number
-// rather than a division by zero.
-function daysOfCover(material) {
-  if (!material.dailyUsage || material.dailyUsage <= 0) return 999;
-  return (material.onHand + material.openOrderQuantity) / material.dailyUsage;
-}
-
-// The same figure ignoring what is on order. Worth showing alongside, because it answers
-// "how exposed am I if that delivery slips?".
-function daysOfCoverWithoutOrders(material) {
-  if (!material.dailyUsage || material.dailyUsage <= 0) return 999;
-  return material.onHand / material.dailyUsage;
-}
-
-// How much to order to get back to the reorder point and cover consumption while the
-// delivery is in transit. Never negative.
-function suggestedOrderQuantity(material) {
-  const target =
-    material.reorderPoint + material.dailyUsage * material.leadTimeDays;
-  const have = material.onHand + material.openOrderQuantity;
-  return Math.max(0, Math.ceil(target - have));
-}
-
 export function assessMaterial(material) {
-  const cover = daysOfCover(material);
-  const coverWithoutOrders = daysOfCoverWithoutOrders(material);
-  const belowReorderPoint = material.onHand < material.reorderPoint;
-  const willRunOut = cover < material.leadTimeDays;
+  const needs = material.needs || [];
+
+  // Everything the departments between them have asked for.
+  const totalNeeded = needs.reduce((sum, n) => sum + n.quantity, 0);
+  // Everything we have or have coming.
+  const available = material.onHand + material.openOrderQuantity;
+  const shortBy = totalNeeded - available;
+
+  const daysOfCover = material.dailyUsage > 0 ? available / material.dailyUsage : 99;
+  // True when a load ordered today would arrive after we have run out.
+  const runsOutFirst = daysOfCover < material.leadTimeDays;
+
+  const tightness = Math.max(
+    0,
+    Math.round((1 - daysOfCover / Math.max(material.leadTimeDays, 1)) * TIGHTNESS_WEIGHT)
+  );
+
+  const urgency =
+    (shortBy > 0 ? SHORT_WEIGHT : 0) +
+    (runsOutFirst ? RUNS_OUT_WEIGHT : 0) +
+    (material.kiln ? KILN_WEIGHT : 0) +
+    tightness;
+
+  // The date on the largest single demand. That is the one that actually bites.
+  const biggestNeed = [...needs].sort((a, b) => b.quantity - a.quantity)[0];
 
   return {
     ...material,
-    daysOfCover: round1(cover),
-    daysOfCoverWithoutOrders: round1(coverWithoutOrders),
-    belowReorderPoint,
-    willRunOut,
-    // One word for the manager, instead of two booleans to interpret.
-    status: willRunOut ? 'runs out' : belowReorderPoint ? 'order soon' : 'healthy',
-    suggestedOrderQuantity: suggestedOrderQuantity(material),
-    // Only offer to order when it is below the reorder point and nothing is on the way.
-    needsOrderNow: belowReorderPoint && material.openOrderQuantity === 0
+    needs,
+    totalNeeded,
+    available,
+    shortBy,
+    daysOfCover: round1(daysOfCover),
+    runsOutFirst,
+    belowReorderPoint: material.onHand < material.reorderPoint,
+    urgency,
+    neededFrom: biggestNeed ? biggestNeed.by : null,
+    band: shortBy > 0 ? 'risk' : runsOutFirst ? 'watch' : 'good',
+    // How much to order: enough to cover the shortfall, or at least back to the
+    // reorder point, whichever is larger.
+    suggestedOrderQuantity: Math.max(
+      Math.max(0, shortBy),
+      Math.max(0, material.reorderPoint - material.onHand)
+    )
   };
 }
 
-// Assesses every material and sorts the most urgent to the top, which is the order a
-// manager wants to read them in.
+// Most urgent first, which is the order a manager wants to read them in.
 export function assessAllMaterials(materials) {
-  return materials
-    .map(assessMaterial)
-    .sort((a, b) => a.daysOfCover - b.daysOfCover);
+  return materials.map(assessMaterial).sort((a, b) => b.urgency - a.urgency);
 }
 
-export function materialsAtRisk(assessed) {
-  return assessed.filter((m) => m.willRunOut);
-}
-
-export function materialsBelowReorderPoint(assessed) {
-  return assessed.filter((m) => m.belowReorderPoint);
+// Anything short against demand, or that runs out before a new load could land.
+export function materialsShort(assessed) {
+  return assessed.filter((m) => m.shortBy > 0 || m.runsOutFirst);
 }
