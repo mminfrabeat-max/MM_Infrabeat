@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 816 220" role="img" aria-label="InfraBeat">
+  <title>InfraBeat</title>
+  <!--
+    The InfraBeat wordmark.
+
+    Drawn as text rather than traced outlines so it stays crisp at any size and weighs
+    under a kilobyte. textLength with lengthAdjust="spacingAndGlyphs" pins the mark to the
+    full width of the viewBox, so it looks the same even if a machine substitutes a
+    different font for the stack below.
+
+    The two colours are the brand blue and red, the same values the dashboard palette is
+    built from: --hero-3 and --violet in web/src/styles.css.
+
+    To use the original artwork instead, drop your own file in this folder as
+    infrabeat-logo.png and change the src in web/src/components/shell-bits.jsx.
+  -->
+  <text
+    x="0"
+    y="174"
+    font-family="'Arial Black', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-weight="900"
+    font-size="200"
+    textLength="816"
+    lengthAdjust="spacingAndGlyphs"
+  ><tspan fill="#009BC9">Infra</tspan><tspan fill="#EB1C24">Beat</tspan></text>
+</svg>

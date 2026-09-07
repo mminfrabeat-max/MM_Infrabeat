@@ -4,20 +4,20 @@
 // content. A screen never uses them; only App.jsx does.
 
 import { useEffect } from 'react';
-import { WORDMARK } from '../brand.js';
+import { LOGO } from '../brand.js';
 import { Icon } from './ui.jsx';
 
 // The logo, with a text fallback.
 //
-// An embedded image can fail for reasons we cannot see from here: a corrupted string, a
-// content policy, an old browser. A broken-image icon in the header looks far worse than
-// clean text, so onError swaps in a wordmark drawn from the name itself.
+// An image can fail for reasons we cannot see from here: a missing file after a bad
+// deploy, a content policy, an old browser. A broken-image icon in the header looks far
+// worse than clean type, so onError swaps in a wordmark drawn from the name itself.
 export function Wordmark() {
   return (
     <img
       className="wordmark"
       alt="InfraBeat"
-      src={WORDMARK}
+      src={LOGO}
       onError={(e) => {
         const img = e.currentTarget;
         img.style.display = 'none';
