@@ -5,9 +5,16 @@
 --
 -- Three SQLite decisions worth knowing about, because they are not obvious:
 --
--- 1. STRICT. Without it SQLite will happily store the text "hello" in an INTEGER column.
---    STRICT makes that an error at insert time, which turns a silent data problem into a
---    loud one while you are still writing the loader.
+-- 1. No STRICT tables, on purpose. STRICT would stop SQLite quietly storing the text
+--    "hello" in an INTEGER column, and it is the better tool. It also needs SQLite 3.37,
+--    from late 2021, and the VS Code SQLite extension bundles 3.26 from 2018 - so a schema
+--    using STRICT cannot be opened in the editor at all. Being able to browse the database
+--    while learning it is worth more than the strictest available check.
+--
+--    Most of that protection is bought back with CHECK (typeof(x) IN (...)) on the columns
+--    where a wrong type would silently corrupt a calculation: stock levels, money and
+--    rates. Those work on every SQLite ever shipped. Columns that are only ever displayed
+--    are left unchecked, because a wrong type there is visible rather than dangerous.
 --
 -- 2. Money is INTEGER, in whole rupees. Every amount in this business is whole rupees, and
 --    an integer cannot drift the way a floating point number can. Quantities and
@@ -34,7 +41,7 @@ CREATE TABLE plants (
   city          TEXT,
   is_active     INTEGER NOT NULL DEFAULT 1,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+);
 
 CREATE TABLE people (
   id                  INTEGER PRIMARY KEY,
@@ -48,7 +55,7 @@ CREATE TABLE people (
   on_leave_until      TEXT,
   stand_in_person_id  INTEGER REFERENCES people(id),
   created_at          TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+);
 
 CREATE TABLE users (
   id              INTEGER PRIMARY KEY,
@@ -60,7 +67,7 @@ CREATE TABLE users (
   approval_limit  INTEGER,
   is_active       INTEGER NOT NULL DEFAULT 1,
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+);
 
 CREATE TABLE vendors (
   id             INTEGER PRIMARY KEY,
@@ -75,8 +82,11 @@ CREATE TABLE vendors (
   contract_rate  INTEGER NOT NULL DEFAULT 0,
   unit           TEXT,
   is_blocked     INTEGER NOT NULL DEFAULT 0,
-  created_at     TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  -- The score and the rate both feed arithmetic, so a text value here would break it
+  -- quietly rather than loudly.
+  CHECK (typeof(sap_score) = 'integer' AND typeof(contract_rate) IN ('integer', 'real'))
+);
 
 CREATE TABLE materials (
   id              INTEGER PRIMARY KEY,
@@ -86,7 +96,7 @@ CREATE TABLE materials (
   material_type   TEXT,
   material_group  TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+);
 
 -- The same material exists at several plants with different stock, lead time and
 -- criticality. Keying on material alone would merge them, which is why SAP splits the
@@ -106,8 +116,19 @@ CREATE TABLE material_plants (
   -- Kept for the case where the usual source is not a vendor we hold a record for.
   default_vendor_name TEXT,
   updated_at         TEXT NOT NULL DEFAULT (datetime('now')),
-  UNIQUE (material_id, plant_id)
-) STRICT;
+  UNIQUE (material_id, plant_id),
+  -- Every one of these feeds the stock calculation. A number typed with a comma in a
+  -- database browser would arrive as text and make days of cover silently wrong, which is
+  -- exactly the sort of error nobody notices until a kiln stops.
+  CHECK (
+    typeof(on_hand)        IN ('integer', 'real') AND
+    typeof(safety_stock)   IN ('integer', 'real') AND
+    typeof(reorder_point)  IN ('integer', 'real') AND
+    typeof(open_order_qty) IN ('integer', 'real') AND
+    typeof(daily_usage)    IN ('integer', 'real') AND
+    typeof(lead_time_days) =  'integer'
+  )
+);
 
 CREATE TABLE teams (
   id              INTEGER PRIMARY KEY,
@@ -124,7 +145,7 @@ CREATE TABLE teams (
   reply_time      TEXT,
   last_seen       TEXT,
   state           TEXT NOT NULL DEFAULT 'ok' CHECK (state IN ('ok', 'nudge'))
-) STRICT;
+);
 
 -- ===========================================================================
 -- TRANSACTIONAL
@@ -143,8 +164,11 @@ CREATE TABLE contracts (
   consumed_value   INTEGER NOT NULL DEFAULT 0,
   valid_from       TEXT,
   valid_to         TEXT,
-  days_left        INTEGER
-) STRICT;
+  days_left        INTEGER,
+  -- Percent used is worked out from these two, and drives the never-used and nearly-used
+  -- flags on the contracts screen.
+  CHECK (typeof(target_value) IN ('integer', 'real') AND typeof(consumed_value) IN ('integer', 'real'))
+);
 
 -- One table for orders, requisitions, open orders and unconverted requests. They are the
 -- same entity at different points in its life, and three tables would mean writing every
@@ -184,8 +208,15 @@ CREATE TABLE purchase_documents (
   decided_by_user_id INTEGER REFERENCES users(id),
   decided_at         TEXT,
   decision_note      TEXT,
-  created_at         TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+  created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Total payable is basic plus freight plus loading. If any of the three arrived as text,
+  -- the sum would come out wrong on screen with nothing to show why.
+  CHECK (
+    typeof(basic_value) IN ('integer', 'real') AND
+    typeof(freight)     IN ('integer', 'real') AND
+    typeof(loading)     IN ('integer', 'real')
+  )
+);
 
 CREATE TABLE purchase_document_items (
   id              INTEGER PRIMARY KEY,
@@ -201,8 +232,10 @@ CREATE TABLE purchase_document_items (
   quantity        REAL NOT NULL DEFAULT 0,
   unit            TEXT,
   rate            INTEGER NOT NULL DEFAULT 0,
-  UNIQUE (document_id, position)
-) STRICT;
+  UNIQUE (document_id, position),
+  -- Line value is quantity times rate, shown on every order detail.
+  CHECK (typeof(quantity) IN ('integer', 'real') AND typeof(rate) IN ('integer', 'real'))
+);
 
 -- The whole approval chain, one row per step. The workbook could hold exactly one previous
 -- approver in four flattened columns; a three-step chain could not be recorded at all.
@@ -218,7 +251,7 @@ CREATE TABLE approval_steps (
   acted_at            TEXT,
   note                TEXT,
   UNIQUE (document_id, step_number)
-) STRICT;
+);
 
 -- Only import orders have one, which is why this is a table rather than ten columns that
 -- sit empty on every domestic order. It also updates on its own clock, from a feed that is
@@ -238,7 +271,7 @@ CREATE TABLE shipments (
   inland_note      TEXT,
   position_at      TEXT,
   feed_source      TEXT
-) STRICT;
+);
 
 -- What departments have actually asked for, by when. This is what makes stock risk real
 -- rather than a comparison against a reorder point somebody set two years ago.
@@ -251,7 +284,7 @@ CREATE TABLE material_demands (
   requested_by_person_id INTEGER REFERENCES people(id),
   requested_by_name      TEXT,
   is_fulfilled           INTEGER NOT NULL DEFAULT 0
-) STRICT;
+);
 
 -- The last ten orders per vendor. Feeds every trend chart and the whole score.
 CREATE TABLE vendor_deliveries (
@@ -262,8 +295,15 @@ CREATE TABLE vendor_deliveries (
   days_late        INTEGER NOT NULL DEFAULT 0,
   quality_percent  REAL NOT NULL DEFAULT 0,
   rate             INTEGER NOT NULL DEFAULT 0,
-  sequence         INTEGER NOT NULL
-) STRICT;
+  sequence         INTEGER NOT NULL,
+  -- These three are the entire vendor score. Text in any of them would produce a score
+  -- that looks plausible and is wrong.
+  CHECK (
+    typeof(days_late)       =  'integer' AND
+    typeof(quality_percent) IN ('integer', 'real') AND
+    typeof(rate)            IN ('integer', 'real')
+  )
+);
 
 -- ===========================================================================
 -- OPERATIONAL
@@ -293,7 +333,7 @@ CREATE TABLE situations (
   detected_at         TEXT,
   resolved_at         TEXT,
   resolved_by_user_id INTEGER REFERENCES users(id)
-) STRICT;
+);
 
 -- The separate facts that had to be put side by side to spot the problem. One pipe
 -- separated cell in the workbook, which cannot be queried at all.
@@ -303,7 +343,7 @@ CREATE TABLE situation_evidence (
   evidence      TEXT NOT NULL,
   source_system TEXT,
   sequence      INTEGER NOT NULL DEFAULT 0
-) STRICT;
+);
 
 -- Append only. Nothing updates or deletes a row here, which is what makes it an audit
 -- trail rather than a status field.
@@ -321,7 +361,7 @@ CREATE TABLE action_log (
   vendor_name       TEXT,
   value             INTEGER,
   note              TEXT
-) STRICT;
+);
 
 -- The mail outbox. Two columns on the log meant a failed send could never be retried,
 -- because there was nowhere to record how many attempts had been made.
@@ -339,7 +379,7 @@ CREATE TABLE notifications (
   sent_at             TEXT,
   last_error          TEXT,
   created_at          TEXT NOT NULL DEFAULT (datetime('now'))
-) STRICT;
+);
 
 -- ===========================================================================
 -- INFRASTRUCTURE AND HISTORY
@@ -356,7 +396,7 @@ CREATE TABLE sessions (
   expires_at  TEXT NOT NULL,
   ip_address  TEXT,
   user_agent  TEXT
-) STRICT;
+);
 
 -- One snapshot per day per plant. This is what turns the tile sparklines from illustrative
 -- shapes into measured history.
@@ -367,7 +407,7 @@ CREATE TABLE daily_metrics (
   metric       TEXT NOT NULL,
   value        REAL NOT NULL,
   UNIQUE (captured_on, plant_id, metric)
-) STRICT;
+);
 
 -- ===========================================================================
 -- INDEXES
