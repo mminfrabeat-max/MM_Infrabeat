@@ -456,3 +456,18 @@ th.rt, td.rt { text-align: right; }
   border-radius: var(--r-sm);
 }
 .signout:hover { background: var(--surface-2); color: var(--ink); }
+
+/* Note field in the approve / reject bar. */
+.noteinput {
+  flex: 1;
+  min-width: 220px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+}
+.noteinput:focus { outline: none; border-color: var(--primary); background: var(--surface); }
+.noteinput:disabled { opacity: .6; }

@@ -7,11 +7,13 @@
 
 import { config, hasSapKey } from '../config.js';
 import { mockProvider } from './mock-provider.js';
+import { excelProvider } from './excel-provider.js';
 import { sapProvider } from './sap-provider.js';
 import { assertValidProvider } from './provider.js';
 
 const providers = {
   mock: mockProvider,
+  excel: excelProvider,
   sap: sapProvider
 };
 
@@ -21,7 +23,7 @@ const selected = providers[config.dataSource];
 if (!selected) {
   throw new Error(
     `DATA_SOURCE in your .env is "${config.dataSource}", which is not a data source. ` +
-      `Use "mock" or "sap".`
+      `Use "excel", "mock" or "sap".`
   );
 }
 

@@ -1,6 +1,7 @@
 // Two screens in one file, because they are the same subject at two zoom levels:
 // the list of everything waiting, and the full picture for one document.
 
+import { useState } from 'react';
 import { useApi } from '../useApi.js';
 import { api } from '../api.js';
 import { money, rupees, number, signedPercent, documentTypeLabel, initials } from '../format.js';
@@ -197,22 +198,93 @@ function ApprovalDetail({ id, onNavigate }) {
         )}
       </div>
 
-      {/* Approve and reject arrive in milestone 5. The buttons are shown but disabled,
-          because a button that looks live and silently does nothing is worse than one
-          that plainly says it is not ready yet. */}
-      {d.status === 'pending' && (
-        <div className="footerbar">
-          <span className="muted" style={{ fontSize: '12.5px' }}>
-            <Icon name="clock" size={13} /> Approving and rejecting arrive in milestone 5
-          </span>
-          <span style={{ flex: 1 }} />
-          <button className="btn rej" disabled type="button">Reject</button>
-          <button className="btn emph" disabled type="button">
-            <Icon name="check" size={13} /> Approve
-          </button>
-        </div>
+      {d.status === 'pending' ? (
+        <DecisionBar document={d} onDecided={reload} />
+      ) : (
+        <DecisionRecord document={d} />
       )}
     </>
+  );
+}
+
+// The approve and reject controls.
+//
+// Two things it must get right. First, the buttons disable while the request is in
+// flight, so an impatient second click cannot send a second decision. Second, saving to
+// the workbook and sending the email are reported separately, because the first can
+// succeed while the second fails and you need to know which happened.
+function DecisionBar({ document, onDecided }) {
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(null); // 'approve' | 'reject' | null
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  async function decide(action) {
+    setBusy(action);
+    setError(null);
+    try {
+      const response = action === 'approve'
+        ? await api.approve(document.id, note)
+        : await api.reject(document.id, note);
+      setResult(response);
+      // Re-fetch so the header, the status chip and the record below all update.
+      onDecided();
+    } catch (err) {
+      setError(err.message);
+      setBusy(null);
+    }
+  }
+
+  if (result) {
+    return (
+      <Banner kind={result.email.sent ? 'ok' : 'warn'} icon={result.email.sent ? 'check' : 'alert'}>
+        <b>{documentTypeLabel(document.type)} {document.id} {result.status}.</b>{' '}
+        Saved to the workbook.{' '}
+        {result.email.sent
+          ? `A notification was emailed to ${result.email.to}.`
+          : `The email did not go out: ${result.email.status.replace(/^Not sent: /, '')}`}
+      </Banner>
+    );
+  }
+
+  return (
+    <>
+      {error && (
+        <Banner kind="err" icon="alert">
+          <b>Not saved.</b> {error}
+        </Banner>
+      )}
+
+      <div className="footerbar">
+        <input
+          className="noteinput"
+          placeholder="Add a note, optional. It is saved and included in the email."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={busy !== null}
+        />
+        <button className="btn rej" onClick={() => decide('reject')} disabled={busy !== null} type="button">
+          {busy === 'reject' ? 'Saving…' : 'Reject'}
+        </button>
+        <button className="btn emph" onClick={() => decide('approve')} disabled={busy !== null} type="button">
+          <Icon name="check" size={13} />
+          {busy === 'approve' ? 'Saving…' : 'Approve'}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// Shown once a decision has been made, so reopening the document tells you what happened.
+function DecisionRecord({ document }) {
+  const approved = document.status === 'approved';
+  return (
+    <Banner kind={approved ? 'ok' : 'err'} icon={approved ? 'check' : 'alert'}>
+      <b>{approved ? 'Approved' : 'Rejected'}</b>
+      {document.decidedBy ? ` by ${document.decidedBy}` : ''}
+      {document.decidedAt ? ` on ${document.decidedAt}` : ''}
+      {document.decisionNote ? `. Note: ${document.decisionNote}` : '.'}
+    </Banner>
   );
 }
 

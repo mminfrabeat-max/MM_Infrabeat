@@ -13,3 +13,11 @@ web/dist/
 *.log
 npm-debug.log*
 .DS_Store
+
+# The live Excel workbook. Not committed because it changes on every approval, it is a
+# binary file that git cannot merge, and it would carry real decisions into the repo.
+# The JSON files in server/data are the seed; rebuild the workbook with:
+#   node server/scripts/build-workbook.js
+server/data/procurement.xlsx
+server/data/*.xlsx.tmp
+~$*.xlsx

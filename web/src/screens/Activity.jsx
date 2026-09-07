@@ -6,11 +6,12 @@
 
 import { useApi } from '../useApi.js';
 import { api } from '../api.js';
-import { plural } from '../format.js';
-import { Card, Banner, Loading, ErrorPanel, SimulatedNote } from '../components/ui.jsx';
+import { plural, money } from '../format.js';
+import { Card, Banner, Chip, Loading, ErrorPanel, SimulatedNote } from '../components/ui.jsx';
 
 export default function Activity() {
   const { state, data, error, reload } = useApi(api.agentActivity);
+  const log = useApi(api.actionLog);
 
   if (state === 'loading') return <Loading what="this morning's run" />;
   if (state === 'error') return <ErrorPanel message={error} onRetry={reload} />;
@@ -19,6 +20,59 @@ export default function Activity() {
 
   return (
     <>
+      {log.state === 'ready' && log.data.available && (
+        <Card
+          span="c12"
+          icon="check"
+          tone="pos"
+          title="Decisions recorded"
+          subtitle={`${plural(log.data.entries.length, 'decision')}, newest first, saved in the workbook`}
+          flush
+        >
+          {log.data.entries.length === 0 ? (
+            <p className="muted" style={{ padding: '22px 17px' }}>
+              Nothing decided yet. Approve or reject something on the Approvals tab and it
+              will appear here and in the workbook.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Decision</th>
+                  <th>Document</th>
+                  <th>Supplier</th>
+                  <th className="rt">Value</th>
+                  <th>By</th>
+                  <th>Note</th>
+                  <th>Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {log.data.entries.map((e, i) => (
+                  <tr key={`${e.documentId}-${i}`}>
+                    <td className="n">{e.at}</td>
+                    <td>
+                      <Chip tone={e.action === 'approved' ? 'pos' : 'neg'}>{e.action}</Chip>
+                    </td>
+                    <td className="n"><b>{e.documentId}</b></td>
+                    <td>{e.supplierName}</td>
+                    <td className="rt n">{money(Number(e.value) || 0)}</td>
+                    <td className="muted">{e.decidedBy}</td>
+                    <td className="muted">{e.note || '–'}</td>
+                    <td>
+                      <Chip tone={String(e.emailStatus).startsWith('Sent') ? 'pos' : 'warn'}>
+                        {String(e.emailStatus).startsWith('Sent') ? 'sent' : 'not sent'}
+                      </Chip>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
       <Banner icon="spark">
         A scheduled check runs each weekday morning, works out what changed overnight and
         sends the head of department a short digest. This screen shows what it did.

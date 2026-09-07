@@ -19,8 +19,11 @@ dotenv.config({ path: envPath });
 export const config = {
   port: Number(process.env.PORT) || 3001,
 
-  // "mock" = local JSON files, "sap" = live sandbox calls. Set in .env.
-  dataSource: (process.env.DATA_SOURCE || 'mock').toLowerCase(),
+  // Where the data lives. Set in .env.
+  //   excel - the Excel workbook in server/data. The only one that can be written to.
+  //   mock  - the read-only JSON files. Useful for a clean demo.
+  //   sap   - the live sandbox (milestone 4).
+  dataSource: (process.env.DATA_SOURCE || 'excel').toLowerCase(),
 
   sap: {
     baseUrl:
@@ -38,6 +41,19 @@ export const config = {
     // the browser will refuse to store the cookie and sign-in will silently fail.
     // Set AUTH_SECURE_COOKIE=true when this is deployed behind HTTPS.
     secureCookie: process.env.AUTH_SECURE_COOKIE === 'true'
+  },
+
+  mail: {
+    host: process.env.MAIL_HOST || '',
+    // 587 starts plain and upgrades to TLS. 465 is TLS from the first byte.
+    port: Number(process.env.MAIL_PORT) || 587,
+    user: process.env.MAIL_USER || '',
+    // For Gmail this must be a 16-character App Password, never the account password.
+    password: process.env.MAIL_PASSWORD || '',
+    // What the recipient sees in the From line. Defaults to the sending account.
+    from: process.env.MAIL_FROM || '',
+    // Who gets the approval notice. Defaults to whoever made the decision.
+    to: process.env.MAIL_TO || ''
   }
 };
 

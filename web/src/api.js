@@ -81,5 +81,10 @@ export const api = {
   approvals: () => request('/api/approvals'),
   approval: (id) => request(`/api/approvals/${encodeURIComponent(id)}`),
   suppliers: () => request('/api/suppliers'),
-  stock: () => request('/api/stock')
+  stock: () => request('/api/stock'),
+
+  // Decisions. These write to the Excel workbook and then send the notification email.
+  approve: (id, note) => post(`/api/approvals/${encodeURIComponent(id)}/approve`, { note }),
+  reject: (id, note) => post(`/api/approvals/${encodeURIComponent(id)}/reject`, { note }),
+  actionLog: () => request('/api/action-log')
 };

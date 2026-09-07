@@ -7,10 +7,12 @@
 import express from 'express';
 import { config, hasSapKey, authConfigured } from './config.js';
 import { requireSignIn } from './auth.js';
+import { verifyMail, mailConfigured } from './mailer.js';
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { todayRouter } from './routes/today.js';
 import { approvalsRouter } from './routes/approvals.js';
+import { decisionsRouter } from './routes/decisions.js';
 import { suppliersRouter } from './routes/suppliers.js';
 import { stockRouter } from './routes/stock.js';
 
@@ -46,6 +48,7 @@ app.use('/api', requireSignIn);
 
 app.use('/api', todayRouter);
 app.use('/api', approvalsRouter);
+app.use('/api', decisionsRouter);
 app.use('/api', suppliersRouter);
 app.use('/api', stockRouter);
 
@@ -68,9 +71,22 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(config.port, () => {
+app.listen(config.port, async () => {
   console.log(`[api] listening on http://localhost:${config.port}`);
   console.log(`[api] data source: ${config.dataSource}`);
   console.log(`[api] SAP API key loaded: ${hasSapKey ? 'yes' : 'no'}`);
   console.log(`[api] sign-in required as: ${config.auth.username}`);
+
+  // Check the mail credentials now, while you are looking at the terminal, rather than
+  // discovering they are wrong on the first approval of the day.
+  if (!mailConfigured()) {
+    console.log('[api] email: not configured, approvals will save but send nothing');
+  } else {
+    const result = await verifyMail();
+    if (result.ok) {
+      console.log(`[api] email: ready, sending as ${config.mail.user}`);
+    } else {
+      console.log(`[api] email: NOT WORKING - ${result.reason}`);
+    }
+  }
 });
