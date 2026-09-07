@@ -57,6 +57,18 @@
       "sapScore": 94,
       "contractRate": 8600,
       "unit": "MT"
+    },
+    {
+      "_note": "Deliberately has NO entry in supplier-history.json. Every real system has vendors you hold a master record for but cannot yet score, and the dashboard has to say so rather than invent a number. Referenced by a contract, an open order and the HDPE bag stock.",
+      "id": "V-10203",
+      "name": "Sunfield Packaging",
+      "category": "Packaging",
+      "city": "Pune",
+      "gst": "27AAHCS7788N1Z4",
+      "iec": null,
+      "sapScore": 79,
+      "contractRate": 14,
+      "unit": "NOS"
     }
   ]
 }

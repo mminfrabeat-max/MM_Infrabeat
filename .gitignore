@@ -25,3 +25,8 @@ server/data/procurement.xlsx
 server/data/sap-source-tables.xlsx
 server/data/*.xlsx.tmp
 ~$*.xlsx
+# The SQLite database. Generated from the workbook, holds real decisions, and binary.
+# Recreate with:  node db/migrate.js  then  node db/seed-from-excel.js
+db/procurement.db
+db/procurement.db-wal
+db/procurement.db-shm

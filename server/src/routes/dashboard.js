@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
 import { getEverything } from '../data-service.js';
 import { config } from '../config.js';
+import { canWrite } from '../store.js';
 
 export const dashboardRouter = Router();
 
@@ -21,8 +22,9 @@ dashboardRouter.get(
       ...data,
       // Who is signed in, so the screen can greet them and stamp their decisions.
       user: { email: req.user.username },
-      // Whether decisions can actually be saved. Only the workbook can be written to.
-      canDecide: config.dataSource === 'excel',
+      // Whether decisions can actually be saved. True for the database and the workbook,
+      // false for the read-only JSON and the SAP sandbox.
+      canDecide: canWrite(),
       dataSource: config.dataSource
     });
   })

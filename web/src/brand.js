@@ -3,7 +3,7 @@
 // The wordmark lives in web/public, so Vite serves it from the site root. Keeping it as a
 // file rather than embedding it means you can replace the artwork without touching code:
 // drop a new file in that folder and change this one line.
-export const LOGO = '/infrabeat-logo.svg';
+export const LOGO = '/infrabeat-logo.png';
 
 export const COMPANY = 'InfraBeat Technologies Pvt. Ltd.';
 export const PRODUCT = 'Procurement dashboard';

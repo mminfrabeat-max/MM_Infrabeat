@@ -1,0 +1,4 @@
+{
+  "//": "Marks the scripts in this folder as ES modules, so `import` works without Node warning about it. Scoped here rather than on the workspace root, which has no JavaScript of its own.",
+  "type": "module"
+}

@@ -3,38 +3,32 @@
 //
 // One rule runs through all of them, and the order of operations enforces it:
 //
-//   1. Write the change to the workbook
+//   1. Write the change to the store
 //   2. Then try to send the email
-//   3. Then write one audit line, once the email outcome is known
+//   3. Then record how the email went
 //
 // Saving first means a mail failure can never lose a decision. The reverse order could
-// leave you having emailed a vendor about an approval that was never recorded, which is
-// much the worse of the two failures.
+// leave you having emailed a vendor about an approval that was never recorded.
+//
+// Where the change is saved depends on DATA_SOURCE, and this file does not know or care.
+// With the database it is one transaction; with the workbook it is a sequence. store.js
+// holds that difference.
 
 import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
 import { getDocuments, getSituations, getStock } from '../data-service.js';
-import {
-  updateDocument,
-  updateSituation,
-  updateMaterial,
-  appendActionLog,
-  readActionLog
-} from '../excel-store.js';
+import * as store from '../store.js';
 import { sendDecisionEmail, sendPlainEmail } from '../mailer.js';
 import { config } from '../config.js';
-import { totalValue } from '../domain/documents.js';
 
 export const actionsRouter = Router();
 
-// Decisions can only be written to the workbook. With DATA_SOURCE=mock the JSON files are
-// read-only demo data, so say that plainly rather than pretending it worked.
 function requireWritableSource(res) {
-  if (config.dataSource !== 'excel') {
+  if (!store.canWrite()) {
     res.status(409).json({
       error:
-        'Changes can only be saved when the data source is the Excel workbook. ' +
-        'Set DATA_SOURCE=excel in your .env and restart the backend.'
+        `Changes cannot be saved with DATA_SOURCE="${config.dataSource}". ` +
+        `Set it to "db" for SQLite or "excel" for the workbook, then restart the backend.`
     });
     return false;
   }
@@ -47,7 +41,7 @@ function stamp() {
 
 // --- Approve and send back ---------------------------------------------------
 
-async function decide(req, res, decision) {
+async function decide(req, res, action) {
   if (!requireWritableSource(res)) return;
 
   const documentId = req.params.id;
@@ -72,31 +66,17 @@ async function decide(req, res, decision) {
     });
   }
 
-  const status = decision === 'approve' ? 'approved' : 'rejected';
+  const status = action === 'approve' ? 'approved' : 'rejected';
   const at = stamp();
 
-  // Step 1: save. If the workbook is open in Excel this throws, and the error handler in
-  // index.js turns it into "close it and try again" on screen.
-  await updateDocument(documentId, { status, decidedBy, decidedAt: at, decisionNote: note });
-
-  // Step 2: email. A failure here is reported, never thrown.
+  // The email is attempted before the save so its outcome can be recorded in the same
+  // transaction. A failure here is returned as a status string, never thrown, so it cannot
+  // stop the decision being saved a moment later.
   const mail = await sendDecisionEmail({ document, decision: status, decidedBy, note });
 
-  // Step 3: one audit line, now the outcome is known.
-  await appendActionLog({
-    at,
-    action: status,
-    documentId,
-    documentType: document.kind,
-    supplierName: document.supplierName,
-    value: totalValue(document),
-    decidedBy,
-    note,
-    emailTo: mail.to,
-    emailStatus: mail.status
-  }).catch((error) => console.error('[api] decision saved but not logged:', error.message));
+  await store.saveDecision({ documentId, status, decidedBy, decidedAt: at, note, document, mail });
 
-  res.json({ status, documentId, decidedBy, decidedAt: at, savedToWorkbook: true, email: mail });
+  res.json({ status, documentId, decidedBy, decidedAt: at, saved: true, email: mail });
 }
 
 // POST /api/approvals/:id/approve   { note }
@@ -116,26 +96,21 @@ actionsRouter.post(
     const situations = await getSituations();
     const situation = situations.find((s) => s.id === req.params.id);
 
-    if (!situation) return res.status(404).json({ error: `No problem found with reference ${req.params.id}.` });
+    if (!situation) {
+      return res.status(404).json({ error: `No problem found with reference ${req.params.id}.` });
+    }
     if (situation.status !== 'open') {
       return res.status(409).json({ error: `${situation.id} has already been handled.` });
     }
 
     const at = stamp();
-    await updateSituation(situation.id, { status: 'fixed' });
-
-    await appendActionLog({
-      at,
-      action: 'problem fixed',
-      documentId: situation.id,
-      documentType: '',
-      supplierName: situation.relatedTo,
-      value: '',
-      decidedBy: req.user.username,
-      note: situation.fix,
-      emailTo: '',
-      emailStatus: ''
-    }).catch(() => {});
+    await store.saveSituationFix({
+      reference: situation.id,
+      relatedTo: situation.relatedTo,
+      fix: situation.fix,
+      fixedAt: at,
+      fixedBy: req.user.username
+    });
 
     res.json({ id: situation.id, status: 'fixed', fixedAt: at, fix: situation.fix });
   })
@@ -163,24 +138,17 @@ actionsRouter.post(
     const quantity = material.suggestedOrderQuantity;
     const at = stamp();
 
-    // Adding to the quantity on order is what a raised request actually changes: the
-    // material is no longer short once the buyer places it.
-    await updateMaterial(material.code, material.plant, {
-      openOrderQuantity: material.openOrderQuantity + quantity
-    });
-
-    await appendActionLog({
-      at,
-      action: 'request raised',
-      documentId: material.code,
-      documentType: '',
+    await store.saveStockRequest({
+      materialCode: material.code,
+      plant: material.plant,
+      quantity,
+      unit: material.unit,
+      materialName: material.name,
       supplierName: material.supplierName,
-      value: '',
-      decidedBy: req.user.username,
-      note: `${quantity} ${material.unit} of ${material.name} at ${material.plant}`,
-      emailTo: '',
-      emailStatus: ''
-    }).catch(() => {});
+      newOpenOrderQuantity: material.openOrderQuantity + quantity,
+      raisedAt: at,
+      raisedBy: req.user.username
+    });
 
     res.json({ code: material.code, plant: material.plant, quantity, unit: material.unit, raisedAt: at });
   })
@@ -202,21 +170,9 @@ actionsRouter.post(
 
     const mail = await sendPlainEmail({ to, subject, body, from: req.user.username });
 
-    // Logged whether it went or not, so there is a record of the attempt either way.
-    if (config.dataSource === 'excel') {
-      await appendActionLog({
-        at: stamp(),
-        action: 'mail sent',
-        documentId: '',
-        documentType: '',
-        supplierName: '',
-        value: '',
-        decidedBy: req.user.username,
-        note: subject,
-        emailTo: to,
-        emailStatus: mail.status
-      }).catch(() => {});
-    }
+    await store
+      .saveMail({ to, subject, body, sentAt: stamp(), sentBy: req.user.username, mail })
+      .catch((error) => console.error('[api] mail sent but not logged:', error.message));
 
     res.json(mail);
   })
@@ -228,7 +184,6 @@ actionsRouter.post(
 actionsRouter.get(
   '/action-log',
   asyncHandler(async (req, res) => {
-    if (config.dataSource !== 'excel') return res.json({ entries: [], available: false });
-    res.json({ entries: await readActionLog(), available: true });
+    res.json({ entries: await store.readActionLog(), available: store.canWrite() });
   })
 );
