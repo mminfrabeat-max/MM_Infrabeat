@@ -42,20 +42,30 @@ export const PLANTS = ['Pune', 'Mumbai', 'Nagpur'];
 //
 // This is the single place recipients are decided. To change who gets what, edit here.
 //
-// All seven people who have a mail button now point at one of three real inboxes. They are
-// spread by how many buttons reach each person, so no single colleague ends up receiving
-// most of the demo: five mails can reach Ganesh, four Hrutik, four Pratik.
+// All seven now point at a Gmail address rather than a work one.
+//
+// That is not a preference, it is what delivers. Mail to infrabeat.com passes through
+// Microsoft 365, which publishes DMARC p=quarantine, and a new Gmail sender writing to that
+// domain for the first time gets held: the first approval mail was accepted by Gmail,
+// returned a message id, and never surfaced in the inbox. Gmail to Gmail skips all of it.
+//
+// Spread by how many buttons reach each person, so no one inbox catches most of the demo:
+// 4 mails can reach Ganesh, 3 Hrutik, 2 each for the rest.
 export const MAIL_DIRECTORY = {
-  // Ganesh: 5 buttons
-  'Mr. Anil Deshmukh': 'ganesh.upadhye@infrabeat.com',   // Procurement desk, problems S1, S3, S5
-  'Mr. Sunil Kulkarni': 'ganesh.upadhye@infrabeat.com',  // Stores and receiving
+  // Ganesh: 4 buttons, the busiest person on the dashboard
+  'Mr. Anil Deshmukh': 'ganesh.upadhye@gmail.com',    // Procurement desk, problems S1, S3, S5
 
-  // Hrutik: 4 buttons
-  'Mr. Kiran Raghavan': 'hrutik270@gmail.com',    // Logistics and freight, problem S2
-  'Mr. Prakash Nair': 'hrutik270@gmail.com',      // Raw materials buying
-  'Ms. Meera Joshi': 'hrutik270@gmail.com',       // Packing materials
+  // Hrutik: 3 buttons
+  'Mr. Kiran Raghavan': 'hrutik270@gmail.com',        // Logistics and freight, problem S2
+  'Ms. Meera Joshi': 'hrutik270@gmail.com',           // Packing materials
 
-  // Pratik: 4 buttons
-  'Mr. Rahul Kamat': 'pratik.salunke@infrabeat.com',     // Contracts and vendor master, problem S6
-  'Mr. Sanjay Bose': 'pratik.salunke@infrabeat.com'      // Spares and refractories, problem S4
+  // Pratik: 2 buttons
+  'Mr. Rahul Kamat': 'Psalunke333@gmail.com',         // Contracts and vendor master, problem S6
+
+  // Ashwin: 2 buttons
+  'Mr. Sanjay Bose': 'Ashwinchandratre@gmail.com',    // Spares and refractories, problem S4
+
+  // Vijay: 2 buttons
+  'Mr. Prakash Nair': 'vijayshedge2820@gmail.com',    // Raw materials buying
+  'Mr. Sunil Kulkarni': 'vijayshedge2820@gmail.com'   // Stores and receiving
 };
