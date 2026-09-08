@@ -1,0 +1,71 @@
+# How Render should build and run this.
+#
+# Committing this file means the settings are in the repository rather than typed into a
+# web form once and forgotten. Render reads it when you create the service.
+#
+# The two commands are split on purpose. buildCommand runs once per deploy: install
+# packages, build the React app, create the database. startCommand runs to keep the service
+# up, and must not rebuild anything - if it did, every restart would wipe the data.
+
+services:
+  - type: web
+    name: infrabeat-procurement
+    runtime: node
+    # node:sqlite is built into Node from 22.5, which is why this app needs no SQLite
+    # package. Pin the version so a host defaulting to something older cannot break it.
+    nodeVersion: 24
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run serve
+
+    # Render checks this to decide whether the service is healthy. /api/health answers
+    # without a session, which is exactly what a health check needs.
+    healthCheckPath: /api/health
+
+    envVars:
+      # Render provides PORT itself and the app already reads it, so it is not set here.
+
+      - key: DATA_SOURCE
+        value: db
+
+      # The session cookie is marked HTTPS-only. Render serves over HTTPS, so this MUST be
+      # true here. Left false and the browser silently discards the cookie: sign-in appears
+      # to work and every page then says you are signed out.
+      - key: AUTH_SECURE_COOKIE
+        value: true
+
+      # Everything below is a secret. sync: false means Render will not read a value from
+      # this file - you type it into the dashboard, and it never appears in the repository.
+      - key: AUTH_USERNAME
+        sync: false
+      - key: AUTH_PASSWORD_HASH
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_TO
+        sync: false
+      - key: SAP_API_KEY
+        sync: false
+
+    # --- On persistence -------------------------------------------------------
+    #
+    # The free plan has no persistent disk and sleeps after fifteen minutes without
+    # traffic. When it wakes, the filesystem is fresh, so the database is rebuilt from the
+    # committed JSON and any approvals made in the previous session are gone.
+    #
+    # For a prototype that is arguably a feature: every demo starts from the same clean
+    # position. If decisions need to survive, move to a paid instance and attach a disk
+    # mounted at /opt/render/project/src/db, which is where the database lives.
+    #
+    # disk:
+    #   name: procurement-data
+    #   mountPath: /opt/render/project/src/db
+    #   sizeGB: 1

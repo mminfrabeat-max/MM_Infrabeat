@@ -11,14 +11,21 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "npm run dev --workspace server",
     "dev:web": "npm run dev --workspace web",
-    "build": "npm run build --workspace web",
-    "start": "npm run build && npm run start --workspace server"
+
+    "build": "npm run build --workspace web && node db/bootstrap.js",
+    "serve": "npm run start --workspace server",
+    "start": "npm run build && npm run serve"
   },
-  "//": "dev = two servers, hot reloading, localhost only. Use while writing code. start = build the app once, then serve it from Express on one port that other people can reach. Use to show it to somebody.",
+  "//": {
+    "dev": "Two servers with hot reloading, localhost only. Use while writing code.",
+    "build": "Builds the React app and creates the database if there is not one. What a host runs once per deploy.",
+    "serve": "Runs the server against whatever is already built. What a host runs to keep it up.",
+    "start": "build then serve, for running it yourself in one command."
+  },
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5.0"
   }
 }
