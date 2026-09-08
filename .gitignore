@@ -30,3 +30,7 @@ server/data/*.xlsx.tmp
 db/procurement.db
 db/procurement.db-wal
 db/procurement.db-shm
+
+# Saved copies of mail settings while switching between providers. Local only.
+*.env.*-backup
+db/.env.*

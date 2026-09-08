@@ -184,7 +184,7 @@ export async function sendDecisionEmail({ document, decision, decidedBy, note })
       text: textBody(document, decision, decidedBy, note),
       html: htmlBody(document, decision, decidedBy, note)
     });
-    return { sent: true, to, status: `Sent ${info.messageId || ''}`.trim() };
+    return { sent: true, to, status: `Sent ${info.messageId || ''}`.trim(), preview: previewLink(info) };
   } catch (error) {
     return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
   }
@@ -206,10 +206,21 @@ export async function sendPlainEmail({ to, subject, body, from }) {
       text: body,
       html: `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.6;color:#0F1A26;white-space:pre-wrap">${escapeHtml(body)}</div>`
     });
-    return { sent: true, to, status: `Sent ${info.messageId || ''}`.trim() };
+    return { sent: true, to, status: `Sent ${info.messageId || ''}`.trim(), preview: previewLink(info) };
   } catch (error) {
     return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
   }
+}
+
+// When the mail went to a test mailbox rather than a real one, this is the URL where you
+// can read it. Real mail servers return nothing here, so the link is simply absent and
+// nothing downstream has to care which kind of server was used.
+function previewLink(info) {
+  const url = nodemailer.getTestMessageUrl(info);
+  if (!url) return null;
+  // Printed as well as returned: the terminal is where you are looking when testing.
+  console.log(`[api] mail preview: ${url}`);
+  return url;
 }
 
 // The body is typed by a person, so it must never be treated as markup.
