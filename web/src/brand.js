@@ -7,15 +7,18 @@ export const LOGO = '/infrabeat-logo.png';
 
 export const COMPANY = 'InfraBeat Technologies Pvt. Ltd.';
 export const PRODUCT = 'Procurement dashboard';
-export const APPROVER_NAME = 'Vaibhav Naik';
+// The one place the approver's name is written. The greeting, the avatar initials, the
+// account panel, the approval chain and the signature on every mail all read from here.
+export const APPROVER_NAME = 'Arjun P';
 
 // The head of department's own record, shown in the account panel. In a real deployment
 // this would come from the HR system and the SAP user master, not a constant.
 export const USER_PROFILE = {
-  role: 'Head of Procurement',
+  // Shown in the account panel and signed at the bottom of every mail sent from here.
+  role: 'Procurement Manager',
   dept: 'Central procurement',
   empId: 'INF-2048',
-  sapUser: 'VNAIK',
+  sapUser: 'ARJUNP',
   mobile: '+91 98220 41756',
   ext: '4102',
   location: 'Pune office, InfraBeat Technologies Pvt. Ltd.',

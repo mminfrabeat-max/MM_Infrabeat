@@ -9,7 +9,7 @@
 // the finding checkable rather than magic.
 
 import { mailAddressFor } from '../format.js';
-import { APPROVER_NAME, COMPANY } from '../brand.js';
+import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { byPlant } from '../selectors.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
 
@@ -99,7 +99,7 @@ export default function Problems({ data, plant, canDecide, onFix, onWriteMail, b
                               `What I need: ${s.call}\n\n` +
                               `Where it is stuck: ${s.stuck}\n\n` +
                               `I will follow up: ${s.followUp}\n\n` +
-                              `Thanks,\n${APPROVER_NAME}\nHead of Procurement, ${COMPANY}`
+                              `Thanks,\n${APPROVER_NAME}\n${USER_PROFILE.role}, ${COMPANY}`
                           })
                         }
                       >

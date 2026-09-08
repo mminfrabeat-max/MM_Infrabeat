@@ -5,7 +5,7 @@
 // That gap is the whole reason the screen exists.
 
 import { initials, plural, mailAddressFor } from '../format.js';
-import { APPROVER_NAME, COMPANY } from '../brand.js';
+import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { byPlant, teamsNeedingNudge } from '../selectors.js';
 import { Card, Banner, Tile, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
 import { SparkArea, toneColour } from '../components/charts.jsx';
@@ -116,7 +116,7 @@ export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
                           `Hello ${t.lead},\n\n${t.follow}\n\n` +
                           `I can see your team is on: ${t.now}\n\n` +
                           `Could you send me where this stands today, or tell me what you need from my side to move it.\n\n` +
-                          `Thanks,\n${APPROVER_NAME}\nHead of Procurement, ${COMPANY}`
+                          `Thanks,\n${APPROVER_NAME}\n${USER_PROFILE.role}, ${COMPANY}`
                       })
                     }
                   >
