@@ -51,9 +51,9 @@ export const MAIL_DIRECTORY = {
   'Mr. Sunil Kulkarni': 'ganesh.upadhye@infrabeat.com',  // Stores and receiving
 
   // Hrutik: 4 buttons
-  'Mr. Kiran Raghavan': 'hrutik.patil@infrabeat.com',    // Logistics and freight, problem S2
-  'Mr. Prakash Nair': 'hrutik.patil@infrabeat.com',      // Raw materials buying
-  'Ms. Meera Joshi': 'hrutik.patil@infrabeat.com',       // Packing materials
+  'Mr. Kiran Raghavan': 'hrutik270@gmail.com',    // Logistics and freight, problem S2
+  'Mr. Prakash Nair': 'hrutik270@gmail.com',      // Raw materials buying
+  'Ms. Meera Joshi': 'hrutik270@gmail.com',       // Packing materials
 
   // Pratik: 4 buttons
   'Mr. Rahul Kamat': 'pratik.salunke@infrabeat.com',     // Contracts and vendor master, problem S6
