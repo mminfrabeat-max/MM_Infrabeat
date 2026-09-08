@@ -31,7 +31,18 @@ function getTransport() {
     // TLS immediately after connecting, which nodemailer handles. Getting this wrong is
     // the single most common cause of a connection that just hangs.
     secure: config.mail.port === 465,
-    auth: { user: config.mail.user, pass: config.mail.password }
+    auth: { user: config.mail.user, pass: config.mail.password },
+
+    // Give up rather than hang. Without these, a blocked port leaves the connection
+    // waiting with nothing to wait for, and the button says "Sending..." indefinitely -
+    // which tells the person nothing and looks like the app is broken.
+    //
+    // This is not theoretical: Render blocks outbound SMTP on free services, so a
+    // deployment there hits exactly this. Ten seconds is long enough for a slow mail
+    // server and short enough that a blocked one reports back while you are still looking.
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 
   return transport;
@@ -242,8 +253,13 @@ function describeMailError(error) {
   if (error.code === 'ECONNECTION' || error.code === 'ESOCKET') {
     return `could not connect to ${config.mail.host}:${config.mail.port}. Check the host and port, and whether a firewall is blocking it.`;
   }
-  if (error.code === 'ETIMEDOUT' || /timeout/i.test(text)) {
-    return 'the mail server did not answer in time. Port 587 on a company network often needs the IT team to allow it.';
+  if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || /timeout|timed out/i.test(text)) {
+    return (
+      `nothing answered on ${config.mail.host}:${config.mail.port} within ten seconds. ` +
+      'Something between here and the mail server is blocking the port. Render blocks ' +
+      'outbound SMTP on free services, and company networks often block 587 too. Either ' +
+      'move to a paid instance, or send through a mail API over HTTPS instead of SMTP.'
+    );
   }
   if (error.code === 'EENVELOPE') {
     return 'the recipient address was rejected. Check the address you typed.';
