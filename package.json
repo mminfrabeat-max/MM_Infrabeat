@@ -2,7 +2,7 @@
   "name": "mm-infrabeat",
   "version": "0.1.0",
   "private": true,
-  "description": "Procurement monitoring and approval dashboard for a cement manufacturer",
+  "description": "Procurement monitoring and approval dashboard for InfraBeat Technologies",
   "workspaces": [
     "server",
     "web"
@@ -10,8 +10,11 @@
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "npm run dev --workspace server",
-    "dev:web": "npm run dev --workspace web"
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace web",
+    "start": "npm run build && npm run start --workspace server"
   },
+  "//": "dev = two servers, hot reloading, localhost only. Use while writing code. start = build the app once, then serve it from Express on one port that other people can reach. Use to show it to somebody.",
   "devDependencies": {
     "concurrently": "^9.1.2"
   },

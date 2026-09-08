@@ -5,6 +5,9 @@
 // server, and only this server holds the credentials and talks to SAP.
 
 import express from 'express';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { config, hasSapKey, authConfigured } from './config.js';
 import { requireSignIn } from './auth.js';
 import { verifyMail, mailConfigured } from './mailer.js';
@@ -51,6 +54,33 @@ app.use('/api', (req, res) => {
   res.status(404).json({ error: 'Not found', path: req.originalUrl });
 });
 
+// --- Serving the dashboard itself --------------------------------------------
+//
+// In development the React app runs on Vite's own server, which handles hot reloading and
+// proxies /api here. That server is a development tool and should never be put in front of
+// other people.
+//
+// So for anyone else to use this, Express serves the BUILT app instead: one process, one
+// port, one address to hand out. Run `npm run build` first, then `npm start`.
+//
+// This block sits AFTER the /api routes on purpose. Express matches in order, so anything
+// starting with /api is already answered above and never reaches the catch-all below.
+const thisFolder = path.dirname(fileURLToPath(import.meta.url));
+const builtApp = path.resolve(thisFolder, '../../web/dist');
+const hasBuiltApp = fs.existsSync(path.join(builtApp, 'index.html'));
+
+if (hasBuiltApp) {
+  app.use(express.static(builtApp));
+
+  // A single-page app owns its own routing, so any address that is not a file has to be
+  // answered with index.html and let the browser sort it out. Without this, refreshing on
+  // a sub-page would 404.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') return next();
+    res.sendFile(path.join(builtApp, 'index.html'));
+  });
+}
+
 // Express error handler. It must take exactly these four arguments - that is how Express
 // recognises it as an error handler rather than a normal route.
 app.use((err, req, res, next) => {
@@ -60,8 +90,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Something went wrong on the server' });
 });
 
-app.listen(config.port, async () => {
+// Listening on 0.0.0.0 rather than localhost is what lets anyone else reach this at all.
+// localhost means "this machine only" - a colleague typing your address would get nothing.
+app.listen(config.port, '0.0.0.0', async () => {
   console.log(`[api] listening on http://localhost:${config.port}`);
+
+  if (hasBuiltApp) {
+    // Print every address this machine can be reached on, so there is something concrete
+    // to hand a colleague rather than telling them to work out your IP.
+    const { networkInterfaces } = await import('node:os');
+    const addresses = Object.values(networkInterfaces())
+      .flat()
+      .filter((n) => n && n.family === 'IPv4' && !n.internal)
+      .map((n) => n.address);
+
+    console.log('[api] serving the dashboard from web/dist');
+    for (const address of addresses) {
+      console.log(`[api]   others on this network: http://${address}:${config.port}`);
+    }
+  } else {
+    console.log('[api] no built app found. Run `npm run build` to serve it from here,');
+    console.log('[api] or use `npm run dev` for the development server on port 5173.');
+  }
+
   console.log(`[api] data source: ${config.dataSource}`);
   console.log(`[api] SAP API key loaded: ${hasSapKey ? 'yes' : 'no'}`);
   console.log(`[api] sign-in required as: ${config.auth.username}`);
