@@ -32,3 +32,30 @@ export const USER_PROFILE = {
 };
 
 export const PLANTS = ['Pune', 'Mumbai', 'Nagpur'];
+
+// Real mailboxes for the demo.
+//
+// The people on the dashboard are invented, but a demo is unconvincing if the mail lands
+// nowhere. These map an invented name to a colleague who will actually receive it. Anyone
+// not listed falls back to a derived name@infrabeat.com address, which is not a real
+// mailbox and will bounce - fine for showing the compose box, not for showing delivery.
+//
+// This is the single place recipients are decided. To change who gets what, edit here.
+//
+// All seven people who have a mail button now point at one of three real inboxes. They are
+// spread by how many buttons reach each person, so no single colleague ends up receiving
+// most of the demo: five mails can reach Ganesh, four Hrutik, four Pratik.
+export const MAIL_DIRECTORY = {
+  // Ganesh: 5 buttons
+  'Mr. Anil Deshmukh': 'ganesh.upadhye@infrabeat.com',   // Procurement desk, problems S1, S3, S5
+  'Mr. Sunil Kulkarni': 'ganesh.upadhye@infrabeat.com',  // Stores and receiving
+
+  // Hrutik: 4 buttons
+  'Mr. Kiran Raghavan': 'hrutik.patil@infrabeat.com',    // Logistics and freight, problem S2
+  'Mr. Prakash Nair': 'hrutik.patil@infrabeat.com',      // Raw materials buying
+  'Ms. Meera Joshi': 'hrutik.patil@infrabeat.com',       // Packing materials
+
+  // Pratik: 4 buttons
+  'Mr. Rahul Kamat': 'pratik.salunke@infrabeat.com',     // Contracts and vendor master, problem S6
+  'Mr. Sanjay Bose': 'pratik.salunke@infrabeat.com'      // Spares and refractories, problem S4
+};

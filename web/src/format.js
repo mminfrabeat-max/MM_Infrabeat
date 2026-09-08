@@ -1,3 +1,5 @@
+import { MAIL_DIRECTORY } from './brand.js';
+
 // Turning numbers and names into something a manager reads without effort.
 //
 // The backend has its own small copy of money() for the sentences it writes. Two small
@@ -65,15 +67,24 @@ export function firstName(fullName) {
   return String(fullName).replace(/^(Mr|Ms|Mrs)\.?\s+/i, '').split(' ')[0];
 }
 
-// Turns a person's name into the company mail address the demo assumes.
+// Works out where a mail to this person should actually go.
+//
+// A real mailbox from the directory in brand.js wins. Anyone not listed falls back to a
+// derived name@infrabeat.com address, which is not a real mailbox: the compose box will
+// show it and Gmail will accept it, but it will bounce. That is deliberate, so the
+// fallback looks right in a screenshot without pretending to deliver.
 export function mailAddressFor(name) {
+  const asWritten = String(name).split(',')[0].trim();
+  if (MAIL_DIRECTORY[asWritten]) return MAIL_DIRECTORY[asWritten];
+
   return (
-    String(name)
-      .split(',')[0]
+    asWritten
       .replace(/^(Mr|Ms|Mrs)\.?\s+/i, '')
-      .trim()
       .toLowerCase()
-      .replace(/\s+/g, '.') + '@infrabeat.com'
+      // An initial already ends in a full stop, so "A. Deshmukh" would otherwise become
+      // "a..deshmukh". Collapse any run of dots that joining the parts produces.
+      .replace(/\s+/g, '.')
+      .replace(/\.{2,}/g, '.') + '@infrabeat.com'
   );
 }
 
