@@ -264,13 +264,16 @@ export default function App() {
             {PLANTS.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
 
+          {/* Names the appearance you are currently in, so the control says what it is
+              rather than leaving you to work out what a lone moon means. */}
           <button
-            className="iconbtn"
+            className="hdrbtn"
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-            aria-label="Light or dark"
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} appearance`}
             type="button"
           >
-            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={17} />
+            <Icon name={theme === 'light' ? 'moon' : 'sun'} size={16} />
+            <span className="hide-sm">{theme === 'light' ? 'Light' : 'Dark'}</span>
           </button>
 
           <button className="pillbtn" onClick={() => setShowAsk(true)} type="button">
@@ -278,8 +281,26 @@ export default function App() {
             Ask
           </button>
 
-          <button className="me" onClick={() => setShowProfile((v) => !v)} title={`${APPROVER_NAME}, ${USER_PROFILE.role}`} type="button">
-            {initials(APPROVER_NAME)}
+          {/* Sign out sits in the header, not buried in the account menu. It is how you
+              leave the application, and a control that important should never need hunting
+              for. It is also still in the account panel, for anyone who looks there first. */}
+          <button className="hdrbtn danger" onClick={signOut} title="End this session" type="button">
+            <Icon name="back" size={16} />
+            <span className="hide-sm">Sign out</span>
+          </button>
+
+          {/* The account menu: who you are, and everything about your access. */}
+          <button
+            className={`userbtn${showProfile ? ' open' : ''}`}
+            onClick={() => setShowProfile((v) => !v)}
+            aria-expanded={showProfile}
+            aria-haspopup="menu"
+            title={`${APPROVER_NAME}, ${USER_PROFILE.role}`}
+            type="button"
+          >
+            <span className="me">{initials(APPROVER_NAME)}</span>
+            <span className="uname hide-sm">{APPROVER_NAME}</span>
+            <span className="ucaret"><Icon name="chevron" size={14} /></span>
           </button>
         </div>
       </header>

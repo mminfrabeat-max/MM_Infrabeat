@@ -515,3 +515,42 @@ th.rt, td.rt { text-align: right; }
   .pulse { animation: none; }
   .tile:hover { transform: none; }
 }
+
+/* The account menu in the header.
+   Reads as a button you can open, rather than a decorative circle of initials, because
+   sign out lives inside it and a bare avatar gives no clue that it does. */
+.userbtn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px 4px 4px; border-radius: 999px;
+  border: 1px solid transparent; transition: background .14s, border-color .14s;
+}
+.userbtn:hover { background: var(--surface-2); border-color: var(--border); }
+.userbtn.open { background: var(--surface-2); border-color: var(--border-2); }
+.userbtn .uname { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.userbtn .ucaret { color: var(--ink-3); display: grid; place-items: center; transition: transform .18s; }
+.userbtn.open .ucaret { transform: rotate(180deg); }
+
+/* Sign out is the way out of the application, so it carries the one bit of colour in the
+   panel. Everything above it is a setting; this one ends the session. */
+.pitem.out { font-weight: 600; }
+.pitem.out:hover { background: var(--neg-soft); }
+
+/* Header controls that carry a label as well as an icon, so each one says what it does
+   instead of relying on the reader decoding a symbol. */
+.hdrbtn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; color: var(--ink-2);
+  border: 1px solid var(--border); background: var(--surface);
+  white-space: nowrap; transition: background .14s, border-color .14s, color .14s;
+}
+.hdrbtn:hover { background: var(--surface-2); border-color: var(--border-2); color: var(--ink); }
+.hdrbtn.danger:hover { background: var(--neg-soft); border-color: var(--neg); color: var(--neg); }
+
+/* Below this width the header would wrap, so the labels drop and the icons carry it.
+   Every one of them keeps a title attribute, so the meaning is still reachable. */
+@media (max-width: 1080px) {
+  .hide-sm { display: none; }
+  .hdrbtn { padding: 7px 9px; }
+  .shell-in { gap: 8px; }
+}
