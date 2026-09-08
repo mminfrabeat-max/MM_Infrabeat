@@ -34,3 +34,7 @@ db/procurement.db-shm
 # Saved copies of mail settings while switching between providers. Local only.
 *.env.*-backup
 db/.env.*
+
+# The offline copy. Generated from live data with:
+#   node server/scripts/build-standalone.js "your password"
+InfraBeat-Dashboard-offline.html
