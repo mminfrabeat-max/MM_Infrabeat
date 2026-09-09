@@ -254,18 +254,56 @@ async function main() {
   const data = await snapshot();
   const logoUri = `data:image/png;base64,${logo.toString('base64')}`;
 
+  // Every replacement below passes a FUNCTION rather than a string, and that is not a style
+  // choice - it is the whole reason this file works.
+  //
+  // String.replace treats $ in a STRING replacement as special: $& means "whatever was
+  // matched", $1 a capture group, $` and $' the text either side. The things being inserted
+  // here are a minified React bundle and a base64 image, and minified React contains the
+  // sequence `!$&&(`. Inserting it as a string turned that into `!</body>&(`, which is not
+  // JavaScript, and the page died before it drew anything. It failed silently: the file was
+  // the right size, opened without complaint, and showed a blank screen.
+  //
+  // A function replacement is returned verbatim, with no $ handling at all. Nothing being
+  // inlined here is under our control, so nothing here may go in as a string.
+  const insert = (text) => () => text;
+
+  // The logo goes into the bundle here, before it is inlined, rather than into the whole
+  // document afterwards. Doing it first is what lets the check at the bottom compare the
+  // bundle that landed against the exact bundle that was meant to land.
+  const bundle = js.replace(/"\/infrabeat-logo\.png"/g, insert(JSON.stringify(logoUri)));
+
   let html = indexHtml
     // The stylesheet and script become inline, so there is nothing left to fetch.
-    .replace(/<link rel="stylesheet"[^>]*>/, `<style>\n${css}\n</style>`)
+    .replace(/<link rel="stylesheet"[^>]*>/, insert(`<style>\n${css}\n</style>`))
     .replace(/<script type="module"[^>]*><\/script>/, '')
     // The logo is referenced by path in the code; the data URI replaces it everywhere.
-    .replace(/href="\/infrabeat-logo\.svg"/g, `href="${logoUri}"`);
+    .replace(/href="\/infrabeat-logo\.svg"/g, insert(`href="${logoUri}"`));
 
   // The shim has to run before the app, so it is in place by the time anything calls fetch.
-  html = html.replace('</body>', `${buildShim(data)}\n<script type="module">\n${js}\n</script>\n${BANNER}\n</body>`);
+  html = html.replace(
+    '</body>',
+    insert(`${buildShim(data)}\n<script type="module">\n${bundle}\n</script>\n${BANNER}\n</body>`)
+  );
 
-  // And the logo path inside the bundle itself.
-  html = html.replace(/"\/infrabeat-logo\.png"/g, JSON.stringify(logoUri));
+  // Prove the bundle went in exactly as it came out of the build, before writing anything.
+  //
+  // The bug this catches produced a file of the right size that opened without complaint and
+  // drew a blank page, which is the worst way for a build to fail: nothing to read, nothing
+  // in a log, and no reason to suspect the file rather than the browser. Comparing what
+  // landed against what was read costs a millisecond and turns that into a message.
+  const inlined = html.match(/<script type="module">\n([\s\S]*?)\n<\/script>/);
+  if (!inlined) {
+    throw new Error('The app bundle is missing from the assembled file.');
+  }
+  if (inlined[1] !== bundle) {
+    throw new Error(
+      'The app bundle was altered while being inlined, so the offline copy would not run.\n' +
+        `It went in at ${bundle.length} characters and came out at ${inlined[1].length}.\n` +
+        'Every replacement in this script must pass a function, never a string: $ sequences ' +
+        'in a string replacement are substituted, and minified React contains "$&".'
+    );
+  }
 
   const out = path.join(root, 'InfraBeat-Dashboard-offline.html');
   await fs.writeFile(out, html, 'utf8');
