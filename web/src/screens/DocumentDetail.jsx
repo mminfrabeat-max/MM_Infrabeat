@@ -12,6 +12,7 @@ import { inr, rupees, num, signed, initials, bandTone, plural } from '../format.
 import { APPROVER_NAME } from '../brand.js';
 import { Card, Banner, Chip, Icon, Facet, TermRow } from '../components/ui.jsx';
 import { VendorCharts } from '../components/charts.jsx';
+import { SeaJourney, VesselMap, modeIcon } from '../components/journey.jsx';
 import { StatusChip } from './Approvals.jsx';
 import { materialFor } from '../selectors.js';
 
@@ -20,6 +21,23 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
   const vendor = document.supplierScore;
   const material = materialFor(data.materials, document);
   const tone = vendor?.scored ? bandTone(vendor.band) : 'pri';
+
+  // A document can be waiting and still not be yours to act on: you approved it, and it
+  // moved to the person after you. decidedAt is what tells the two apart, and it decides
+  // whether the buttons at the foot of the page appear at all.
+  const decided = Boolean(document.decidedAt);
+  const mayDecide = canDecide && document.status === 'pending' && !decided;
+  const handedOn = document.status === 'pending' && decided && document.next;
+
+  // The next approver appears only once the decision is made.
+  //
+  // Naming them beforehand answers a question nobody has yet, and quietly changes the one
+  // being asked: "is this order sound" becomes "what will Finance think of it". Who it goes
+  // to afterwards is useful; who it would go to is a hint. So the card stays out of the way
+  // until approving has made it a fact.
+  //
+  // A document that was sent back never reaches them, so it is never shown there either.
+  const showNext = Boolean(handedOn);
 
   return (
     <>
@@ -38,7 +56,7 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
                 {document.material} &middot; {document.supplierName} &middot; {document.plant} plant &middot; {document.docType}
               </div>
             </div>
-            <span style={{ marginLeft: 'auto' }}><StatusChip status={document.status} /></span>
+            <span style={{ marginLeft: 'auto' }}><StatusChip status={document.status} document={document} /></span>
           </div>
 
           <div className="facets">
@@ -67,7 +85,7 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
       )}
 
       <div className="grid">
-        {document.status === 'pending' && (
+        {mayDecide && (
           <Card
             span="c12"
             icon="spark"
@@ -95,7 +113,15 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
               <TermRow label="Document type" value={document.docType} />
               <TermRow label="Domestic or import" value={document.trade} />
               <TermRow label="Incoterm" value={document.incoterm} />
-              <TermRow label="Mode of transport" value={document.transport} />
+              <TermRow
+                label="Mode of transport"
+                value={
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Icon name={modeIcon(document.transport)} size={14} />
+                    {document.transport}
+                  </span>
+                }
+              />
               <TermRow label="Delivery date" value={document.deliveryDate} />
               <TermRow label="Plant" value={document.plant} />
             </div>
@@ -141,59 +167,124 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
         </Card>
 
         <Card span="c5" icon="people" tone="pri" title="Who has approved so far" subtitle="and who it is with now">
-          {document.prev ? (
-            <div className="stepline">
-              <span className="sd bg-pos"><Icon name="check" size={13} /></span>
-              <div>
-                <div className="s1">{document.prev.name}</div>
-                <div className="s2">{document.prev.level}, approved {document.prev.when}</div>
-                <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{document.prev.note}&rdquo;</div>
-              </div>
-            </div>
-          ) : (
-            <div className="stepline">
-              <span className="sd bg-pri">1</span>
-              <div>
-                <div className="s1">No one yet</div>
-                <div className="s2">You are the first approval on this order</div>
-              </div>
-            </div>
-          )}
-
-          {document.status === 'pending' ? (
-            <div className="stepline">
-              <span className="sd bg-warn"><Icon name="clock" size={13} /></span>
-              <div>
-                <div className="s1">{APPROVER_NAME} (you), now</div>
-                <div className="s2">{document.step}, waiting {document.hoursWaiting} hours</div>
-                <div className="s2">{document.reason}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="stepline">
-              <span className={`sd bg-${document.status === 'approved' ? 'pos' : 'neg'}`}>
-                <Icon name={document.status === 'approved' ? 'check' : 'alert'} size={13} />
-              </span>
-              <div>
-                <div className="s1">{document.decidedBy || APPROVER_NAME}</div>
-                <div className="s2">
-                  {document.step}, {document.status === 'approved' ? 'approved' : 'sent back'}
-                  {document.decidedAt ? ` at ${document.decidedAt}` : ''}
+          {/* One list, drawn as a line. Each row carries `done` or `wait`, and the connector
+              below the dot takes its colour from that: solid green for a step that has
+              happened, dashed red for one still to come. The state is on the row rather
+              than worked out in CSS, because the row is the only thing that knows it. */}
+          <div className="chain">
+            {/* Who raised it. First in the list because that is where the document started,
+                and because they are the person told about every decision made on it. */}
+            {document.createdBy && (
+              <div className="stepline done">
+                <span className="sd bg-mut"><Icon name="doc" size={13} /></span>
+                <div>
+                  <div className="s1">{document.createdBy.name}</div>
+                  {/* Name and role, never the address. Who someone is belongs on screen;
+                      where their mail goes is the backend's business and nobody else's. */}
+                  <div className="s2">
+                    Raised this {document.kind}
+                    {document.createdBy.title ? `, ${document.createdBy.title}` : ''}
+                    {document.createdBy.when ? ` on ${document.createdBy.when}` : ''}
+                  </div>
                 </div>
-                {document.decisionNote && <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{document.decisionNote}&rdquo;</div>}
               </div>
-            </div>
-          )}
+            )}
+
+            {document.prev ? (
+              <div className="stepline done">
+                <span className="sd bg-pos"><Icon name="check" size={13} /></span>
+                <div>
+                  <div className="s1">{document.prev.name}</div>
+                  <div className="s2">{document.prev.level}, approved {document.prev.when}</div>
+                  <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{document.prev.note}&rdquo;</div>
+                </div>
+              </div>
+            ) : (
+              <div className="stepline done">
+                <span className="sd bg-mut">1</span>
+                <div>
+                  <div className="s1">No one yet</div>
+                  <div className="s2">You are the first approval on this order</div>
+                </div>
+              </div>
+            )}
+
+            {document.status === 'pending' && !decided ? (
+              <div className="stepline wait">
+                <span className="sd bg-neg"><Icon name="clock" size={13} /></span>
+                <div>
+                  <div className="s1">{APPROVER_NAME} (you), now</div>
+                  <div className="s2">{document.step}, waiting {document.hoursWaiting} hours</div>
+                  <div className="s2">{document.reason}</div>
+                </div>
+              </div>
+            ) : (
+              <div className={`stepline ${document.status === 'rejected' ? 'wait' : 'done'}`}>
+                <span className={`sd bg-${document.status === 'rejected' ? 'neg' : 'pos'}`}>
+                  <Icon name={document.status === 'rejected' ? 'alert' : 'check'} size={13} />
+                </span>
+                <div>
+                  {/* The name. decidedBy is the address the decision was stamped with, which
+                      is how the sign-in works, not how a person is called. */}
+                  <div className="s1">{APPROVER_NAME} (you)</div>
+                  <div className="s2">
+                    {handedOn ? document.prev?.level || 'your step' : document.step},{' '}
+                    {document.status === 'rejected' ? 'sent back' : 'approved'}
+                    {document.decidedAt ? ` at ${document.decidedAt}` : ''}
+                  </div>
+                  {document.decisionNote && <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{document.decisionNote}&rdquo;</div>}
+                </div>
+              </div>
+            )}
+
+            {/* The step after this one. Shown, never actionable: this dashboard belongs to one
+                manager, and the person named here approves in their own system, not in yours.
+                Saying so on the row is the honest version of greying out a button. */}
+            {showNext && (
+              <div className="stepline wait">
+                <span className="sd bg-neg"><Icon name="clock" size={13} /></span>
+                <div>
+                  <div className="s1">
+                    {document.next.name}
+                    <span style={{ marginLeft: 8 }}>
+                      <Chip tone="mut" icon="eye">Display only</Chip>
+                    </span>
+                  </div>
+                  <div className="s2">
+                    {[document.next.title, document.next.level].filter(Boolean).join(' · ')}
+                  </div>
+                  <div className="s2">
+                    Waiting with them since you approved it{document.decidedAt ? ` at ${document.decidedAt}` : ''}.
+                    They have been mailed.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flagline">
             <Icon name="shield" size={14} />
-            Approved under your own name, as if you had done it in SAP.
+            {/* Before the decision this says there IS a further step, without saying who is
+                on it. That the order will not be released yet changes how you read it; who
+                signs it next does not, and should not. */}
+            {handedOn
+              ? `Approved under your own name. ${document.createdBy ? `${document.createdBy.name} has been told by mail.` : 'The buyer has been told by mail.'}`
+              : mayDecide && document.next
+                ? 'Approving does not release this order. There is one more approval after yours, and the buyer is mailed either way.'
+                : 'Approved under your own name, as if you had done it in SAP.'}
           </div>
         </Card>
 
         {document.vessel && (
-          <Card span="c12" icon="truck" tone="warn" title="Where the shipment is" subtitle="live position, not a note somebody typed">
-            <div className="terms">
+          <Card span="c12" icon="ship" tone="warn" title="Where the shipment is" subtitle="live position, not a note somebody typed">
+            {/* The shape of the journey first, the numbers under it. Which leg it is on and
+                whether that leg has started are the two things you want at a glance; the
+                bill of lading is what you want once you have them. */}
+            <SeaJourney vessel={document.vessel} plant={document.plant} />
+
+            <VesselMap vessel={document.vessel} />
+
+            <div className="terms" style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
               <div>
                 <TermRow label="Vessel" value={`${document.vessel.name}, IMO ${document.vessel.imo}`} />
                 <TermRow label="Bill of lading" value={document.vessel.billOfLading} />
@@ -283,14 +374,14 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
         </Card>
       </div>
 
-      {document.status === 'pending' && (
+      {mayDecide && (
         <div className="footerbar">
           <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="shield" size={13} /> Approving as {APPROVER_NAME}
           </span>
           <input
             className="noteinput"
-            placeholder="Add a note, optional. It is saved and included in the mail."
+            placeholder="Approval note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             disabled={busy !== null || !canDecide}
@@ -298,9 +389,14 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
           <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null || !canDecide} type="button">
             {busy === 'reject' ? 'Saving…' : 'Send back'}
           </button>
+          {/* The label says what the button does. On a two step order "Approve" would read
+              as "release this order", which is not what pressing it does. */}
           <button className="btn emph" onClick={() => onDecide('approve', note)} disabled={busy !== null || !canDecide} type="button">
             <Icon name="check" size={13} />
-            {busy === 'approve' ? 'Saving…' : 'Approve'}
+            {/* The label says what pressing it does. "Approve" on a two step order would
+                read as "release this order", which is not what happens. It says there is a
+                next step without saying who is on it. */}
+            {busy === 'approve' ? 'Saving…' : document.next ? 'Approve and pass on' : 'Approve'}
           </button>
         </div>
       )}

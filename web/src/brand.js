@@ -33,39 +33,14 @@ export const USER_PROFILE = {
 
 export const PLANTS = ['Pune', 'Mumbai', 'Nagpur'];
 
-// Real mailboxes for the demo.
+// Who mail goes to is decided on the SERVER, in server/src/domain/recipients.js, from the
+// MAIL_DIRECTORY variable in .env.
 //
-// The people on the dashboard are invented, but a demo is unconvincing if the mail lands
-// nowhere. These map an invented name to a colleague who will actually receive it. Anyone
-// not listed falls back to a derived name@infrabeat.com address, which is not a real
-// mailbox and will bounce - fine for showing the compose box, not for showing delivery.
+// A directory used to live here, in this file, holding real people's personal Gmail
+// addresses. This is a browser file: everything in it is compiled into the JavaScript
+// bundle and served to whoever opens the page. Those addresses were readable in the page
+// source, packed into the shareable offline HTML, and committed to a public repository.
 //
-// This is the single place recipients are decided. To change who gets what, edit here.
-//
-// All seven now point at a Gmail address rather than a work one.
-//
-// That is not a preference, it is what delivers. Mail to infrabeat.com passes through
-// Microsoft 365, which publishes DMARC p=quarantine, and a new Gmail sender writing to that
-// domain for the first time gets held: the first approval mail was accepted by Gmail,
-// returned a message id, and never surfaced in the inbox. Gmail to Gmail skips all of it.
-//
-// Spread by how many buttons reach each person, so no one inbox catches most of the demo:
-// 4 mails can reach Ganesh, 3 Hrutik, 2 each for the rest.
-export const MAIL_DIRECTORY = {
-  // Ganesh: 4 buttons, the busiest person on the dashboard
-  'Mr. Anil Deshmukh': 'ganesh.upadhye@gmail.com',    // Procurement desk, problems S1, S3, S5
-
-  // Hrutik: 3 buttons
-  'Mr. Kiran Raghavan': 'hrutik270@gmail.com',        // Logistics and freight, problem S2
-  'Ms. Meera Joshi': 'hrutik270@gmail.com',           // Packing materials
-
-  // Pratik: 2 buttons
-  'Mr. Rahul Kamat': 'Psalunke333@gmail.com',         // Contracts and vendor master, problem S6
-
-  // Ashwin: 2 buttons
-  'Mr. Sanjay Bose': 'Ashwinchandratre@gmail.com',    // Spares and refractories, problem S4
-
-  // Vijay: 2 buttons
-  'Mr. Prakash Nair': 'vijayshedge2820@gmail.com',    // Raw materials buying
-  'Mr. Sunil Kulkarni': 'vijayshedge2820@gmail.com'   // Stores and receiving
-};
+// Nothing a browser holds can be kept from the person holding it, so the fix was not to
+// hide the list better but to stop shipping it at all. The dashboard now sends a person's
+// NAME to the backend and never learns their address.

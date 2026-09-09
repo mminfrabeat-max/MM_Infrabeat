@@ -6,6 +6,15 @@ import { byPlant } from '../selectors.js';
 import { Card, Banner, Chip, Score } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
+// Who the document is sitting with, in the words the row needs. A pending document that
+// this manager has already signed is with the next approver, not with them.
+function holder(d) {
+  if (d.status === 'approved') return 'nobody, released';
+  if (d.status === 'rejected') return 'nobody, sent back';
+  if (d.decidedAt && d.next) return d.next.name;
+  return 'you';
+}
+
 export default function Approvals({ data, plant, onOpenDocument }) {
   const documents = byPlant(data.documents, plant);
 
@@ -13,7 +22,8 @@ export default function Approvals({ data, plant, onOpenDocument }) {
     <>
       <Banner icon="eye">
         Open any order to see the full header: value, vendor and GST, payment terms, freight
-        and loading, transport, discounts and rebate, incoterms, and who approved it before you.
+        and loading, transport, discounts and rebate, incoterms, who approved it before you,
+        and who it goes to after you.
       </Banner>
 
       <Card span="c12" flush icon="doc" tone="warn" title="Purchasing documents" subtitle="longest wait first">
@@ -31,7 +41,8 @@ export default function Approvals({ data, plant, onOpenDocument }) {
                 <th className="rt">Total value</th>
                 <th>Transport</th>
                 <th>Waiting</th>
-                <th>Approved before by</th>
+                <th>Raised by</th>
+                <th>With now</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -66,8 +77,9 @@ export default function Approvals({ data, plant, onOpenDocument }) {
                         {d.hoursWaiting} h
                       </Chip>
                     </td>
-                    <td className="sub">{d.prev ? d.prev.name : 'first step'}</td>
-                    <td><StatusChip status={d.status} /></td>
+                    <td className="sub">{d.createdBy ? d.createdBy.name : 'not recorded'}</td>
+                    <td className="sub">{holder(d)}</td>
+                    <td><StatusChip status={d.status} document={d} /></td>
                   </tr>
                 ))}
             </tbody>
@@ -78,8 +90,12 @@ export default function Approvals({ data, plant, onOpenDocument }) {
   );
 }
 
-export function StatusChip({ status }) {
+// `document` is optional. Given it, the chip can tell apart the two states that both store
+// themselves as "pending": waiting for you, and waiting for the person after you. They look
+// identical in the database and mean opposite things to whoever is reading the screen.
+export function StatusChip({ status, document }) {
   if (status === 'approved') return <Chip tone="pos" icon="check">Approved</Chip>;
   if (status === 'rejected') return <Chip tone="neg">Sent back</Chip>;
+  if (document?.decidedAt) return <Chip tone="pri" icon="clock">Passed on</Chip>;
   return <Chip tone="warn" icon="clock">Waiting</Chip>;
 }

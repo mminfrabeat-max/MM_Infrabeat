@@ -16,6 +16,29 @@ const thisFolder = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(thisFolder, '../../.env');
 dotenv.config({ path: envPath });
 
+// Turns the MAIL_DIRECTORY variable into a name-to-address map.
+//
+// A bad value must never stop the server booting. The dashboard works perfectly well with
+// no directory at all - every notification simply comes to MAIL_TO, saying who it was for -
+// so a typo here is a warning and an empty map, not a crash at startup on a Sunday.
+function parseDirectory(raw) {
+  if (!raw || !raw.trim()) return {};
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('it must be a JSON object of "Name": "address" pairs');
+    }
+    // Only keep entries that are actually a name mapped to an address.
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([name, address]) => name.trim() && typeof address === 'string' && address.includes('@'))
+    );
+  } catch (error) {
+    console.error(`[api] MAIL_DIRECTORY could not be read, so no real mailboxes are known: ${error.message}`);
+    return {};
+  }
+}
+
 export const config = {
   port: Number(process.env.PORT) || 3001,
 
@@ -53,7 +76,36 @@ export const config = {
     // What the recipient sees in the From line. Defaults to the sending account.
     from: process.env.MAIL_FROM || '',
     // Who gets the approval notice. Defaults to whoever made the decision.
-    to: process.env.MAIL_TO || ''
+    //
+    // Also the catch-all: a notification for somebody who has no mailbox in MAIL_DIRECTORY
+    // comes here instead, with a banner at the top naming who it was meant for. The
+    // alternative was inventing an address from their name, which sent real mail to a
+    // mailbox that did not exist and told nobody it had failed.
+    to: process.env.MAIL_TO || '',
+    // The Reply-To on messages that are pure information, such as the note sent to whoever
+    // raised a document.
+    //
+    // It falls back to the sending account rather than to an invented no-reply address.
+    // A made-up address on a domain nobody owns does not stop replies, it loses them: the
+    // reply bounces and the person who wrote it assumes they were ignored. The message
+    // says plainly that it needs no answer, and the Auto-Submitted header tells other mail
+    // systems the same thing. Those do the job honestly; a dead address only looks like it
+    // does. Set MAIL_NO_REPLY only if you own a real mailbox for it.
+    noReply: process.env.MAIL_NO_REPLY || process.env.MAIL_USER || '',
+
+    // Who the people named on the dashboard really are, as JSON in one variable:
+    //   MAIL_DIRECTORY={"Mr. Anil Deshmukh":"someone@gmail.com", ...}
+    //
+    // This belongs on the server and nowhere else. It used to live in web/src/brand.js,
+    // which is a browser file: every address in it was compiled into the JavaScript bundle,
+    // served to anyone who opened the dashboard, packed into the shareable offline HTML,
+    // and committed to a public repository. These are real people's personal mailboxes, and
+    // none of those four things should ever have been true of them.
+    //
+    // Here, the browser never receives an address. It sends a name; this side turns the
+    // name into a mailbox. And because it is an environment variable it stays out of git
+    // like every other secret, and is set in the Render dashboard for the deployed copy.
+    directory: parseDirectory(process.env.MAIL_DIRECTORY)
   }
 };
 

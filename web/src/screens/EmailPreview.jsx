@@ -13,7 +13,7 @@ import { Banner, Chip, Icon, TermRow } from '../components/ui.jsx';
 import { VendorCharts } from '../components/charts.jsx';
 import { byPlant } from '../selectors.js';
 
-export default function EmailPreview({ data, plant, mailTo, canDecide, onDecide, busy }) {
+export default function EmailPreview({ data, plant, canDecide, onDecide, busy }) {
   const documents = byPlant(data.documents, plant);
   const pendingFirst = [...documents].sort((a, b) => {
     if (a.status === b.status) return b.hoursWaiting - a.hoursWaiting;
@@ -33,8 +33,9 @@ export default function EmailPreview({ data, plant, mailTo, canDecide, onDecide,
   return (
     <>
       <Banner icon="mail">
-        This is what arrives at <b>{mailTo}</b>. The full header travels with it, so the
-        decision can be made from the phone.
+        This is what lands in the approver&rsquo;s inbox. The full header travels with it, so
+        the decision can be made from the phone. Where each one actually goes is decided by
+        the backend from the person&rsquo;s name, so no address appears on this screen.
       </Banner>
 
       <div style={{ display: 'flex', gap: 9, marginBottom: 13, flexWrap: 'wrap' }}>
@@ -67,7 +68,10 @@ export default function EmailPreview({ data, plant, mailTo, canDecide, onDecide,
             <span className="av">PD</span>
             <div>
               <div style={{ color: 'var(--ink)', fontSize: '13.2px', fontWeight: 600 }}>Procurement dashboard</div>
-              <div>to {mailTo}</div>
+              {/* The person, not their mailbox. On a document with a second approver this
+                  goes to them rather than to you, and printing an address here would put a
+                  colleague's personal mailbox on screen for no reason. */}
+              <div>to {document.next ? document.next.name : 'you'}</div>
             </div>
           </div>
         </div>

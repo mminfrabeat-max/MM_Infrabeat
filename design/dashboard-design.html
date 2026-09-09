@@ -1428,7 +1428,9 @@ function openProf(){ renderProf(); document.getElementById("prof").classList.add
 function closeProf(){ document.getElementById("prof").classList.remove("open"); }
 
 /* ================= WRITE A MAIL ================= */
-function mailId(name){ return String(name).split(",")[0].replace(/^(Mr|Ms|Mrs)\.?\s+/i,"").trim().toLowerCase().replace(/\s+/g,".")+"@infrabeat.com"; }
+/* The real dashboard resolves a name to a mailbox on the server, and shows nobody an
+   address. This mockup has no server, so it names the person, same as the app does. */
+function mailId(name){ return String(name).split(",")[0].trim(); }
 var mailFor=null;
 function openMail(o){ mailFor=o;
  document.getElementById("mm-to").value=o.to;

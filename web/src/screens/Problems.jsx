@@ -8,7 +8,6 @@
 // took two or three separate facts placed side by side, and showing which ones is what makes
 // the finding checkable rather than magic.
 
-import { mailAddressFor } from '../format.js';
 import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { byPlant } from '../selectors.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
@@ -92,7 +91,9 @@ export default function Problems({ data, plant, canDecide, onFix, onWriteMail, b
                         onClick={() =>
                           onWriteMail({
                             name: s.speakTo.split(',')[0],
-                            to: mailAddressFor(s.speakTo),
+                            // The person, not their address. The backend turns one into the
+                            // other when Send is pressed.
+                            toName: s.speakTo,
                             subject: s.title,
                             body:
                               `Hello ${s.speakTo.split(',')[0]},\n\n${s.detail}\n\n` +

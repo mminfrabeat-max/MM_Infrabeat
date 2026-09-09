@@ -36,7 +36,9 @@
       "vessel": null,
       "deliveryDate": "22 Sep 2026",
       "reason": "Waiting at the final step",
-      "status": "pending"
+      "status": "pending",
+      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "28 Aug, 11:20" },
+      "next": null
     },
     {
       "id": "4500178342",
@@ -78,7 +80,9 @@
       },
       "deliveryDate": "18 Sep 2026",
       "reason": "Approver on leave, no stand-in was set",
-      "status": "pending"
+      "status": "pending",
+      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "5 Sep, 09:05" },
+      "next": { "name": "Mr. Kiran Raghavan", "title": "Finance head", "level": "Step 2 of 2, final" }
     },
     {
       "id": "1000442190",
@@ -109,7 +113,9 @@
       "vessel": null,
       "deliveryDate": "29 Sep 2026",
       "reason": "Waiting for purchasing release",
-      "status": "pending"
+      "status": "pending",
+      "createdBy": { "name": "P. Kamat", "title": "Buyer, Spares", "when": "2 Sep, 08:30" },
+      "next": { "name": "Mr. Anil Deshmukh", "title": "Head of Procurement", "level": "Release step, final" }
     },
     {
       "id": "4500178266",
@@ -140,7 +146,9 @@
       "vessel": null,
       "deliveryDate": "Rolling, monthly",
       "reason": "In the queue",
-      "status": "pending"
+      "status": "pending",
+      "createdBy": { "name": "D. Ghorpade", "title": "Planner, Raw materials", "when": "30 Aug, 10:00" },
+      "next": null
     },
     {
       "id": "4500178455",
@@ -171,7 +179,153 @@
       "vessel": null,
       "deliveryDate": "12 Oct 2026",
       "reason": "In the queue",
-      "status": "pending"
+      "status": "pending",
+      "createdBy": { "name": "N. Shirke", "title": "Buyer, Packing", "when": "29 Aug, 14:45" },
+      "next": null
+    },
+    {
+      "id": "4500178512",
+      "kind": "PO",
+      "docType": "NB, standard order",
+      "trade": "Domestic",
+      "incoterm": "DAP, Nagpur plant",
+      "supplierId": "V-10141",
+      "material": "Conveyor belt, 1200mm, clinker line",
+      "materialCode": "SP-4120",
+      "plant": "Nagpur",
+      "quantity": 620,
+      "unit": "MTR",
+      "rate": 1985,
+      "basic": 1230700,
+      "freight": 46000,
+      "loading": 11500,
+      "transport": "Road",
+      "items": [
+        { "pos": 10, "materialCode": "SP-4120", "material": "Conveyor belt, 1200mm, clinker line", "type": "ERSA", "typeText": "Spare part", "group": "CNV-01", "groupText": "Conveyor", "quantity": 620, "unit": "MTR", "rate": 1985 },
+        { "pos": 20, "materialCode": "SP-4136", "material": "Carrying idlers, 152mm", "type": "ERSA", "typeText": "Spare part", "group": "CNV-01", "groupText": "Conveyor", "quantity": 180, "unit": "NOS", "rate": 1240 }
+      ],
+      "payTerms": "45 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 52,
+      "step": "Step 2 of 2, final",
+      "prev": { "name": "K. Raghavan", "level": "Step 1 of 2", "when": "7 Sep, 09:15", "note": "Belt length checked against the drawing" },
+      "vessel": null,
+      "deliveryDate": "26 Sep 2026",
+      "reason": "Waiting at the final step",
+      "status": "pending",
+      "createdBy": { "name": "P. Kamat", "title": "Buyer, Spares", "when": "1 Sep, 16:10" },
+      "next": null
+    },
+    {
+      "id": "4500178498",
+      "kind": "PO",
+      "docType": "ZIMP, import order",
+      "trade": "Import",
+      "incoterm": "CIF, Mundra port",
+      "supplierId": "V-20044",
+      "material": "Coal, imported",
+      "materialCode": "RM-1201",
+      "plant": "Mumbai",
+      "quantity": 9000,
+      "unit": "MT",
+      "rate": 10250,
+      "basic": 92250000,
+      "freight": 0,
+      "loading": 640000,
+      "transport": "Sea",
+      "items": [
+        { "pos": 10, "materialCode": "RM-1201", "material": "Coal, imported, 6000 kcal", "type": "ROH", "typeText": "Raw material", "group": "FUE-01", "groupText": "Fuel", "quantity": 9000, "unit": "MT", "rate": 10250 }
+      ],
+      "payTerms": "Letter of credit, 90 days usance",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 71,
+      "step": "Step 1 of 2",
+      "prev": null,
+      "vessel": {
+        "name": "MV Gulf Trader",
+        "imo": "9518841",
+        "billOfLading": "JCDM1201338",
+        "from": "Jebel Ali, UAE",
+        "to": "Mundra",
+        "position": "21.4 N, 68.9 E, west of Porbandar",
+        "eta": "19 Sep",
+        "afterPort": "5 days for customs and the rail leg",
+        "updated": "10:15",
+        "source": "AIS vessel feed, outside SAP"
+      },
+      "deliveryDate": "27 Sep 2026",
+      "reason": "Waiting for the second approval step",
+      "status": "pending",
+      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "4 Sep, 15:40" },
+      "next": { "name": "Mr. Sunil Kulkarni", "title": "Director, Operations", "level": "Step 2 of 2, final" }
+    },
+    {
+      "id": "1000442310",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10190",
+      "material": "Grinding aid, cement mill",
+      "materialCode": "CH-5510",
+      "plant": "Pune",
+      "quantity": 24,
+      "unit": "KL",
+      "rate": 96500,
+      "basic": 2316000,
+      "freight": 34000,
+      "loading": 0,
+      "transport": "Road",
+      "items": [
+        { "pos": 10, "materialCode": "CH-5510", "material": "Grinding aid, cement mill", "type": "ROH", "typeText": "Raw material", "group": "CHM-01", "groupText": "Process chemicals", "quantity": 24, "unit": "KL", "rate": 96500 }
+      ],
+      "payTerms": "30 days from invoice date",
+      "cashDiscount": "1 percent if paid within 7 days",
+      "rebate": "None",
+      "hoursWaiting": 16,
+      "step": "Purchasing step",
+      "prev": { "name": "M. Joshi", "level": "Department step", "when": "8 Sep, 16:05", "note": "Consumption checked against last quarter" },
+      "vessel": null,
+      "deliveryDate": "30 Sep 2026",
+      "reason": "Waiting for purchasing release",
+      "status": "pending",
+      "createdBy": { "name": "N. Shirke", "title": "Buyer, Packing", "when": "3 Sep, 09:50" },
+      "next": { "name": "Mr. Anil Deshmukh", "title": "Head of Procurement", "level": "Release step, final" }
+    },
+    {
+      "id": "4500178530",
+      "kind": "PO",
+      "docType": "NB, standard order",
+      "trade": "Domestic",
+      "incoterm": "DAP, Pune plant",
+      "supplierId": "V-10008",
+      "material": "Fly ash, dry",
+      "materialCode": "RM-1088",
+      "plant": "Pune",
+      "quantity": 4800,
+      "unit": "MT",
+      "rate": 8600,
+      "basic": 41280000,
+      "freight": 296000,
+      "loading": 68000,
+      "transport": "Road",
+      "items": [
+        { "pos": 10, "materialCode": "RM-1088", "material": "Fly ash, dry", "type": "ROH", "typeText": "Raw material", "group": "RAW-02", "groupText": "Blending material", "quantity": 4800, "unit": "MT", "rate": 8600 }
+      ],
+      "payTerms": "45 days from invoice date",
+      "cashDiscount": "2 percent if paid within 10 days",
+      "rebate": "1.5 percent per quarter above 2 crore",
+      "hoursWaiting": 6,
+      "step": "Step 1 of 1",
+      "prev": null,
+      "vessel": null,
+      "deliveryDate": "21 Sep 2026",
+      "reason": "In the queue",
+      "status": "pending",
+      "createdBy": { "name": "D. Ghorpade", "title": "Planner, Raw materials", "when": "6 Sep, 12:25" },
+      "next": null
     }
   ]
 }

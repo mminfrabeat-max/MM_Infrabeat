@@ -6,10 +6,16 @@
 
 import { inr, num, plural, bandTone } from '../format.js';
 import { byPlant, sumValues, contractsToWatch } from '../selectors.js';
+import { useState } from 'react';
 import { Card, Banner, Chip, Tile } from '../components/ui.jsx';
 import { SparkArea, Meter, toneColour } from '../components/charts.jsx';
 
 export default function Commitments({ data, plant }) {
+  // Which contracts the table is showing. "Contracts to act on" sets this to flagged, so
+  // that tile does more than move the page: it answers the question it asks. Any other tile
+  // clears it, and so does the link in the card header.
+  const [contractView, setContractView] = useState('all');
+
   const openOrders = byPlant(data.openOrders, plant);
   const openRequests = byPlant(data.openRequests, plant);
   const contracts = byPlant(data.contracts, plant);
@@ -17,6 +23,23 @@ export default function Commitments({ data, plant }) {
 
   const agreed = contracts.reduce((sum, c) => sum + c.target, 0);
   const remaining = contracts.reduce((sum, c) => sum + c.remaining, 0);
+
+  // Moves to a table and marks it for a moment.
+  //
+  // The scroll on its own is not enough: the page lands somewhere new and it is not obvious
+  // what moved or why. A brief outline on the card that was asked for answers that, then
+  // gets out of the way. It is removed on a timer rather than left on, because a permanent
+  // highlight becomes part of the furniture and stops meaning anything.
+  function jumpTo(id, view = 'all') {
+    setContractView(view);
+    const card = window.document.getElementById(id);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.classList.add('flash');
+    window.setTimeout(() => card.classList.remove('flash'), 1400);
+  }
+
+  const shownContracts = contractView === 'flagged' ? flagged : contracts;
 
   return (
     <>
@@ -34,6 +57,7 @@ export default function Commitments({ data, plant }) {
           tone="warn"
           footer={`${openOrders.filter((o) => o.receivedPercent === 0).length} with nothing delivered`}
           spark={<SparkArea values={[6, 6, 5, 6, 6, 7, 6]} colour={toneColour('warn')} />}
+          onClick={() => jumpTo('open-orders')}
         />
         <Tile
           icon="file"
@@ -43,6 +67,7 @@ export default function Commitments({ data, plant }) {
           tone="warn"
           footer={`${openRequests.filter((r) => r.ageDays > 5).length} older than 5 days`}
           spark={<SparkArea values={[4, 4, 5, 5, 5, 5, 5]} colour={toneColour('warn')} />}
+          onClick={() => jumpTo('open-requests')}
         />
         <Tile
           icon="doc"
@@ -52,6 +77,7 @@ export default function Commitments({ data, plant }) {
           tone="mut"
           footer={`${inr(remaining)} still to use`}
           spark={<SparkArea values={[5, 5, 5, 5, 5, 5, 5]} colour={toneColour('pri')} />}
+          onClick={() => jumpTo('contracts')}
         />
         <Tile
           icon="alert"
@@ -61,16 +87,29 @@ export default function Commitments({ data, plant }) {
           tone={flagged.length ? 'neg' : 'pos'}
           footer="see the list below"
           spark={<SparkArea values={[1, 1, 2, 2, 2, 3, 3]} colour={toneColour(flagged.length ? 'neg' : 'pos')} />}
+          onClick={() => jumpTo('contracts', flagged.length ? 'flagged' : 'all')}
         />
       </div>
 
       <div className="grid">
         <Card
+          id="contracts"
           span="c12"
           icon="doc"
           tone={flagged.length ? 'neg' : 'pos'}
           title="Contracts"
-          subtitle="how much has been agreed, how much used, and when it runs out"
+          subtitle={
+            contractView === 'flagged'
+              ? 'only the ones that are unused or running out'
+              : 'how much has been agreed, how much used, and when it runs out'
+          }
+          action={
+            contractView === 'flagged' ? (
+              <button className="btn q" type="button" onClick={() => setContractView('all')}>
+                Show all {contracts.length}
+              </button>
+            ) : null
+          }
           flush
         >
           <table>
@@ -87,7 +126,7 @@ export default function Commitments({ data, plant }) {
               </tr>
             </thead>
             <tbody>
-              {contracts.map((c) => (
+              {shownContracts.map((c) => (
                 <tr key={c.id}>
                   <td><b>{c.id}</b><div className="sub">{c.plant}</div></td>
                   <td>{c.supplierName}</td>
@@ -109,7 +148,7 @@ export default function Commitments({ data, plant }) {
           </table>
         </Card>
 
-        <Card span="c7" icon="truck" tone="warn" title="Ordered but not received" subtitle="money committed, goods not in" flush>
+        <Card id="open-orders" span="c7" icon="truck" tone="warn" title="Ordered but not received" subtitle="money committed, goods not in" flush>
           <table>
             <thead>
               <tr>
@@ -142,7 +181,7 @@ export default function Commitments({ data, plant }) {
           </table>
         </Card>
 
-        <Card span="c5" icon="file" tone="warn" title="Asked for but not ordered" subtitle="requests sitting with buyers" flush>
+        <Card id="open-requests" span="c5" icon="file" tone="warn" title="Asked for but not ordered" subtitle="requests sitting with buyers" flush>
           <table>
             <thead>
               <tr>

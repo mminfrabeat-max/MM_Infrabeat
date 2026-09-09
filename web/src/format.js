@@ -1,4 +1,3 @@
-import { MAIL_DIRECTORY } from './brand.js';
 
 // Turning numbers and names into something a manager reads without effort.
 //
@@ -67,26 +66,12 @@ export function firstName(fullName) {
   return String(fullName).replace(/^(Mr|Ms|Mrs)\.?\s+/i, '').split(' ')[0];
 }
 
-// Works out where a mail to this person should actually go.
+// There is no mailAddressFor here any more.
 //
-// A real mailbox from the directory in brand.js wins. Anyone not listed falls back to a
-// derived name@infrabeat.com address, which is not a real mailbox: the compose box will
-// show it and Gmail will accept it, but it will bounce. That is deliberate, so the
-// fallback looks right in a screenshot without pretending to deliver.
-export function mailAddressFor(name) {
-  const asWritten = String(name).split(',')[0].trim();
-  if (MAIL_DIRECTORY[asWritten]) return MAIL_DIRECTORY[asWritten];
-
-  return (
-    asWritten
-      .replace(/^(Mr|Ms|Mrs)\.?\s+/i, '')
-      .toLowerCase()
-      // An initial already ends in a full stop, so "A. Deshmukh" would otherwise become
-      // "a..deshmukh". Collapse any run of dots that joining the parts produces.
-      .replace(/\s+/g, '.')
-      .replace(/\.{2,}/g, '.') + '@infrabeat.com'
-  );
-}
+// It used to turn a name into an email address, using a table of real people's mailboxes
+// that shipped inside this bundle. That lookup now lives in server/src/domain/recipients.js
+// where the browser cannot read it. Screens pass the person's NAME to the compose box, and
+// the backend works out the address when the mail is actually sent.
 
 // The backend speaks in business words (good / watch / risk). The stylesheet speaks in
 // colours (pos / warn / neg). This is the one place that translates between them.

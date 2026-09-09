@@ -67,11 +67,14 @@ export const dbProvider = {
 
   async getPurchaseDocuments() {
     const documents = all(
-      `SELECT d.*, v.code AS vendor_code, p.name AS plant_name, u.email AS decided_by_email
+      `SELECT d.*, v.code AS vendor_code, p.name AS plant_name, u.email AS decided_by_email,
+              raiser.full_name AS raised_by_full_name,
+              raiser.job_title AS raised_by_title
          FROM purchase_documents d
          LEFT JOIN vendors v ON v.id = d.vendor_id
          LEFT JOIN plants  p ON p.id = d.plant_id
          LEFT JOIN users   u ON u.id = d.decided_by_user_id
+         LEFT JOIN people  raiser ON raiser.id = d.created_by_person_id
         WHERE d.status IN ('pending', 'approved', 'rejected')
         ORDER BY d.hours_waiting DESC`
     );
@@ -116,14 +119,36 @@ export const dbProvider = {
       // storing them again is what stops the two disagreeing after somebody edits a line.
       const first = lines[0] || { quantity: 0, unit: '', rate: 0 };
 
+      // The chain, in step order. Three questions are answered from it.
+      const chain = stepsByDocument.get(d.id) || [];
+
       // The previous approver is the earliest step already signed off.
-      const approved = (stepsByDocument.get(d.id) || []).filter((s) => s.status === 'approved');
+      const approved = chain.filter((s) => s.status === 'approved');
       const prev = approved.length
         ? {
             name: approved[0].approver_name,
             level: approved[0].step_label,
             when: approved[0].acted_at,
             note: approved[0].note
+          }
+        : null;
+
+      // Steps still waiting, in order. Normally the first of them is whoever holds the
+      // document right now and the second is where it goes after they sign.
+      //
+      // Once this manager has signed a document that is not the last step, the document is
+      // still pending but its own step is closed - so the first waiting step has become the
+      // next approver rather than the current holder. decided_at on a pending document is
+      // what distinguishes the two cases, and it is the only place that distinction lives.
+      const waiting = chain.filter((s) => s.status === 'waiting');
+      const movedOn = Boolean(d.decided_at) && d.status === 'pending';
+      const upcoming = movedOn ? waiting[0] : waiting[1];
+
+      const next = upcoming
+        ? {
+            name: upcoming.approver_name,
+            title: upcoming.approver_title,
+            level: upcoming.step_label
           }
         : null;
 
@@ -154,7 +179,15 @@ export const dbProvider = {
         step: d.current_step || '',
         reason: d.blocked_reason || '',
         items: lines,
+        createdBy: d.created_by_name
+          ? {
+              name: d.raised_by_full_name || d.created_by_name,
+              title: d.raised_by_title || '',
+              when: d.raised_on || ''
+            }
+          : null,
         prev,
+        next,
         vessel: ship
           ? {
               name: ship.vessel_name,

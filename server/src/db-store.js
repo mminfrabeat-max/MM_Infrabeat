@@ -28,25 +28,53 @@ function documentRowFor(docNumber) {
 
 // Records a decision on one document: the document row, its final approval step, one audit
 // line and one notification, together or not at all.
-export function saveDecision({ documentId, status, decidedBy, decidedAt, note, document, mail }) {
+export function saveDecision({ documentId, status, decidedBy, decidedAt, note, document, mail, outcome, initiatorMail }) {
   return transaction((db) => {
     const row = documentRowFor(documentId);
     if (!row) throw new Error(`Document ${documentId} is not in the database.`);
 
     const userId = userIdFor(decidedBy);
 
+    // current_step moves with the document. Without this the header would still name the
+    // step just finished, and the screen would say an order was waiting at a step that had
+    // already been signed.
     db.prepare(
       `UPDATE purchase_documents
-          SET status = ?, decided_by_user_id = ?, decided_at = ?, decision_note = ?
+          SET status = ?, decided_by_user_id = ?, decided_at = ?, decision_note = ?, current_step = ?
         WHERE id = ?`
-    ).run(status, userId, decidedAt, note || null, row.id);
+    ).run(status, userId, decidedAt, note || null, outcome?.step || document.step || null, row.id);
 
-    // Close the step that was waiting, so the chain shows who finished it.
-    db.prepare(
-      `UPDATE approval_steps
-          SET status = ?, acted_at = ?, note = ?, approver_name = ?
-        WHERE document_id = ? AND status = 'waiting'`
-    ).run(status, decidedAt, note || null, decidedBy, row.id);
+    // Close the step that was waiting - the FIRST one, by step number.
+    //
+    // The obvious version of this closes every waiting step at once. That was harmless
+    // while a document had one, and would be silently wrong now that it can have two: one
+    // approval would sign off both this manager's step and the step belonging to the person
+    // it was being passed to, and the document would arrive already approved by somebody
+    // who had never seen it.
+    const currentStep = one(
+      `SELECT id FROM approval_steps
+        WHERE document_id = ? AND status = 'waiting'
+        ORDER BY step_number
+        LIMIT 1`,
+      [row.id]
+    );
+
+    if (currentStep) {
+      db.prepare(
+        `UPDATE approval_steps
+            SET status = ?, acted_at = ?, note = ?, approver_name = ?
+          WHERE id = ?`
+      ).run(status === 'pending' ? 'approved' : status, decidedAt, note || null, decidedBy, currentStep.id);
+    }
+
+    // A document that has been sent back is not going anywhere, so the steps after it never
+    // happen. Marking them skipped says that, where leaving them waiting would read as a
+    // document still moving through a chain it has already fallen out of.
+    if (status === 'rejected') {
+      db.prepare(
+        `UPDATE approval_steps SET status = 'skipped' WHERE document_id = ? AND status = 'waiting'`
+      ).run(row.id);
+    }
 
     const total = row.basic_value + row.freight + row.loading;
 
@@ -56,22 +84,41 @@ export function saveDecision({ documentId, status, decidedBy, decidedAt, note, d
            (occurred_at, action, user_id, acted_by, document_id, document_number, document_kind, vendor_name, value, note)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(decidedAt, status, userId, decidedBy, row.id, documentId, row.kind, row.vendor_name, total, note || null);
+      .run(decidedAt, actionLabel(status, outcome), userId, decidedBy, row.id, documentId, row.kind, row.vendor_name, total, note || null);
 
-    db.prepare(
-      `INSERT INTO notifications (action_log_id, channel, to_address, subject, status, provider_message_id, attempts, sent_at, last_error)
-       VALUES (?, 'email', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      Number(logged.lastInsertRowid),
-      mail?.to || null,
-      `${row.kind} ${documentId} ${status}`,
-      mail?.sent ? 'sent' : 'failed',
-      mail?.sent ? String(mail.status || '').replace(/^Sent /, '') : null,
-      1,
-      mail?.sent ? decidedAt : null,
-      mail?.sent ? null : mail?.status || null
-    );
+    // One row per message. Two mails leave on an approval that moves a document on, and an
+    // outbox that recorded only one of them could not tell you which had failed.
+    const logId = Number(logged.lastInsertRowid);
+
+    saveNotification(db, logId, mail, `${row.kind} ${documentId} ${actionLabel(status, outcome)}`, decidedAt);
+
+    if (initiatorMail) {
+      saveNotification(db, logId, initiatorMail, `${row.kind} ${documentId} outcome, for information`, decidedAt);
+    }
   });
+}
+
+// What the audit trail calls this. "pending" is the document's state, not a description of
+// what anyone did, so an approval that passed a document on says exactly that.
+function actionLabel(status, outcome) {
+  if (status !== 'pending') return status;
+  return outcome?.movedTo ? `approved, passed to ${outcome.movedTo.name}` : 'approved';
+}
+
+function saveNotification(db, actionLogId, mail, subject, at) {
+  db.prepare(
+    `INSERT INTO notifications (action_log_id, channel, to_address, subject, status, provider_message_id, attempts, sent_at, last_error)
+     VALUES (?, 'email', ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    actionLogId,
+    mail?.to || null,
+    subject,
+    mail?.sent ? 'sent' : 'failed',
+    mail?.sent ? String(mail.status || '').replace(/^Sent /, '') : null,
+    1,
+    mail?.sent ? at : null,
+    mail?.sent ? null : mail?.status || null
+  );
 }
 
 // Marks a problem handled.

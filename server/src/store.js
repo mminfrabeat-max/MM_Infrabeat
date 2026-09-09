@@ -44,12 +44,18 @@ export async function saveDecision(input) {
       status: input.status,
       decidedBy: input.decidedBy,
       decidedAt: input.decidedAt,
-      decisionNote: input.note
+      decisionNote: input.note,
+      // The step moves with the document, so the row keeps saying where it actually is.
+      step: input.outcome?.step || input.document.step || ''
     });
+
+    // Two mails go out on a decision that passes a document on, and the log has one pair of
+    // email columns. Each message therefore gets its own line rather than the second being
+    // dropped, which is also how it reads best: two things were sent, two rows.
     await excel
       .appendActionLog({
         at: input.decidedAt,
-        action: input.status,
+        action: excelActionLabel(input),
         documentId: input.documentId,
         documentType: input.document.kind,
         supplierName: input.document.supplierName,
@@ -60,10 +66,34 @@ export async function saveDecision(input) {
         emailStatus: input.mail?.status || ''
       })
       .catch((error) => console.error('[api] decision saved but not logged:', error.message));
+
+    if (input.initiatorMail) {
+      await excel
+        .appendActionLog({
+          at: input.decidedAt,
+          action: 'informed the buyer',
+          documentId: input.documentId,
+          documentType: input.document.kind,
+          supplierName: input.document.supplierName,
+          value: '',
+          decidedBy: input.decidedBy,
+          note: input.document.createdBy ? `To ${input.document.createdBy.name}` : '',
+          emailTo: input.initiatorMail.to || '',
+          emailStatus: input.initiatorMail.status || ''
+        })
+        .catch(() => {});
+    }
     return;
   }
 
   refuse();
+}
+
+// "pending" describes the document, not what the manager did. An approval that moved a
+// document on says so, and names who has it.
+function excelActionLabel(input) {
+  if (input.status !== 'pending') return input.status;
+  return input.outcome?.movedTo ? `approved, passed to ${input.outcome.movedTo.name}` : 'approved';
 }
 
 // --- Problems ----------------------------------------------------------------

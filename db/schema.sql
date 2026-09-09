@@ -43,10 +43,12 @@ CREATE TABLE plants (
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Note there is no email column. Where a person's mail goes is decided from their name
+-- against MAIL_DIRECTORY in .env, which is the only place that knows. A column here would
+-- have to be filled with something for everyone, and the something would be invented.
 CREATE TABLE people (
   id                  INTEGER PRIMARY KEY,
   full_name           TEXT NOT NULL,
-  email               TEXT COLLATE NOCASE,
   phone               TEXT,
   job_title           TEXT,
   plant_id            INTEGER REFERENCES plants(id),
@@ -205,6 +207,15 @@ CREATE TABLE purchase_documents (
   ordered_on         TEXT,
   due_on             TEXT,
   age_days           INTEGER,
+  -- Who raised the document. Every decision on it is mailed back to this person, so a
+  -- document with nobody here is one whose outcome nobody is told about.
+  --
+  -- The name is kept alongside the reference for the same reason default_vendor_name is:
+  -- the workbook can name somebody we hold no people row for, and losing the name would be
+  -- worse than storing it twice.
+  created_by_person_id INTEGER REFERENCES people(id),
+  created_by_name    TEXT,
+  raised_on          TEXT,
   decided_by_user_id INTEGER REFERENCES users(id),
   decided_at         TEXT,
   decision_note      TEXT,
@@ -246,6 +257,13 @@ CREATE TABLE approval_steps (
   step_label          TEXT,
   approver_person_id  INTEGER REFERENCES people(id),
   approver_name       TEXT,
+  -- The role at the time, carried on the step rather than read from people every time,
+  -- because a step has to keep saying what it was even if that person later changes job.
+  -- An audit trail that rewrites itself is not one.
+  --
+  -- There is no address here on purpose. Where a step's mail goes is decided from the
+  -- approver's name against MAIL_DIRECTORY in .env, which is the one place that knows.
+  approver_title      TEXT,
   status              TEXT NOT NULL DEFAULT 'waiting'
                       CHECK (status IN ('waiting', 'approved', 'rejected', 'skipped')),
   acted_at            TEXT,

@@ -4,13 +4,13 @@
 // been open eleven days; it does not know that the buyer is waiting on you for an answer.
 // That gap is the whole reason the screen exists.
 
-import { initials, plural, mailAddressFor } from '../format.js';
+import { initials, plural } from '../format.js';
 import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { byPlant, teamsNeedingNudge } from '../selectors.js';
 import { Card, Banner, Tile, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
 import { SparkArea, toneColour } from '../components/charts.jsx';
 
-export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
+export default function Teams({ data, plant, onWriteMail, onTeams, onAddTask }) {
   const teams = byPlant(data.teams, plant);
   const nudge = teamsNeedingNudge(data.teams, plant);
   const sum = (field) => teams.reduce((total, t) => total + t[field], 0);
@@ -18,9 +18,9 @@ export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
   return (
     <>
       <Banner icon="people">
-        What each team is working on, what they owe you, and what you owe them. Call or send
-        a reminder straight from the row. Reply time is how long that team usually takes to
-        answer your mail.
+        What each team is working on, what they owe you, and what you owe them. Message or
+        call them on Teams, or send a reminder, straight from the row. Reply time is how long
+        that team usually takes to answer your mail.
       </Banner>
 
       <SimulatedNote>
@@ -90,7 +90,18 @@ export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
                       {t.state === 'nudge' ? 'needs a nudge' : 'on track'}
                     </Chip>
                   </div>
-                  <div className="tsub">{t.lead}, {plural(t.people, 'person', 'people')}, {t.plant}</div>
+                  <div className="tsub">
+                    {t.lead}, {plural(t.people, 'person', 'people')}, {t.plant}
+                    {/* No address on the row. The one place it belongs is the To box of the
+                        compose window, where the person about to send is looking at it.
+                        Only the warning survives, because a reminder that will reach nobody
+                        is worth knowing about before you write it. */}
+                    {!t.reminderReaches && (
+                      <span className="tmail none" title="Add them to MAIL_DIRECTORY in .env to have reminders delivered.">
+                        <Icon name="alert" size={11} /> no mailbox on file
+                      </span>
+                    )}
+                  </div>
                   <div className="tline"><b>Doing now:</b> {t.now}</div>
                   <div className="tline fu"><b>Follow up:</b> {t.follow}</div>
 
@@ -110,7 +121,7 @@ export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
                     onClick={() =>
                       onWriteMail({
                         name: t.lead,
-                        to: mailAddressFor(t.lead),
+                        toName: t.lead,
                         subject: `Follow up, ${t.name}`,
                         body:
                           `Hello ${t.lead},\n\n${t.follow}\n\n` +
@@ -122,8 +133,23 @@ export default function Teams({ data, plant, onWriteMail, onCall, onAddTask }) {
                   >
                     <Icon name="mail" size={13} /> Send reminder
                   </button>
-                  <button className="btn q" type="button" onClick={() => onCall(t)}>
-                    <Icon name="phone" size={13} /> Call {t.lead.split(' ')[1] || t.lead}
+                  {/* Both open Microsoft Teams through the backend, which knows the
+                      address and redirects. The page never holds one. */}
+                  <button
+                    className="btn q"
+                    type="button"
+                    disabled={!t.reminderReaches}
+                    onClick={() => onTeams(t, 'chat')}
+                  >
+                    <Icon name="send" size={13} /> Teams message
+                  </button>
+                  <button
+                    className="btn q"
+                    type="button"
+                    disabled={!t.reminderReaches}
+                    onClick={() => onTeams(t, 'call')}
+                  >
+                    <Icon name="phone" size={13} /> Teams call
                   </button>
                   <button className="btn q" type="button" onClick={() => onAddTask(t)}>
                     <Icon name="doc" size={13} /> Add task

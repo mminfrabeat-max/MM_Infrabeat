@@ -85,6 +85,9 @@ svg { display: block; }
 .bg-warn { background: var(--warn-soft); color: var(--warn); }
 .bg-neg { background: var(--neg-soft); color: var(--neg); }
 .bg-pri { background: var(--primary-soft); color: var(--primary); }
+/* For a step that is neither good nor bad news: who raised the document, and the approver
+   after this one who is shown but cannot be acted on. */
+.bg-mut { background: var(--surface-3); color: var(--ink-2); }
 .bg-vio { background: var(--violet-soft); color: var(--violet); }
 
 /* ============ shell ============ */
@@ -186,7 +189,10 @@ svg { display: block; }
   border-radius: var(--r-md); padding: 14px 15px 12px; text-align: left; box-shadow: var(--sh-1);
   transition: transform .16s, box-shadow .16s, border-color .16s;
 }
-.tile:hover { transform: translateY(-2px); box-shadow: var(--sh-2); border-color: var(--border-2); }
+.tile { cursor: default; }
+.tile-link { cursor: pointer; }
+.tile-link:hover { transform: translateY(-2px); box-shadow: var(--sh-2); border-color: var(--border-2); }
+.tile-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .tile .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; margin-bottom: 10px; }
 .tile .lab { font-size: 12.4px; color: var(--ink-2); font-weight: 500; }
 .tile .val { font-size: 30px; font-weight: 700; letter-spacing: -1.2px; line-height: 1.05; margin-top: 5px; display: flex; align-items: baseline; gap: 4px; }
@@ -302,10 +308,123 @@ th.rt, td.rt { text-align: right; }
 .trow .tk { color: var(--ink-3); }
 .trow .tv { font-weight: 600; text-align: right; }
 .trow .tv.big { font-size: 15px; }
-.stepline { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.stepline { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); position: relative; }
 .stepline:last-child { border-bottom: 0; }
-.stepline .sd { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 800; }
-.stepline .s1 { font-size: 13.4px; font-weight: 650; }
+.stepline .sd { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 800; position: relative; z-index: 1; }
+
+/* The line down the chain.
+ *
+ * It runs from the bottom of one dot to the top of the next, so the steps read as one
+ * sequence rather than four unrelated rows. The colour is the point: solid green behind a
+ * step that has happened, dashed red ahead of one still waiting. Dashed as well as red,
+ * because a line that has not been walked yet should not look like one that has, and
+ * because colour alone is no use to anyone who cannot separate the two.
+ *
+ * Nothing is drawn under the last row: there is no next dot to reach. */
+.chain .stepline:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  transform: translateX(-1px);
+  top: 38px;
+  bottom: -13px;
+  width: 2px;
+}
+/* The card a tile just jumped to.
+ *
+ * Landing somewhere new without being told what moved is disorienting, so the card that was
+ * asked for outlines itself for a moment and then stops. On a timer rather than left on: a
+ * permanent highlight becomes furniture and stops meaning anything.
+ *
+ * Anyone who has asked not to be shown motion gets the outline without the fade. */
+.card.flash { animation: cardflash 1.4s ease-out; }
+@keyframes cardflash {
+  0%   { box-shadow: 0 0 0 3px var(--primary), var(--sh-2); }
+  70%  { box-shadow: 0 0 0 3px var(--primary), var(--sh-2); }
+  100% { box-shadow: 0 0 0 0 transparent, var(--sh-2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.flash { animation: none; box-shadow: 0 0 0 3px var(--primary), var(--sh-2); }
+}
+
+/* Which mailbox a team reminder reaches. Masked on purpose: enough to check the right
+   person is tagged, not enough to be an address. */
+.tmail {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;
+  padding: 1px 7px; border-radius: 20px;
+  background: var(--surface-3); color: var(--ink-2);
+  font-size: 11.2px; font-weight: 600; white-space: nowrap;
+}
+.tmail.none { background: var(--warn-soft); color: var(--warn); }
+
+/* --- The shipment journey -------------------------------------------------
+ *
+ * Nodes and legs alternate in one row: port, sea leg, port, inland leg, plant. The legs
+ * take the spare width so the nodes stay their natural size and the line does the
+ * stretching.
+ *
+ * Below 720px it turns and runs down the page instead. A five stage journey squeezed into
+ * a phone width is unreadable sideways, and the order of the stages is the whole point. */
+.journey { display: flex; align-items: flex-start; gap: 4px; padding: 4px 0 2px; }
+
+.jnode { flex: none; width: 92px; text-align: center; }
+.jdot {
+  width: 34px; height: 34px; margin: 0 auto 7px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--surface-3); color: var(--ink-2);
+  border: 2px solid var(--border);
+}
+.jdot.done { background: var(--pos-soft); color: var(--pos); border-color: var(--pos); }
+.jname { font-size: 12.6px; font-weight: 650; color: var(--ink); line-height: 1.3; }
+.jnode .jsub { font-size: 11.4px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+
+.jleg { flex: 1 1 0; min-width: 60px; padding-top: 4px; }
+/* The vehicle sits on the middle of its leg as a label, not as a position. What the line
+   says is whether the leg has started; where the ship actually is, is the text below. */
+.jtrack { position: relative; height: 26px; display: grid; place-items: center; }
+.jtrack::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 12px; height: 0;
+  border-top: 2px dashed var(--border-2);
+}
+.jleg.moving .jtrack::before { border-top: 2px solid var(--pos); }
+.jvehicle {
+  position: relative; z-index: 1; padding: 0 6px;
+  background: var(--surface); color: var(--ink-3); line-height: 0;
+}
+.jleg.moving .jvehicle { color: var(--pos); }
+.jleg .jsub { font-size: 11.4px; color: var(--ink-3); text-align: center; margin-top: 3px; line-height: 1.35; }
+
+/* The map. A fixed aspect rather than a fixed height, so it keeps its shape on a phone
+   without a media query, and the border keeps Google's tiles inside the card's own edges. */
+.vmap { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+.vmap iframe { display: block; width: 100%; aspect-ratio: 21 / 8; min-height: 190px; border: 0; }
+.vmapfoot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--surface-2); border-top: 1px solid var(--border);
+  font-size: 11.8px; color: var(--ink-2);
+}
+.vmapfoot span { display: inline-flex; align-items: center; gap: 6px; }
+.vmapfoot a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.vmapfoot a:hover { text-decoration: underline; }
+
+@media (max-width: 720px) {
+  .journey { flex-direction: column; align-items: flex-start; gap: 0; }
+  .jnode { width: auto; text-align: left; display: flex; align-items: center; gap: 10px; }
+  .jdot { margin: 0; }
+  .jnode .jsub { margin-top: 0; }
+  .jleg { width: 100%; padding: 0 0 0 16px; }
+  .jtrack { height: 34px; width: 2px; display: block; }
+  .jtrack::before { left: 0; right: auto; top: 0; bottom: 0; height: auto; width: 0; border-top: 0; border-left: 2px dashed var(--border-2); }
+  .jleg.moving .jtrack::before { border-top: 0; border-left: 2px solid var(--pos); }
+  .jvehicle { position: absolute; left: -7px; top: 8px; padding: 4px 0; }
+  .jleg .jsub { text-align: left; padding-left: 18px; margin-top: -6px; padding-bottom: 6px; }
+}
+
+.chain .stepline.done:not(:last-child)::before { background: var(--pos); }
+.chain .stepline.wait:not(:last-child)::before { border-left: 2px dashed var(--neg); }
+/* Flex rather than plain text, so a chip sitting beside the name lines up with it instead
+   of riding on the text baseline. */
+.stepline .s1 { font-size: 13.4px; font-weight: 650; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
 .stepline .s2 { font-size: 12.4px; color: var(--ink-2); margin-top: 3px; }
 .flagline { display: flex; gap: 9px; align-items: center; font-size: 12.6px; color: var(--ink-2); margin-top: 10px; }
 .footerbar {

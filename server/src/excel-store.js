@@ -150,6 +150,15 @@ function buildDocuments(documentRows, itemRows) {
       step: asText(row.step),
       reason: asText(row.reason),
       items,
+      // Who raised it. Null rather than an empty object, so the mailer can ask "is there
+      // anyone to tell?" with a plain if.
+      createdBy: asText(row.createdByName)
+        ? {
+            name: asText(row.createdByName),
+            title: asText(row.createdByTitle),
+            when: asText(row.createdByWhen)
+          }
+        : null,
       // Only build the previous-approver block when there actually was one.
       prev: asText(row.prevName)
         ? {
@@ -157,6 +166,15 @@ function buildDocuments(documentRows, itemRows) {
             level: asText(row.prevLevel),
             when: asText(row.prevWhen),
             note: asText(row.prevNote)
+          }
+        : null,
+      // An empty "Goes next to" is meaningful: it says this approval finishes the
+      // document. That is why the column stays blank rather than repeating the approver.
+      next: asText(row.nextName)
+        ? {
+            name: asText(row.nextName),
+            title: asText(row.nextTitle),
+            level: asText(row.nextLevel)
           }
         : null,
       // Same for the ship. Only import orders have one.

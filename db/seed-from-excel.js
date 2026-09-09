@@ -120,14 +120,16 @@ function ensurePerson(rawName, plant) {
   // same and silently merging them would be the worse mistake: the fix is to tidy the
   // source data, not to have the loader invent a rule.
   //
-  // The name is stored exactly as written, so the screens read as they always did. Only the
-  // mail address is derived, from the name with any title removed.
-  const withoutTitle = name.replace(/^(Mr|Ms|Mrs)\.?\s+/i, '');
-  const mail = withoutTitle.toLowerCase().replace(/[^a-z\s]/g, '').trim().replace(/\s+/g, '.');
-
+  // The name is stored exactly as written, so the screens read as they always did.
+  //
+  // No address is stored. This used to build one out of the person's name and a company
+  // domain, for every person it met, which produced a column full of addresses that
+  // belonged to nobody, delivered nowhere, and looked entirely real to anyone reading the
+  // table. Mail is routed from the name against MAIL_DIRECTORY in .env, so a made-up
+  // address served no purpose except to be mistaken for a true one.
   const result = db
-    .prepare('INSERT INTO people (full_name, email, plant_id) VALUES (?, ?, ?)')
-    .run(name, mail ? `${mail}@infrabeat.com` : null, plant ? plantId.get(plant) ?? null : null);
+    .prepare('INSERT INTO people (full_name, plant_id) VALUES (?, ?)')
+    .run(name, plant ? plantId.get(plant) ?? null : null);
 
   const id = Number(result.lastInsertRowid);
   personId.set(key, id);
@@ -338,13 +340,18 @@ async function main() {
        (doc_number, kind, doc_type, trade, incoterm, vendor_id, plant_id, department, transport,
         pay_terms, cash_discount, rebate, basic_value, freight, loading, delivery_date,
         received_percent, status, hours_waiting, current_step, blocked_reason, note,
-        ordered_on, due_on, age_days, decided_at, decision_note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ordered_on, due_on, age_days, decided_at, decision_note,
+        created_by_person_id, created_by_name, raised_on)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   for (const row of documents) {
     const number = text(row['Document number']);
     const status = (text(row['Status']) || 'pending').toLowerCase();
+    // The person who raised it goes through ensurePerson like every other name, so the
+    // buyer who raised three orders is one row rather than three.
+    const raisedByName = text(row['Raised by']);
+    const raisedById = ensurePerson(raisedByName, text(row['Plant']));
     const result = insertDocument.run(
       number,
       text(row['Kind']) || 'PO',
@@ -372,7 +379,10 @@ async function main() {
       null,
       null,
       text(row['Decided at']) || null,
-      text(row['Note']) || null
+      text(row['Note']) || null,
+      raisedById,
+      raisedByName || null,
+      text(row['Raised on']) || null
     );
     documentId.set(number, Number(result.lastInsertRowid));
 
@@ -409,6 +419,40 @@ async function main() {
       text(row['Decided at']) || null,
       text(row['Note']) || null
     );
+
+    // The step after this manager's, where the workbook names one. It is written as a
+    // waiting row like any other, which is what lets the same query answer both "who is it
+    // with now" and "who is it with next" - the first two waiting steps in order.
+    const nextName = text(row['Goes next to']);
+    if (nextName) {
+      step += 1;
+      const nextPersonId = ensurePerson(nextName, text(row['Plant']));
+      db.prepare(
+        `INSERT INTO approval_steps
+           (document_id, step_number, step_label, approver_person_id, approver_name, approver_title, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'waiting')`
+      ).run(
+        documentId.get(number),
+        step,
+        text(row['Next step']),
+        nextPersonId,
+        nextName,
+        text(row['Next approver role']) || null
+      );
+
+      // The role is on the step for the audit trail; it also belongs on the person, so
+      // every screen that shows them agrees. Only filled where it is still blank.
+      const nextTitle = text(row['Next approver role']);
+      if (nextPersonId && nextTitle) {
+        db.prepare('UPDATE people SET job_title = ? WHERE id = ? AND job_title IS NULL').run(nextTitle, nextPersonId);
+      }
+    }
+
+    // The buyer's role, from the same row, for the same reason.
+    const raisedByTitle = text(row['Raised by role']);
+    if (raisedById && raisedByTitle) {
+      db.prepare('UPDATE people SET job_title = ? WHERE id = ? AND job_title IS NULL').run(raisedByTitle, raisedById);
+    }
 
     // The ship, only where there is one.
     const vessel = text(row['Vessel']);

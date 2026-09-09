@@ -32,7 +32,14 @@ const PATHS = {
   file: 'M4 3h11a3 3 0 0 1 3 3v15H7a3 3 0 0 1-3-3V3Zm3 3v11h9V6H7Zm2 2h5v1.6H9V8Zm0 3.4h5V13H9v-1.6Z',
   phone: 'M6.2 2.8 3.4 5.6c-.5.5-.6 1.2-.4 1.8 2 5.9 6.7 10.6 12.6 12.6.6.2 1.3.1 1.8-.4l2.8-2.8-4.6-2.3-1.8 1.8a15.5 15.5 0 0 1-6.7-6.7l1.8-1.8L6.2 2.8Z',
   people: 'M8.5 11a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Zm7.5.6a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6ZM8.5 13C5.4 13 2 14.5 2 17v2.6h13V17c0-2.5-3.4-4-6.5-4Zm7.5.6c-.6 0-1.2 0-1.8.2 1.1 1 1.8 2.2 1.8 3.6v2.2h6V17c0-2-2.8-3.4-6-3.4Z',
-  chevron: 'M12 15.4 5.6 9 7 7.6l5 5 5-5L18.4 9 12 15.4Z'
+  chevron: 'M12 15.4 5.6 9 7 7.6l5 5 5-5L18.4 9 12 15.4Z',
+  // The three ways goods move. Drawn to read at 14px, where detail is noise: a hull with a
+  // wave under it, a carriage on rails, and the truck that was already here.
+  ship: 'M4 13h16l-2.2 6H6.2L4 13Zm7-9h2v3h4v4h-2v-2H9v2H7V7h4V4ZM2 20c1.7 0 1.7 1.2 3.3 1.2S7 20 8.7 20s1.7 1.2 3.3 1.2S13.7 20 15.3 20s1.7 1.2 3.4 1.2V23c-1.7 0-1.7-1.2-3.4-1.2S13.7 23 12 23s-1.7-1.2-3.3-1.2S7 23 5.3 23 3.7 21.8 2 21.8V20Z',
+  train: 'M7 2h10a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3ZM6 6v4h5V6H6Zm7 0v4h5V6h-5Zm-4 6.4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM5.5 18h13l2.5 4h-3l-1.2-2H7.2L6 22H3l2.5-4Z',
+  // Where a leg begins or ends: a port, and the plant at the end of the line.
+  anchor: 'M11 2h2v2.2h2.2v2H13v11.5a5.6 5.6 0 0 0 4.8-4.4h-1.9L19 9.8l3.1 3.5h-2a7.6 7.6 0 0 1-7.1 6.6v.2h-.1a7.6 7.6 0 0 1-7.8-6.8H3L6.1 9.8l3.1 3.5H7.3A5.6 5.6 0 0 0 11 17.6V6.2H8.8v-2H11V2Z',
+  factory: 'M2 21V9l6 4V9l6 4V4h8v17H2Zm4-2h3v-3H6v3Zm5 0h3v-3h-3v3Zm5 0h3v-3h-3v3Z'
 };
 
 export function Icon({ name, size = 16 }) {
@@ -45,9 +52,11 @@ export function Icon({ name, size = 16 }) {
 
 // --- Layout ------------------------------------------------------------------
 
-export function Card({ span = 'c12', icon, tone = 'pri', title, subtitle, action, flush, children }) {
+// `id` is what a tile scrolls to. Without one a card cannot be linked to, and the tiles at
+// the top of a screen are only summaries of the tables underneath them.
+export function Card({ id, span = 'c12', icon, tone = 'pri', title, subtitle, action, flush, children }) {
   return (
-    <section className={`card ${span}`}>
+    <section className={`card ${span}`} id={id}>
       <div className="chd">
         {icon && (
           <span className={`ico bg-${tone}`}>
@@ -80,8 +89,17 @@ export function Banner({ kind = 'info', icon = 'eye', children }) {
 
 export function Tile({ icon, label, value, unit, sub, tone = 'mut', direction, footer, spark, onClick }) {
   const iconTone = tone === 'mut' ? 'pri' : tone;
+  // A tile that goes nowhere should not lift under the cursor and should not be reachable
+  // by tab. The hover was promising something half of them could not deliver.
+  const clickable = typeof onClick === 'function';
   return (
-    <button className="tile" onClick={onClick} type="button">
+    <button
+      className={`tile${clickable ? ' tile-link' : ''}`}
+      onClick={onClick}
+      type="button"
+      tabIndex={clickable ? 0 : -1}
+      aria-disabled={clickable ? undefined : true}
+    >
       {spark}
       <span className={`ico bg-${iconTone}`}>
         <Icon name={icon} />

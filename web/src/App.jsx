@@ -101,6 +101,26 @@ export default function App() {
     setSavedMinutes((m) => m + minutes);
   }
 
+  // Opens the compose window, then fills in the address.
+  //
+  // The window appears immediately with the person's name in the To box, and the address
+  // drops in a moment later when the backend answers. Waiting for the lookup before showing
+  // anything would make a button that does nothing for half a second, which reads as broken.
+  // If the lookup fails the window still works: the name is sent instead, and the backend
+  // resolves it at send time exactly as it did before.
+  async function writeMail(draft) {
+    setMailDraft(draft);
+    if (!draft?.toName) return;
+    try {
+      const found = await api.contactAddress(draft.toName);
+      if (found.address) {
+        setMailDraft((current) => (current && current.toName === draft.toName ? { ...current, to: found.address } : current));
+      }
+    } catch {
+      // No address in the box. Sending still works, because `toName` goes with it.
+    }
+  }
+
   function navigate(nextTab) {
     setTab(nextTab);
     setOpenDocumentId(null);
@@ -120,16 +140,40 @@ export default function App() {
   async function decide(id, action, note = '') {
     setBusy(action);
     setDecideError(null);
+    // Read before the reload, because after it the document is no longer in the pending
+    // list this closure captured.
+    const buyer = data?.documents?.find((d) => d.id === id)?.createdBy?.name || '';
     try {
       const result = action === 'approve' ? await api.approve(id, note) : await api.reject(id, note);
       await load();
       credit(`${action === 'approve' ? 'Approved' : 'Sent back'} ${id}`, MINUTES.decision);
+
+      // What was saved, then what was sent. An approval that moves a document on is not
+      // "approved" as far as the reader is concerned, so the outcome is described rather
+      // than the status field printed.
+      const what = result.movedTo
+        ? `${id} approved and passed to ${result.movedTo.name}.`
+        : `${id} ${result.status === 'rejected' ? 'sent back' : 'approved'}.`;
+
+      // Two mails go out and they can fail independently, so saying "mail sent" when only
+      // one of them left would be the kind of half-truth that is worse than silence.
+      //
+      // People, never addresses. The backend no longer tells the browser where anything
+      // went, which is deliberate, and the names read better anyway.
+      const mails = [result.email, result.initiatorEmail].filter(Boolean);
+      const failed = mails.filter((m) => !m.sent);
+      const undelivered = mails.filter((m) => m.sent && m.delivered === false);
+
+      const told = [result.movedTo?.name, buyer].filter(Boolean).join(' and ');
+
       toast(
-        result.email.sent ? 'pos' : 'warn',
-        result.email.sent ? 'check' : 'alert',
-        result.email.sent
-          ? `${id} ${result.status}. Saved, and mailed to ${result.email.to}.`
-          : `${id} ${result.status}. Saved to the workbook, but the mail did not go: ${result.email.status.replace(/^Not sent: /, '')}`
+        failed.length ? 'warn' : undelivered.length ? 'warn' : 'pos',
+        failed.length || undelivered.length ? 'alert' : 'check',
+        failed.length
+          ? `${what} Saved, but ${failed.length === mails.length ? 'no mail went out' : 'one mail did not go'}: ${failed[0].status.replace(/^Not sent: /, '')}`
+          : undelivered.length
+            ? `${what} Saved and mailed, but someone on it has no mailbox on file, so their copy came to you instead.`
+            : `${what} Saved${told ? `, and ${told} told by mail` : ' and mailed'}.`
       );
     } catch (error) {
       setDecideError(error.message);
@@ -175,15 +219,27 @@ export default function App() {
     const draft = mailDraft;
     setBusy('mail');
     try {
-      const result = await api.sendMail(draft.to, draft.subject, draft.body);
+      const result = await api.sendMail({
+        toName: draft.toName,
+        to: draft.to,
+        subject: draft.subject,
+        body: draft.body
+      });
+      const who = draft.name || draft.toName || draft.to;
       setMailDraft(null);
-      credit(`Mailed ${draft.name || draft.to}`, MINUTES.mail);
+      credit(`Mailed ${who}`, MINUTES.mail);
+
+      // The address is never sent back to the browser, so the message names the person.
+      // `deliverable` is false for anyone with no real mailbox on file: the mail left, and
+      // it will bounce, and saying so is more use than a green tick.
       toast(
-        result.sent ? 'pos' : 'warn',
-        result.sent ? 'check' : 'alert',
-        result.sent
-          ? `Sent to ${draft.name || draft.to} at ${draft.to}.`
-          : `Not sent: ${result.status.replace(/^Not sent: /, '')}`
+        result.sent && result.deliverable !== false ? 'pos' : 'warn',
+        result.sent && result.deliverable !== false ? 'check' : 'alert',
+        !result.sent
+          ? `Not sent: ${result.status.replace(/^Not sent: /, '')}`
+          : result.deliverable === false
+            ? `Sent to ${who}, but there is no real mailbox on file for them, so it will bounce. Add them to MAIL_DIRECTORY in .env.`
+            : `Sent to ${who}.`
       );
     } catch (error) {
       toast('neg', 'alert', error.message);
@@ -361,10 +417,22 @@ export default function App() {
           <Teams
             data={data}
             plant={plant}
-            onWriteMail={setMailDraft}
-            onCall={(t) => {
-              credit(`Called ${t.lead}, ${t.name}`, MINUTES.call);
-              toast('pri', 'phone', `Calling ${t.lead} on ${t.phone}. Their usual reply time by mail is ${t.replyTime}.`);
+            onWriteMail={writeMail}
+            onTeams={(t, mode) => {
+              // The backend turns the name into a Teams deep link and redirects. Opening it
+              // in a new tab keeps the dashboard where it was, and means the address never
+              // has to exist in this page.
+              window.open(
+                `/api/contact/teams?name=${encodeURIComponent(t.lead)}&mode=${mode}`,
+                '_blank',
+                'noopener'
+              );
+              credit(`${mode === 'call' ? 'Called' : 'Messaged'} ${t.lead} on Teams, ${t.name}`, MINUTES.call);
+              toast(
+                'pri',
+                mode === 'call' ? 'phone' : 'send',
+                `Opening Teams to ${mode === 'call' ? 'call' : 'message'} ${t.lead}. Their usual reply time by mail is ${t.replyTime}.`
+              );
             }}
             onAddTask={(t) => {
               credit(`Added a task for ${t.name}`, 4);
@@ -378,7 +446,7 @@ export default function App() {
             plant={plant}
             canDecide={data.canDecide}
             onFix={fixProblem}
-            onWriteMail={setMailDraft}
+            onWriteMail={writeMail}
             busyId={busy}
           />
         )}
@@ -386,7 +454,6 @@ export default function App() {
           <EmailPreview
             data={data}
             plant={plant}
-            mailTo={data.user.email}
             canDecide={data.canDecide}
             busy={busy}
             onDecide={(id, action) => decide(id, action)}
@@ -486,9 +553,17 @@ export default function App() {
             </>
           }
         >
+          {/* Opened from a button, this shows the person, because the browser genuinely does
+              not know their address any more and should not. Typing one is still allowed:
+              an address you type yourself is yours to choose. */}
           <div className="mrow">
             <div className="mlab">To</div>
-            <input className="minp" value={mailDraft.to} onChange={(e) => setMailDraft({ ...mailDraft, to: e.target.value })} />
+            <input
+              className="minp"
+              placeholder={mailDraft.toName ? `${mailDraft.toName}, at their mailbox on file` : 'An email address'}
+              value={mailDraft.to || ''}
+              onChange={(e) => setMailDraft({ ...mailDraft, to: e.target.value })}
+            />
           </div>
           <div className="mrow">
             <div className="mlab">Subject</div>

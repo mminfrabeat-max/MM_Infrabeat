@@ -61,11 +61,29 @@ export const COLUMNS = {
     { key: 'hoursWaiting', header: 'Hours waiting', width: 13 },
     { key: 'step', header: 'Approval step', width: 20 },
     { key: 'reason', header: 'Why it has not moved', width: 40 },
+    // Who raised the document. The mail confirming a decision goes back to this person,
+    // so a document without one has nobody to tell.
+    //
+    // The name only. Where their mail goes is decided by MAIL_DIRECTORY in .env, keyed on
+    // exactly this name, so an address here would be a second copy of the truth that
+    // nothing reads and that would go stale the first time somebody's mailbox changed.
+    { key: 'createdByName', header: 'Raised by', width: 20 },
+    { key: 'createdByTitle', header: 'Raised by role', width: 24 },
+    { key: 'createdByWhen', header: 'Raised on', width: 16 },
     // The previous approver, flattened out of its own object.
     { key: 'prevName', header: 'Approved before by', width: 20 },
     { key: 'prevLevel', header: 'At which step', width: 20 },
     { key: 'prevWhen', header: 'Approved when', width: 16 },
     { key: 'prevNote', header: 'Their note', width: 38 },
+    // Who it goes to after this manager approves. Empty means this approval is the last
+    // one and the document is finished when it is given.
+    //
+    // Four flat columns can hold exactly one next approver, which is the limit of a
+    // spreadsheet: a chain of three would need a fifth, then a ninth. The database keeps
+    // the same information in approval_steps, one row per step, with no such ceiling.
+    { key: 'nextName', header: 'Goes next to', width: 22 },
+    { key: 'nextTitle', header: 'Next approver role', width: 24 },
+    { key: 'nextLevel', header: 'Next step', width: 20 },
     // Ship tracking, only on import orders. Outside SAP entirely.
     { key: 'vesselName', header: 'Vessel', width: 18 },
     { key: 'vesselImo', header: 'IMO', width: 11 },

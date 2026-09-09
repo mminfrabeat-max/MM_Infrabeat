@@ -13,6 +13,7 @@ import { scoreAllSuppliers, lowestScoring } from './domain/supplier-score.js';
 import { assessAllMaterials } from './domain/stock-risk.js';
 import { assessAllContracts } from './domain/contracts.js';
 import { enrichAllDocuments } from './domain/documents.js';
+import { recipientFor } from './domain/recipients.js';
 
 // Fetches several things at once and fails with a clear message naming what broke.
 // Promise.all runs them in parallel, which matters once these are real network calls.
@@ -99,7 +100,19 @@ export async function getEverything() {
     openOrders: commitments.openOrders,
     openRequests: commitments.openRequests,
     contracts: commitments.contracts,
-    teams,
+    teams: teams.map(withReminderMailbox),
     worstSupplier: lowestScoring(scoresById)
   };
+}
+
+// Whether a reminder to this team lead will reach anybody - and nothing more than that.
+//
+// A flag, not an address. The mailbox itself is fetched one name at a time when the compose
+// window opens, because this payload is held in the page for the whole session and is what
+// the shareable offline copy is built from. A true or false costs nothing in either.
+//
+// What it buys is the warning on the row: a team with nobody on file is worth knowing about
+// before you write the reminder rather than after you send it.
+function withReminderMailbox(team) {
+  return { ...team, reminderReaches: recipientFor(team.lead).real };
 }

@@ -8,6 +8,15 @@
 // It will not overwrite an existing workbook unless you pass --force, because that workbook
 // may hold approvals you have made since. This is the sort of guard worth writing on day
 // one: the day you need it, you really need it.
+//
+// There is a third mode, and it is the one you usually want:
+//
+//   node server/scripts/build-workbook.js --refresh
+//
+// That rebuilds every sheet from the JSON, so new orders, vendors and materials appear,
+// but carries your existing decisions across: which documents were approved or sent back
+// and by whom, which problems were marked fixed, which materials had a request raised
+// against them, and the whole action log. Adding data should never cost you your history.
 
 import ExcelJS from 'exceljs';
 import fs from 'node:fs/promises';
@@ -36,22 +45,101 @@ function addSheet(workbook, name, columns, rows, headerColour = 'FFEEF2F7') {
   return sheet;
 }
 
+// --- Carrying decisions across a rebuild --------------------------------------
+//
+// Reads what the app has written into the existing workbook, so a rebuild can put it back.
+// Rows are matched by header text rather than column position, the same way the reader
+// does it, so a workbook whose columns were dragged around in Excel still works.
+
+function rowsOf(workbook, sheetName, columns) {
+  const sheet = workbook.getWorksheet(sheetName);
+  if (!sheet) return [];
+
+  const keyByColumn = new Map();
+  sheet.getRow(1).eachCell((cell, columnNumber) => {
+    const header = String(cell.value ?? '').trim();
+    const column = columns.find((c) => c.header === header);
+    if (column) keyByColumn.set(columnNumber, column.key);
+  });
+
+  const rows = [];
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const record = {};
+    let hasSomething = false;
+    for (const [columnNumber, key] of keyByColumn) {
+      let value = row.getCell(columnNumber).value;
+      if (value && typeof value === 'object') {
+        value = 'result' in value ? value.result : 'text' in value ? value.text : String(value);
+      }
+      record[key] = value === null || value === undefined ? '' : value;
+      if (record[key] !== '') hasSomething = true;
+    }
+    if (hasSomething) rows.push(record);
+  });
+  return rows;
+}
+
+async function readExistingDecisions() {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(WORKBOOK_PATH);
+
+  const decisions = new Map();
+  for (const row of rowsOf(workbook, SHEETS.documents, COLUMNS.documents)) {
+    // Only rows somebody actually decided. A pending row carries nothing worth keeping.
+    if (row.status && row.status !== 'pending') {
+      decisions.set(String(row.id), {
+        status: row.status,
+        decidedBy: row.decidedBy,
+        decidedAt: row.decidedAt,
+        decisionNote: row.decisionNote
+      });
+    }
+  }
+
+  const situations = new Map();
+  for (const row of rowsOf(workbook, SHEETS.situations, COLUMNS.situations)) {
+    if (row.status && row.status !== 'open') situations.set(String(row.id), row.status);
+  }
+
+  // Raising a request adds to the quantity on order, which is a decision too.
+  const onOrder = new Map();
+  for (const row of rowsOf(workbook, SHEETS.materials, COLUMNS.materials)) {
+    onOrder.set(`${row.code}@${row.plant}`, Number(row.openOrderQuantity) || 0);
+  }
+
+  const actionLog = rowsOf(workbook, SHEETS.actionLog, COLUMNS.actionLog);
+
+  return { decisions, situations, onOrder, actionLog };
+}
+
 async function main() {
   const force = process.argv.includes('--force');
+  const refresh = process.argv.includes('--refresh');
+
+  // Nothing to carry across on a first run, so this stays empty unless --refresh finds a
+  // workbook to read.
+  let kept = { decisions: new Map(), situations: new Map(), onOrder: new Map(), actionLog: [] };
 
   try {
     await fs.access(WORKBOOK_PATH);
-    if (!force) {
+    if (refresh) {
+      kept = await readExistingDecisions();
+    } else if (!force) {
       console.error('');
       console.error(`The workbook already exists: ${WORKBOOK_PATH}`);
       console.error('Refusing to overwrite it, because it may hold decisions you have made.');
-      console.error('To start again from the JSON files, run:');
+      console.error('To rebuild it from the JSON files but keep those decisions, run:');
+      console.error('  node server/scripts/build-workbook.js --refresh');
+      console.error('To start again from nothing, throwing the decisions away, run:');
       console.error('  node server/scripts/build-workbook.js --force');
       console.error('');
       process.exit(1);
     }
-  } catch {
-    // Does not exist yet, which is the normal first run.
+  } catch (error) {
+    // ENOENT is the normal first run. Anything else is a real problem and should be said
+    // out loud rather than swallowed into a silent rebuild.
+    if (error.code !== 'ENOENT') throw error;
   }
 
   const suppliersFile = await readJson('suppliers.json');
@@ -91,10 +179,16 @@ async function main() {
     hoursWaiting: d.hoursWaiting,
     step: d.step,
     reason: d.reason,
+    createdByName: d.createdBy ? d.createdBy.name : '',
+    createdByTitle: d.createdBy ? d.createdBy.title : '',
+    createdByWhen: d.createdBy ? d.createdBy.when : '',
     prevName: d.prev ? d.prev.name : '',
     prevLevel: d.prev ? d.prev.level : '',
     prevWhen: d.prev ? d.prev.when : '',
     prevNote: d.prev ? d.prev.note : '',
+    nextName: d.next ? d.next.name : '',
+    nextTitle: d.next ? d.next.title : '',
+    nextLevel: d.next ? d.next.level : '',
     vesselName: d.vessel ? d.vessel.name : '',
     vesselImo: d.vessel ? d.vessel.imo : '',
     vesselBillOfLading: d.vessel ? d.vessel.billOfLading : '',
@@ -105,10 +199,14 @@ async function main() {
     vesselAfterPort: d.vessel ? d.vessel.afterPort : '',
     vesselUpdated: d.vessel ? d.vessel.updated : '',
     vesselSource: d.vessel ? d.vessel.source : '',
-    status: d.status,
-    decidedBy: '',
-    decidedAt: '',
-    decisionNote: ''
+    // A decision carried over from the previous workbook wins over the JSON, which only
+    // ever says "pending".
+    ...(kept.decisions.get(String(d.id)) || {
+      status: d.status,
+      decidedBy: '',
+      decidedAt: '',
+      decisionNote: ''
+    })
   }));
 
   const itemRows = [];
@@ -131,7 +229,8 @@ async function main() {
     unit: m.unit,
     safetyStock: m.safetyStock,
     reorderPoint: m.reorderPoint,
-    openOrderQuantity: m.openOrderQuantity,
+    // A request raised from the dashboard added to this, so keep the larger of the two.
+    openOrderQuantity: Math.max(m.openOrderQuantity, kept.onOrder.get(`${m.code}@${m.plant}`) ?? 0),
     dailyUsage: m.dailyUsage,
     leadTimeDays: m.leadTimeDays,
     kiln: m.kiln,
@@ -148,7 +247,8 @@ async function main() {
   // --- Situations: the joined list has to live in one cell ------------------
   const situationRows = situationsFile.situations.map((s) => ({
     ...s,
-    joined: (s.joined || []).join(LIST_SEPARATOR)
+    joined: (s.joined || []).join(LIST_SEPARATOR),
+    status: kept.situations.get(String(s.id)) || s.status
   }));
 
   addSheet(workbook, SHEETS.documents, COLUMNS.documents, documentRows, 'FFE3F3FA');
@@ -163,13 +263,20 @@ async function main() {
   addSheet(workbook, SHEETS.contracts, COLUMNS.contracts, commitmentsFile.contracts, 'FFFAEFE0');
   addSheet(workbook, SHEETS.teams, COLUMNS.teams, teamsFile.teams);
 
-  // Starts empty. Every decision appends a row here.
-  addSheet(workbook, SHEETS.actionLog, COLUMNS.actionLog, []);
+  // Starts empty on a first build. Every decision appends a row here, and --refresh puts
+  // the existing rows back.
+  addSheet(workbook, SHEETS.actionLog, COLUMNS.actionLog, kept.actionLog);
 
   await workbook.xlsx.writeFile(WORKBOOK_PATH);
 
   console.log('');
-  console.log(`Created ${WORKBOOK_PATH}`);
+  console.log(`${refresh ? 'Refreshed' : 'Created'} ${WORKBOOK_PATH}`);
+  if (refresh) {
+    console.log(
+      `  kept ${kept.decisions.size} decisions, ${kept.situations.size} fixed problems, ` +
+        `${kept.actionLog.length} action log entries`
+    );
+  }
   console.log('');
   for (const sheet of workbook.worksheets) {
     console.log(`  ${sheet.name.padEnd(20)} ${Math.max(0, sheet.rowCount - 1)} rows`);
