@@ -35,7 +35,12 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
 
   const waitingValue = sumTotals(pending);
   const worstMaterial = short[0];
-  const neverUsed = flagged.find((c) => c.flag === 'never used');
+  // More than one contract can be sitting unused, so count them rather than assuming
+  // there is only ever one to mention.
+  const neverUsed = flagged.filter((c) => c.flag === 'never used');
+  const biggestUnused = neverUsed.length
+    ? neverUsed.reduce((a, b) => (b.target > a.target ? b : a))
+    : null;
   const worst = data.worstSupplier;
 
   return (
@@ -63,7 +68,9 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
                 : 'Every plant has enough stock. '}
               {flagged.length > 0
                 ? `${flagged.length}${flagged.length === 1 ? ' contract needs' : ' contracts need'} a look` +
-                  (neverUsed ? `, one of ${inr(neverUsed.target)} never used.` : '.')
+                  (biggestUnused
+                    ? `, ${neverUsed.length === 1 ? 'one' : neverUsed.length} never used, the largest worth ${inr(biggestUnused.target)}.`
+                    : '.')
                 : 'All contracts are fine.'}
             </p>
 
@@ -157,7 +164,11 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
           value={flagged.length}
           sub="unused or expiring"
           tone={flagged.length ? 'neg' : 'pos'}
-          footer={neverUsed ? 'one has never been used' : 'all being used'}
+          footer={
+            neverUsed.length
+              ? `${neverUsed.length} ${neverUsed.length === 1 ? 'has' : 'have'} never been used`
+              : 'all being used'
+          }
           spark={<SparkArea values={SHAPES.contracts} colour={toneColour(flagged.length ? 'neg' : 'pos')} />}
           onClick={() => onNavigate('open')}
         />

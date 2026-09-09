@@ -17,7 +17,11 @@
       "call": "Confirm that Anil takes his approvals until the 12th",
       "speakTo": "Mr. Anil Deshmukh",
       "followUp": "Check on 12 Sep that Sunil is back and the stand-in is removed",
-      "joined": ["Leave record, away until 12 Sep", "Workflow substitute table, no deputy active", "Five work items at his step, 1.1 crore"],
+      "joined": [
+        "Leave record, away until 12 Sep",
+        "Workflow substitute table, no deputy active",
+        "Five work items at his step, 1.1 crore"
+      ],
       "fix": "Move his work to Anil Deshmukh, his listed deputy, until the 12th",
       "canAutoFix": true,
       "status": "open"
@@ -36,7 +40,11 @@
       "call": "Ask Kiran Raghavan to confirm he is the owner on record",
       "speakTo": "Mr. Kiran Raghavan",
       "followUp": "Ask master data to fix the cost centre owner so it does not repeat",
-      "joined": ["Requisition 1000442190", "Cost centre 4100 owner record", "Release strategy, no agent found"],
+      "joined": [
+        "Requisition 1000442190",
+        "Cost centre 4100 owner record",
+        "Release strategy, no agent found"
+      ],
       "fix": "Send it to Kiran Raghavan, the owner on the cost centre record",
       "canAutoFix": true,
       "status": "open"
@@ -55,7 +63,11 @@
       "call": "Approve the order the same day it reaches you",
       "speakTo": "Mr. Anil Deshmukh, buyer for raw materials",
       "followUp": "Check on 15 Sep that the vessel is confirmed",
-      "joined": ["Stock at Pune, 1180 MT", "Demand from three departments, 2520 MT", "Import lead time, 12 days"],
+      "joined": [
+        "Stock at Pune, 1180 MT",
+        "Demand from three departments, 2520 MT",
+        "Import lead time, 12 days"
+      ],
       "fix": "Prepare the order now and mark it for same day approval",
       "canAutoFix": true,
       "status": "open"
@@ -74,7 +86,11 @@
       "call": "Decide whether to use it or let it lapse",
       "speakTo": "Mr. Sanjay Bose",
       "followUp": "Look at it again on 20 Sep, before the last week",
-      "joined": ["Contract 4600001155, 2.4 crore", "Release orders against it, none", "Validity, 26 days left"],
+      "joined": [
+        "Contract 4600001155, 2.4 crore",
+        "Release orders against it, none",
+        "Validity, 26 days left"
+      ],
       "fix": "Ask the buyer whether to use it or let it lapse",
       "canAutoFix": false,
       "status": "open"
@@ -93,7 +109,11 @@
       "call": "Look at the delivery record before you release the order",
       "speakTo": "Mr. Anil Deshmukh",
       "followUp": "Ask the vendor for a written recovery plan by 20 Sep",
-      "joined": ["Last ten deliveries, on time to 11 days late", "Contract rate 41200 per MT", "PO 4500178401 waiting with you"],
+      "joined": [
+        "Last ten deliveries, on time to 11 days late",
+        "Contract rate 41200 per MT",
+        "PO 4500178401 waiting with you"
+      ],
       "fix": "Put the record in front of the approver before the 1.16 crore order is released",
       "canAutoFix": false,
       "status": "open"
@@ -112,9 +132,105 @@
       "call": "Have the requisition converted into a release order on 4600001155",
       "speakTo": "Mr. Rahul Kamat",
       "followUp": "Check on 20 Sep that the release order is placed and the contract is being used",
-      "joined": ["Contract 4600001155, unused, expires in 26 days", "Requisition 1000442190, 18 MT grinding media", "Stock at Nagpur, 22 MT against a 60 MT reorder level"],
+      "joined": [
+        "Contract 4600001155, unused, expires in 26 days",
+        "Requisition 1000442190, 18 MT grinding media",
+        "Stock at Nagpur, 22 MT against a 60 MT reorder level"
+      ],
       "fix": "Convert PR 1000442190 into a release order against contract 4600001155",
       "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "S7",
+      "severity": "high",
+      "icon": "alert",
+      "title": "A conveyor belt contract is sitting unused while the same belt is bought at spot price",
+      "where": "Purchasing, Nagpur",
+      "plant": "Nagpur",
+      "relatedTo": "Contract 4600001211",
+      "detail": "An 1.8 crore agreement with Konkan Conveyors has never been drawn on. The order in front of you for the same belt is at 1985 a metre against 1850 agreed, which is 1.35 lakh more than it needs to be.",
+      "who": "Mr. Rahul Kamat raised the order. Mr. Anil Deshmukh signed the contract in March.",
+      "stuck": "Nothing is stuck. The contract is simply not being quoted on the order.",
+      "call": "Ask the buyer to put the order against the contract before it is released",
+      "speakTo": "Mr. Rahul Kamat",
+      "followUp": "Check next week that the contract number is on the order",
+      "joined": [
+        "Contract 4600001211, 1.8 crore, nothing drawn",
+        "Order 4500178512 at 1985 a metre",
+        "Agreed contract rate 1850 a metre"
+      ],
+      "fix": "Put order 4500178512 against contract 4600001211 at the agreed rate",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "S8",
+      "severity": "high",
+      "icon": "box",
+      "title": "Cooler castable runs out eight days before a new load could arrive",
+      "where": "Stores, Mumbai",
+      "plant": "Mumbai",
+      "relatedTo": "SP-2214",
+      "detail": "Twenty-six tonnes on hand, ninety-five asked for by the kiln and the cooler overhaul, and nothing on order. At today's use the stock lasts eight days and the lead time is eighteen.",
+      "who": "Asked for by R. Iyer for Kiln 1 and S. Bose for the cooler overhaul.",
+      "stuck": "Requisition 1000442288 has been open twelve days with no order against it",
+      "call": "Get the requisition converted today, and ask Aditya for a part load against the shortfall",
+      "speakTo": "Mr. Rahul Kamat",
+      "followUp": "Confirm on 12 Sep that an order exists and has a date",
+      "joined": [
+        "Stock 26 MT against 95 MT of departmental demand",
+        "Nothing on order, lead time 18 days",
+        "Requisition 1000442288 open 12 days"
+      ],
+      "fix": "Raise the order for 69 MT against the open requisition",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "S9",
+      "severity": "medium",
+      "icon": "truck",
+      "title": "Two orders on Bharat Bearings are part received with no date for the balance",
+      "where": "Goods receipt, Nagpur",
+      "plant": "Nagpur",
+      "relatedTo": "Bharat Bearings",
+      "detail": "Order 4500177455 is seventy percent received and fourteen pieces short. The vendor has said next week twice. Nobody has put a confirmed date back on the order, so the mill has nothing to plan against.",
+      "who": "Mr. Prakash Nair handles goods receipt at Nagpur. Mr. Rahul Kamat owns the vendor.",
+      "stuck": "The balance quantity has no confirmed delivery date against it",
+      "call": "Get a firm date in writing and put it on the order",
+      "speakTo": "Mr. Rahul Kamat",
+      "followUp": "Chase again on 15 Sep if the date has not appeared",
+      "joined": [
+        "Order 4500177455, 70 percent received",
+        "Vendor standing 53 out of 100, getting worse",
+        "No confirmed date on the balance line"
+      ],
+      "fix": "Mail the vendor for a confirmed date on the fourteen pieces outstanding",
+      "canAutoFix": true,
+      "status": "open"
+    },
+    {
+      "id": "S10",
+      "severity": "medium",
+      "icon": "file",
+      "title": "The imported coal contract is 94 percent used with four months still to run",
+      "where": "Purchasing, Mumbai",
+      "plant": "Mumbai",
+      "relatedTo": "Contract 4600001178",
+      "detail": "One crore twenty lakh is left on a twenty-one crore agreement that runs to January. The order in front of you is nine crore, so the contract is exhausted the moment it is released and everything after that is bought at spot price.",
+      "who": "Mr. Sanjay Bose negotiated the agreement with Jebel Coal DMCC.",
+      "stuck": "Nothing is stuck. The value is simply about to run out ahead of the date.",
+      "call": "Start the extension now rather than after the contract is empty",
+      "speakTo": "Mr. Sanjay Bose",
+      "followUp": "Check on 20 Sep that an extension has been raised",
+      "joined": [
+        "Contract 4600001178, 21 crore agreed, 19.8 crore drawn",
+        "Order 4500178498 for 9.29 crore awaiting approval",
+        "Contract valid until 31 Jan 2027"
+      ],
+      "fix": "Raise an extension on contract 4600001178 before the next order goes out",
+      "canAutoFix": false,
       "status": "open"
     }
   ]

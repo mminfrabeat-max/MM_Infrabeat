@@ -18,9 +18,24 @@
       "kiln": true,
       "supplierName": "Oman Mining LLC",
       "needs": [
-        { "dept": "Kiln 1 operations", "quantity": 1600, "by": "12 Sep", "who": "R. Iyer" },
-        { "dept": "Kiln 2 operations", "quantity": 900, "by": "18 Sep", "who": "S. Bose" },
-        { "dept": "Quality lab", "quantity": 20, "by": "20 Sep", "who": "M. Rao" }
+        {
+          "dept": "Kiln 1 operations",
+          "quantity": 1600,
+          "by": "12 Sep",
+          "who": "R. Iyer"
+        },
+        {
+          "dept": "Kiln 2 operations",
+          "quantity": 900,
+          "by": "18 Sep",
+          "who": "S. Bose"
+        },
+        {
+          "dept": "Quality lab",
+          "quantity": 20,
+          "by": "20 Sep",
+          "who": "M. Rao"
+        }
       ]
     },
     {
@@ -37,8 +52,18 @@
       "kiln": false,
       "supplierName": "Bharat Bearings",
       "needs": [
-        { "dept": "Cement mill 2", "quantity": 40, "by": "25 Sep", "who": "P. Nair" },
-        { "dept": "Maintenance", "quantity": 12, "by": "30 Sep", "who": "S. Bose" }
+        {
+          "dept": "Cement mill 2",
+          "quantity": 40,
+          "by": "25 Sep",
+          "who": "P. Nair"
+        },
+        {
+          "dept": "Maintenance",
+          "quantity": 12,
+          "by": "30 Sep",
+          "who": "S. Bose"
+        }
       ]
     },
     {
@@ -55,8 +80,18 @@
       "kiln": true,
       "supplierName": "Aditya Refractories",
       "needs": [
-        { "dept": "October kiln shutdown", "quantity": 700, "by": "5 Oct", "who": "Project team" },
-        { "dept": "Routine maintenance", "quantity": 60, "by": "22 Sep", "who": "S. Bose" }
+        {
+          "dept": "October kiln shutdown",
+          "quantity": 700,
+          "by": "5 Oct",
+          "who": "Project team"
+        },
+        {
+          "dept": "Routine maintenance",
+          "quantity": 60,
+          "by": "22 Sep",
+          "who": "S. Bose"
+        }
       ]
     },
     {
@@ -73,7 +108,12 @@
       "kiln": true,
       "supplierName": "Oman Mining LLC",
       "needs": [
-        { "dept": "Kiln fuel, Mumbai", "quantity": 22000, "by": "28 Sep", "who": "R. Iyer" }
+        {
+          "dept": "Kiln fuel, Mumbai",
+          "quantity": 22000,
+          "by": "28 Sep",
+          "who": "R. Iyer"
+        }
       ]
     },
     {
@@ -90,7 +130,12 @@
       "kiln": false,
       "supplierName": "Sunfield Packaging",
       "needs": [
-        { "dept": "Packing plant", "quantity": 240000, "by": "30 Sep", "who": "K. Menon" }
+        {
+          "dept": "Packing plant",
+          "quantity": 240000,
+          "by": "30 Sep",
+          "who": "K. Menon"
+        }
       ]
     },
     {
@@ -107,7 +152,124 @@
       "kiln": true,
       "supplierName": "Shreeji Minerals",
       "needs": [
-        { "dept": "Blending", "quantity": 8000, "by": "25 Sep", "who": "R. Iyer" }
+        {
+          "dept": "Blending",
+          "quantity": 8000,
+          "by": "25 Sep",
+          "who": "R. Iyer"
+        }
+      ]
+    },
+    {
+      "code": "SP-2214",
+      "name": "Castable, cooler throat",
+      "plant": "Mumbai",
+      "onHand": 26,
+      "unit": "MT",
+      "safetyStock": 40,
+      "reorderPoint": 90,
+      "openOrderQuantity": 0,
+      "dailyUsage": 3.2,
+      "leadTimeDays": 18,
+      "kiln": true,
+      "supplierName": "Aditya Refractories",
+      "needs": [
+        {
+          "dept": "Kiln 1 operations",
+          "quantity": 60,
+          "by": "14 Sep",
+          "who": "R. Iyer"
+        },
+        {
+          "dept": "Cooler overhaul",
+          "quantity": 35,
+          "by": "21 Sep",
+          "who": "S. Bose"
+        }
+      ]
+    },
+    {
+      "code": "SP-4120",
+      "name": "Conveyor belt, 1200mm",
+      "plant": "Nagpur",
+      "onHand": 180,
+      "unit": "MTR",
+      "safetyStock": 300,
+      "reorderPoint": 600,
+      "openOrderQuantity": 0,
+      "dailyUsage": 12,
+      "leadTimeDays": 21,
+      "kiln": false,
+      "supplierName": "Konkan Conveyors",
+      "needs": [
+        {
+          "dept": "Mill maintenance",
+          "quantity": 620,
+          "by": "24 Sep",
+          "who": "P. Kamat"
+        },
+        {
+          "dept": "Packing plant",
+          "quantity": 90,
+          "by": "30 Sep",
+          "who": "N. Shirke"
+        }
+      ]
+    },
+    {
+      "code": "CH-5510",
+      "name": "Grinding aid, cement mill",
+      "plant": "Pune",
+      "onHand": 9,
+      "unit": "KL",
+      "safetyStock": 12,
+      "reorderPoint": 30,
+      "openOrderQuantity": 0,
+      "dailyUsage": 1.4,
+      "leadTimeDays": 14,
+      "kiln": false,
+      "supplierName": "Saraswati Chemicals",
+      "needs": [
+        {
+          "dept": "Cement mill 1",
+          "quantity": 18,
+          "by": "16 Sep",
+          "who": "M. Joshi"
+        },
+        {
+          "dept": "Cement mill 2",
+          "quantity": 12,
+          "by": "22 Sep",
+          "who": "A. Pawar"
+        }
+      ]
+    },
+    {
+      "code": "RM-1305",
+      "name": "Iron ore fines",
+      "plant": "Nagpur",
+      "onHand": 2100,
+      "unit": "MT",
+      "safetyStock": 1500,
+      "reorderPoint": 3600,
+      "openOrderQuantity": 1200,
+      "dailyUsage": 190,
+      "leadTimeDays": 16,
+      "kiln": false,
+      "supplierName": "Shreeji Minerals",
+      "needs": [
+        {
+          "dept": "Raw mill",
+          "quantity": 3200,
+          "by": "17 Sep",
+          "who": "D. Ghorpade"
+        },
+        {
+          "dept": "Blending",
+          "quantity": 900,
+          "by": "25 Sep",
+          "who": "R. Iyer"
+        }
       ]
     }
   ]

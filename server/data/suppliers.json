@@ -69,6 +69,39 @@
       "sapScore": 79,
       "contractRate": 14,
       "unit": "NOS"
+    },
+    {
+      "id": "V-10141",
+      "name": "Konkan Conveyors",
+      "category": "Conveyor belts and spares",
+      "city": "Kolhapur",
+      "gst": "27AABCK4455P1Z2",
+      "iec": null,
+      "sapScore": 76,
+      "contractRate": 1850,
+      "unit": "MTR"
+    },
+    {
+      "id": "V-20044",
+      "name": "Jebel Coal DMCC",
+      "category": "Raw material, import",
+      "city": "Dubai, UAE",
+      "gst": "Not applicable, import vendor",
+      "iec": "IEC 0311224455",
+      "sapScore": 83,
+      "contractRate": 9450,
+      "unit": "MT"
+    },
+    {
+      "id": "V-10190",
+      "name": "Saraswati Chemicals",
+      "category": "Grinding aids",
+      "city": "Nashik",
+      "gst": "27AAECS6611R1ZQ",
+      "iec": null,
+      "sapScore": 91,
+      "contractRate": 96500,
+      "unit": "KL"
     }
   ]
 }
