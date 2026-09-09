@@ -38,3 +38,9 @@ db/.env.*
 # The offline copy. Generated from live data with:
 #   node server/scripts/build-standalone.js "your password"
 InfraBeat-Dashboard-offline.html
+
+# Working notes that map the invented dashboard names to real people's mailboxes.
+# Same reason .env is ignored: these are personal addresses, this repository is public, and
+# the whole point of moving the directory into MAIL_DIRECTORY was to stop shipping them.
+mailbox_persona_mapping.xlsx
+*persona*mapping*.xlsx
