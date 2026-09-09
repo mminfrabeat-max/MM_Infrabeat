@@ -20,7 +20,7 @@ import { getDocuments, getSituations, getStock } from '../data-service.js';
 import * as store from '../store.js';
 import { sendDecisionEmail, sendInitiatorEmail, sendPlainEmail } from '../mailer.js';
 import { canDecide, outcomeOf, outcomeSentence } from '../domain/approvals.js';
-import { recipientFor } from '../domain/recipients.js';
+import { recipientFor, maskedAddress } from '../domain/recipients.js';
 import { config } from '../config.js';
 
 export const actionsRouter = Router();
@@ -342,27 +342,9 @@ actionsRouter.get(
   asyncHandler(async (req, res) => {
     const entries = (await store.readActionLog()).map((entry) => ({
       ...entry,
-      emailTo: maskAddress(entry.emailTo)
+      emailTo: maskedAddress(entry.emailTo)
     }));
     res.json({ entries, available: store.canWrite() });
   })
 );
 
-// Leaves enough to recognise a mailbox you already know, and not enough to be one:
-// "firstname.lastname@example.com" becomes "f…e@example.com".
-function maskAddress(address) {
-  const text = String(address || '').trim();
-  const at = text.lastIndexOf('@');
-  if (at < 1) return text;
-
-  const local = text.slice(0, at);
-  const domain = text.slice(at);
-
-  // The dashboard's own mailbox is the operator's own address, not a third party's, and
-  // masking it only makes the log harder to read.
-  if (text.toLowerCase() === String(config.mail.to || '').toLowerCase()) return text;
-  if (text.toLowerCase() === String(config.mail.user || '').toLowerCase()) return text;
-
-  if (local.length <= 2) return `${local[0]}…${domain}`;
-  return `${local[0]}…${local[local.length - 1]}${domain}`;
-}

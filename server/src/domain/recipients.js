@@ -37,3 +37,26 @@ export function recipientFor(name) {
   // message to the operator instead, with a banner saying who it was meant for.
   return { address: '', real: false, name: asWritten };
 }
+
+// Leaves enough of an address to recognise a mailbox you already know, and not enough to be
+// one: "firstname.lastname@example.com" becomes "f…e@example.com".
+//
+// Used on anything that leaves this machine as data rather than as a message: the action
+// log the browser reads, and the snapshot baked into the shareable offline file. Both are
+// read by people who were never the recipient.
+export function maskedAddress(address) {
+  const text = String(address || '').trim();
+  const at = text.lastIndexOf('@');
+  if (at < 1) return text;
+
+  const local = text.slice(0, at);
+  const domain = text.slice(at);
+
+  // The dashboard's own mailbox is the operator's own address, not a third party's, and
+  // masking it only makes the log harder to read.
+  if (text.toLowerCase() === String(config.mail.to || '').toLowerCase()) return text;
+  if (text.toLowerCase() === String(config.mail.user || '').toLowerCase()) return text;
+
+  if (local.length <= 2) return `${local[0]}…${domain}`;
+  return `${local[0]}…${local[local.length - 1]}${domain}`;
+}

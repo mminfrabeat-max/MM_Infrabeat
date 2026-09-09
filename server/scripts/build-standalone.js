@@ -2,6 +2,8 @@
 //
 //   node server/scripts/build-standalone.js
 //
+// No arguments, no password, and the backend does not need to be running.
+//
 // Why this is possible at all: the browser half of this app is already self-contained. It
 // draws whatever the backend hands it and decides nothing itself. So if the data comes from
 // somewhere else, everything still works.
@@ -20,41 +22,50 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config } from '../src/config.js';
+import { config, hasSapKey } from '../src/config.js';
+import { getEverything } from '../src/data-service.js';
+import { readActionLog, canWrite } from '../src/store.js';
+import { maskedAddress } from '../src/domain/recipients.js';
 
 const thisFolder = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(thisFolder, '../..');
 const dist = path.join(root, 'web', 'dist');
 
-const BASE = `http://localhost:${config.port}`;
-
 // --- Take a snapshot of the real data ----------------------------------------
+//
+// Read straight from the data layer rather than fetched over HTTP from the running server.
+//
+// It used to sign in to itself and call three endpoints, which meant the backend had to be
+// up and you had to hand the script your dashboard password on the command line. Neither
+// bought anything: this process can already open the same workbook. What it cost was that
+// nobody could rebuild the offline copy without typing a password into a terminal, so the
+// file went stale instead.
+//
+// The one thing that must not be lost in the change is the masking. /api/action-log hides
+// recipient addresses before answering, precisely because this snapshot is what gets shared
+// around, so the same masking is applied here from the same function.
 
 async function snapshot() {
-  const login = await fetch(`${BASE}/api/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: config.auth.username, password: process.argv[2] })
-  });
-
-  if (!login.ok) {
-    throw new Error(
-      'Could not sign in to take the snapshot. Pass the dashboard password as an argument:\n' +
-        '  node server/scripts/build-standalone.js "your password"'
-    );
-  }
-
-  const cookie = login.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
-  const get = async (p) => {
-    const r = await fetch(`${BASE}${p}`, { headers: { cookie } });
-    if (!r.ok) throw new Error(`${p} returned ${r.status}`);
-    return r.json();
-  };
+  const everything = await getEverything();
 
   return {
-    dashboard: await get('/api/dashboard'),
-    actionLog: await get('/api/action-log'),
-    health: await get('/api/health')
+    dashboard: {
+      ...everything,
+      user: { email: config.auth.username },
+      canDecide: canWrite(),
+      dataSource: config.dataSource
+    },
+    actionLog: {
+      entries: (await readActionLog()).map((entry) => ({ ...entry, emailTo: maskedAddress(entry.emailTo) })),
+      available: canWrite()
+    },
+    health: {
+      status: 'ok',
+      service: 'procurement-dashboard-api',
+      dataSource: config.dataSource,
+      sapKeyLoaded: hasSapKey,
+      checkedAt: new Date().toISOString()
+    }
   };
 }
 
