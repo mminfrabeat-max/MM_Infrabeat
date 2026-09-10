@@ -57,6 +57,13 @@ export const config = {
 
   auth: {
     username: process.env.AUTH_USERNAME || '',
+    // The name to write and show instead of the sign-in address.
+    //
+    // The address is the credential; it is not what a person is called. Stamping it into
+    // the workbook's "Decided by" column and into the body of every notification put an
+    // account name in front of people who only ever needed to know who approved something.
+    // Falls back to the address when unset, so an unconfigured copy still records somebody.
+    displayName: process.env.AUTH_DISPLAY_NAME || '',
     // Never the password itself, only a hash of it. Generate one with:
     //   node server/scripts/hash-password.js "the password"
     passwordHash: process.env.AUTH_PASSWORD_HASH || '',

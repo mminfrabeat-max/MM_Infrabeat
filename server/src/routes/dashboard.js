@@ -21,7 +21,7 @@ dashboardRouter.get(
     res.json({
       ...data,
       // Who is signed in, so the screen can greet them and stamp their decisions.
-      user: { email: req.user.username },
+      user: { email: req.user.username, name: req.user.name },
       // Whether decisions can actually be saved. True for the database and the workbook,
       // false for the read-only JSON and the SAP sandbox.
       canDecide: canWrite(),

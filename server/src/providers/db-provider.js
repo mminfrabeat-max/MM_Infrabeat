@@ -68,12 +68,23 @@ export const dbProvider = {
   async getPurchaseDocuments() {
     const documents = all(
       `SELECT d.*, v.code AS vendor_code, p.name AS plant_name, u.email AS decided_by_email,
+              decider.full_name AS decided_by_full_name,
+              -- Who actually signed, taken from the step they closed. The login behind a
+              -- decision need not have a person record, but the step always carries the
+              -- name that was recorded at the time - and an audit trail should read as the
+              -- name of a person, not as somebody's account.
+              (SELECT st.approver_name
+                 FROM approval_steps st
+                WHERE st.document_id = d.id AND st.acted_at IS NOT NULL
+                ORDER BY st.step_number DESC
+                LIMIT 1) AS decided_by_step_name,
               raiser.full_name AS raised_by_full_name,
               raiser.job_title AS raised_by_title
          FROM purchase_documents d
          LEFT JOIN vendors v ON v.id = d.vendor_id
          LEFT JOIN plants  p ON p.id = d.plant_id
          LEFT JOIN users   u ON u.id = d.decided_by_user_id
+         LEFT JOIN people  decider ON decider.id = u.person_id
          LEFT JOIN people  raiser ON raiser.id = d.created_by_person_id
         WHERE d.status IN ('pending', 'approved', 'rejected')
         ORDER BY d.hours_waiting DESC`
@@ -203,7 +214,9 @@ export const dbProvider = {
             }
           : null,
         status: d.status,
-        decidedBy: d.decided_by_email || '',
+        // The name, as the workbook records it. The address is the last resort, for a
+        // login with neither a signed step nor a person record behind it.
+        decidedBy: d.decided_by_step_name || d.decided_by_full_name || d.decided_by_email || '',
         decidedAt: d.decided_at || '',
         decisionNote: d.decision_note || ''
       };

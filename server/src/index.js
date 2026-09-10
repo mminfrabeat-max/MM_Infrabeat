@@ -115,7 +115,12 @@ app.listen(config.port, '0.0.0.0', async () => {
 
   console.log(`[api] data source: ${config.dataSource}`);
   console.log(`[api] SAP API key loaded: ${hasSapKey ? 'yes' : 'no'}`);
-  console.log(`[api] sign-in required as: ${config.auth.username}`);
+  // The name is printed too, because it is read from .env and nodemon does not watch
+  // .env: without this line a stale value looks exactly like a working one.
+  console.log(
+    `[api] sign-in required as: ${config.auth.username}` +
+      (config.auth.displayName ? ` (recorded as "${config.auth.displayName}")` : ' (no AUTH_DISPLAY_NAME set, decisions will record the address)')
+  );
 
   // Check the mail credentials now, while you are looking at the terminal, rather than
   // discovering they are wrong on the first approval of the day.

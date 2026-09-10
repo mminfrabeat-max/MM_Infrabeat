@@ -11,6 +11,8 @@
 
 import { all, one, run, transaction, getDb } from './db.js';
 
+// Takes an ADDRESS, never a display name: it matches on users.email. Passing a name here
+// finds nobody, stores a NULL foreign key, and the row reads back with no author.
 function userIdFor(email) {
   const row = one('SELECT id FROM users WHERE email = ?', [email]);
   return row ? row.id : null;
@@ -28,12 +30,12 @@ function documentRowFor(docNumber) {
 
 // Records a decision on one document: the document row, its final approval step, one audit
 // line and one notification, together or not at all.
-export function saveDecision({ documentId, status, decidedBy, decidedAt, note, document, mail, outcome, initiatorMail }) {
+export function saveDecision({ documentId, status, decidedBy, decidedByAddress, decidedAt, note, document, mail, outcome, initiatorMail }) {
   return transaction((db) => {
     const row = documentRowFor(documentId);
     if (!row) throw new Error(`Document ${documentId} is not in the database.`);
 
-    const userId = userIdFor(decidedBy);
+    const userId = userIdFor(decidedByAddress || decidedBy);
 
     // current_step moves with the document. Without this the header would still name the
     // step just finished, and the screen would say an order was waiting at a step that had
@@ -122,12 +124,12 @@ function saveNotification(db, actionLogId, mail, subject, at) {
 }
 
 // Marks a problem handled.
-export function saveSituationFix({ reference, fixedAt, fixedBy, fix }) {
+export function saveSituationFix({ reference, fixedAt, fixedBy, fixedByAddress, fix }) {
   return transaction((db) => {
     const row = one('SELECT id, related_to FROM situations WHERE reference = ?', [reference]);
     if (!row) throw new Error(`Problem ${reference} is not in the database.`);
 
-    const userId = userIdFor(fixedBy);
+    const userId = userIdFor(fixedByAddress || fixedBy);
 
     db.prepare(
       `UPDATE situations SET status = 'fixed', resolved_at = ?, resolved_by_user_id = ? WHERE id = ?`
@@ -142,7 +144,7 @@ export function saveSituationFix({ reference, fixedAt, fixedBy, fix }) {
 
 // Adds to the quantity on order for a material at a plant, which is what raising a request
 // actually changes.
-export function saveStockRequest({ materialCode, plant, quantity, unit, materialName, raisedAt, raisedBy }) {
+export function saveStockRequest({ materialCode, plant, quantity, unit, materialName, raisedAt, raisedBy, raisedByAddress }) {
   return transaction((db) => {
     const row = one(
       `SELECT mp.id, mp.open_order_qty, mp.default_vendor_name
@@ -157,7 +159,7 @@ export function saveStockRequest({ materialCode, plant, quantity, unit, material
     db.prepare('UPDATE material_plants SET open_order_qty = ?, updated_at = ? WHERE id = ?')
       .run(row.open_order_qty + quantity, raisedAt, row.id);
 
-    const userId = userIdFor(raisedBy);
+    const userId = userIdFor(raisedByAddress || raisedBy);
     db.prepare(
       `INSERT INTO action_log (occurred_at, action, user_id, acted_by, material_plant_id, document_number, vendor_name, note)
        VALUES (?, 'request raised', ?, ?, ?, ?, ?, ?)`
@@ -174,9 +176,9 @@ export function saveStockRequest({ materialCode, plant, quantity, unit, material
 }
 
 // A mail the manager typed. Logged whether it went or not, so there is a record either way.
-export function saveMail({ to, subject, body, sentAt, sentBy, mail }) {
+export function saveMail({ to, subject, body, sentAt, sentBy, sentByAddress, mail }) {
   return transaction((db) => {
-    const userId = userIdFor(sentBy);
+    const userId = userIdFor(sentByAddress || sentBy);
 
     const logged = db
       .prepare(

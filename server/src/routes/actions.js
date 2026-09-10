@@ -61,7 +61,9 @@ async function decide(req, res, action) {
   const note = String(req.body?.note || '').trim();
   // Taken from the signed-in session, never from the request body. If the browser could
   // tell us who approved something, anyone could approve as anyone.
-  const decidedBy = req.user.username;
+  const decidedBy = req.user.name;
+  // Kept separately because a mail has to be routable: this is what a reply goes to.
+  const decidedByAddress = req.user.username;
 
   const documents = await getDocuments();
   const document = documents.find((d) => d.id === documentId);
@@ -105,6 +107,7 @@ async function decide(req, res, action) {
       document,
       decision: outcome.final ? outcome.status : 'approved',
       decidedBy,
+      decidedByAddress,
       note,
       movedTo: outcome.movedTo
     }),
@@ -116,6 +119,7 @@ async function decide(req, res, action) {
     documentId,
     status: outcome.status,
     decidedBy,
+    decidedByAddress,
     decidedAt: at,
     note,
     document,
@@ -171,7 +175,8 @@ actionsRouter.post(
       relatedTo: situation.relatedTo,
       fix: situation.fix,
       fixedAt: at,
-      fixedBy: req.user.username
+      fixedBy: req.user.name,
+      fixedByAddress: req.user.username
     });
 
     res.json({ id: situation.id, status: 'fixed', fixedAt: at, fix: situation.fix });
@@ -209,7 +214,8 @@ actionsRouter.post(
       supplierName: material.supplierName,
       newOpenOrderQuantity: material.openOrderQuantity + quantity,
       raisedAt: at,
-      raisedBy: req.user.username
+      raisedBy: req.user.name,
+      raisedByAddress: req.user.username
     });
 
     res.json({ code: material.code, plant: material.plant, quantity, unit: material.unit, raisedAt: at });
@@ -260,7 +266,7 @@ actionsRouter.post(
     });
 
     await store
-      .saveMail({ to, subject, body, sentAt: stamp(), sentBy: req.user.username, mail })
+      .saveMail({ to, subject, body, sentAt: stamp(), sentBy: req.user.name, sentByAddress: req.user.username, mail })
       .catch((error) => console.error('[api] mail sent but not logged:', error.message));
 
     // The address is deliberately not returned. The screen says who it went to by name, and

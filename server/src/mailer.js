@@ -258,13 +258,14 @@ function htmlBody(document, decision, decidedBy, note, movedTo, target) {
 // `movedTo` is the approver the document has just been passed to, or null when the decision
 // finished it. When it is set, this message stops being a record of what happened and
 // becomes the request that the next person act - same facts, different job.
-export async function sendDecisionEmail({ document, decision, decidedBy, note, movedTo = null }) {
+export async function sendDecisionEmail({ document, decision, decidedBy, decidedByAddress = '', note, movedTo = null }) {
   // Addressed by NAME. The address on the document is only ever a display value; the
   // directory on this side is what decides where a message goes.
   const target = movedTo
     ? addressee(movedTo.name)
     : { box: config.mail.to || config.mail.user, intended: '', who: '', redirected: false };
-  const to = target.box || decidedBy;
+  // The address, never the name: a display name in a To field is not a mailbox.
+  const to = target.box || decidedByAddress || config.mail.to || config.mail.user;
 
   if (!mailConfigured()) {
     return { sent: false, to, status: 'Not sent: email is not configured in .env' };
@@ -276,7 +277,7 @@ export async function sendDecisionEmail({ document, decision, decidedBy, note, m
       to,
       // A next approver who has a question should be able to ask the person who approved
       // it, not the dashboard. A plain record has nobody to reply to.
-      ...(movedTo ? { replyTo: decidedBy } : {}),
+      ...(movedTo && decidedByAddress ? { replyTo: decidedByAddress } : {}),
       subject: subjectFor(document, decision, movedTo),
       text: textBody(document, decision, decidedBy, note, movedTo, target),
       html: htmlBody(document, decision, decidedBy, note, movedTo, target)

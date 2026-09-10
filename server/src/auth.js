@@ -186,6 +186,8 @@ export function requireSignIn(req, res, next) {
 
   // Hand the signed-in user to the rest of the request, which milestone 5 will need in
   // order to record who approved what.
-  req.user = { username: session.username };
+  // `username` stays the address, because that is the identity that was checked. `name` is
+  // what gets written down and shown. Callers pick whichever of the two they actually mean.
+  req.user = { username: session.username, name: config.auth.displayName || session.username };
   next();
 }
