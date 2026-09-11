@@ -205,6 +205,77 @@ function buildShim(data) {
       return reply({ code: code, plant: m.plant, quantity: qty, unit: m.unit, raisedAt: now() });
     }
 
+    // Moving a released order along, the same rule the backend follows: forwards only, one
+    // step at a time. The stage list is repeated here rather than imported because this
+    // shim is a string inlined into a file that runs with no modules and no server.
+    var SHIPMENT_STAGES = [
+      { key: "released", label: "Released" },
+      { key: "sent", label: "Sent to vendor" },
+      { key: "dispatched", label: "Dispatched" },
+      { key: "transit", label: "In transit" },
+      { key: "delivered", label: "Delivered" },
+      { key: "received", label: "Goods receipt" }
+    ];
+
+    // Doubled backslashes on purpose: this shim is a template literal, and a single \/ is
+    // consumed before it reaches the file, turning the regex into a comment.
+    var advance = url.match(/\\/api\\/shipments\\/([^/]+)\\/advance/);
+    if (advance) {
+      var shipId = decodeURIComponent(advance[1]);
+      var order = DATA.dashboard.documents.find(function (d) { return d.id === shipId; });
+      if (!order) return reply({ error: "No document found with the number " + shipId + "." }, 404);
+      if (order.kind !== "PO" || order.status !== "approved") {
+        return reply({ error: shipId + " has not been released, so nothing is on its way yet." }, 409);
+      }
+
+      var atKey = order.shipmentStage || "released";
+      var atIndex = 0;
+      for (var i = 0; i < SHIPMENT_STAGES.length; i++) {
+        if (SHIPMENT_STAGES[i].key === atKey) atIndex = i;
+      }
+      if (atIndex >= SHIPMENT_STAGES.length - 1) {
+        return reply({ error: shipId + " has already been booked into stock. It is complete." }, 409);
+      }
+
+      var next = SHIPMENT_STAGES[atIndex + 1];
+      if (body.stage && body.stage !== next.key) {
+        return reply({ error: shipId + " has to be marked " + next.label + " before it can go further." }, 409);
+      }
+
+      order.shipmentStage = next.key;
+      order.shipmentStageAt = now();
+      order.shipmentNote = body.note || "";
+
+      DATA.actionLog.entries.unshift({
+        at: order.shipmentStageAt, action: next.label.toLowerCase(), documentId: shipId,
+        documentType: order.kind, supplierName: order.supplierName, value: order.total,
+        decidedBy: DATA.dashboard.user.name, note: body.note || "", emailTo: "", emailStatus: ""
+      });
+
+      return reply({
+        id: shipId, stage: next.key, label: next.label,
+        describe: "Recorded in the offline copy. Nothing is saved.",
+        at: order.shipmentStageAt,
+        complete: next.key === "received"
+      });
+    }
+
+    // Ask needs the rules that live on the server, and there is no server here. Saying so
+    // is better than a bare 404, which the screen would show as an unexplained failure.
+    if (url.indexOf("/api/ask") === 0) {
+      return reply({
+        kind: "answer",
+        text: "Ask is not available in this offline copy \u2014 it works out its answers on the server, and there is no server in this file. Everything else here is real: open any order, approve it, and move a shipment along. Use the live dashboard to try Ask."
+      });
+    }
+
+    // Looking a mailbox up is a server job for a good reason: the directory of real
+    // addresses must never be inside a file that gets shared. The compose window still
+    // opens; it simply has no address to show.
+    if (url.indexOf("/api/contact/address") === 0) {
+      return reply({ name: "", address: "", deliverable: false });
+    }
+
     if (url.indexOf("/api/mail") === 0) {
       DATA.actionLog.entries.unshift({
         at: now(), action: "mail sent", documentId: "", documentType: "", supplierName: "",
