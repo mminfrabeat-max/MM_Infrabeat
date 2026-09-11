@@ -70,6 +70,10 @@ export const COLUMNS = {
     { key: 'createdByName', header: 'Raised by', width: 20 },
     { key: 'createdByTitle', header: 'Raised by role', width: 24 },
     { key: 'createdByWhen', header: 'Raised on', width: 16 },
+    // The requisition an order was created from. Empty on anything raised directly.
+    // appendDocument adds this header to a workbook that predates it, so an older file
+    // gains the column on first use instead of needing a rebuild.
+    { key: 'sourceDocument', header: 'Created from', width: 18 },
     // The previous approver, flattened out of its own object.
     { key: 'prevName', header: 'Approved before by', width: 20 },
     { key: 'prevLevel', header: 'At which step', width: 20 },
@@ -99,7 +103,13 @@ export const COLUMNS = {
     { key: 'status', header: 'Status', width: 12 },
     { key: 'decidedBy', header: 'Decided by', width: 24 },
     { key: 'decidedAt', header: 'Decided at', width: 22 },
-    { key: 'decisionNote', header: 'Note', width: 40 }
+    { key: 'decisionNote', header: 'Note', width: 40 },
+    // Where the goods are, once the order has been released and the vendor has it.
+    // Empty until then, and empty for ever on a requisition: nothing ships against a
+    // request to buy.
+    { key: 'shipmentStage', header: 'Shipment stage', width: 18 },
+    { key: 'shipmentStageAt', header: 'Stage recorded at', width: 22 },
+    { key: 'shipmentNote', header: 'Shipment note', width: 40 }
   ],
 
   orderItems: [

@@ -33,6 +33,7 @@ export function getDb() {
 
   connection = new DatabaseSync(DB_PATH);
   applyPragmas(connection);
+  upgradeInPlace(connection);
   return connection;
 }
 
@@ -42,6 +43,33 @@ export function openForSetup() {
   const db = new DatabaseSync(DB_PATH);
   applyPragmas(db);
   return db;
+}
+
+// Adds columns a database created before them is missing.
+//
+// migrate.js builds the schema from scratch and has no notion of a version, so without
+// this the only way to gain a column is --force, which deletes every decision in the file.
+// ALTER TABLE ADD COLUMN is cheap, safe and idempotent: SQLite backfills NULL and existing
+// rows are untouched. Checked against PRAGMA table_info rather than caught as an error, so
+// a genuine failure is still a failure.
+function upgradeInPlace(db) {
+  const wanted = [
+    { table: 'purchase_documents', column: 'source_doc_number', type: 'TEXT' },
+    { table: 'purchase_documents', column: 'shipment_stage', type: 'TEXT' },
+    { table: 'purchase_documents', column: 'shipment_stage_at', type: 'TEXT' },
+    { table: 'purchase_documents', column: 'shipment_note', type: 'TEXT' }
+  ];
+
+  for (const { table, column, type } of wanted) {
+    const exists = db
+      .prepare(`PRAGMA table_info(${table})`)
+      .all()
+      .some((c) => c.name === column);
+    if (!exists) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+      console.log(`[db] added ${table}.${column}`);
+    }
+  }
 }
 
 function applyPragmas(db) {

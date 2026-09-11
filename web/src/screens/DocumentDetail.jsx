@@ -14,7 +14,7 @@ import { Card, Banner, Chip, Icon, Facet, TermRow } from '../components/ui.jsx';
 import { VendorCharts } from '../components/charts.jsx';
 import { SeaJourney, VesselMap, modeIcon } from '../components/journey.jsx';
 import { StatusChip } from './Approvals.jsx';
-import { materialFor } from '../selectors.js';
+import { materialFor, stillNeedsSigning, recordingForNext } from '../selectors.js';
 
 export default function DocumentDetail({ data, document, canDecide, onBack, onDecide, busy, error }) {
   const [note, setNote] = useState('');
@@ -26,7 +26,10 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
   // moved to the person after you. decidedAt is what tells the two apart, and it decides
   // whether the buttons at the foot of the page appear at all.
   const decided = Boolean(document.decidedAt);
-  const mayDecide = canDecide && document.status === 'pending' && !decided;
+  // Still actionable after you have signed, because the approver it moved to does not
+  // sign in here: you record their decision. The button says whose signature it is.
+  const mayDecide = canDecide && stillNeedsSigning(document);
+  const forNext = recordingForNext(document);
   const handedOn = document.status === 'pending' && decided && document.next;
 
   // The next approver appears only once the decision is made.
@@ -377,7 +380,8 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
       {mayDecide && (
         <div className="footerbar">
           <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon name="shield" size={13} /> Approving as {APPROVER_NAME}
+            <Icon name="shield" size={13} />{" "}
+            {forNext ? `Recording the decision of ${document.next.name}` : `Approving as ${APPROVER_NAME}`}
           </span>
           <input
             className="noteinput"
@@ -387,7 +391,11 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
             disabled={busy !== null || !canDecide}
           />
           <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null || !canDecide} type="button">
-            {busy === 'reject' ? 'Saving…' : 'Send back'}
+            {busy === 'reject'
+              ? 'Saving…'
+              : forNext
+                ? `Record ${document.next.name} sending it back`
+                : 'Send back'}
           </button>
           {/* The label says what the button does. On a two step order "Approve" would read
               as "release this order", which is not what pressing it does. */}
@@ -396,7 +404,13 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
             {/* The label says what pressing it does. "Approve" on a two step order would
                 read as "release this order", which is not what happens. It says there is a
                 next step without saying who is on it. */}
-            {busy === 'approve' ? 'Saving…' : document.next ? 'Approve and pass on' : 'Approve'}
+            {busy === 'approve'
+              ? 'Saving…'
+              : forNext
+                ? `Record approval by ${document.next.name}`
+                : document.next
+                  ? 'Approve and pass on'
+                  : 'Approve'}
           </button>
         </div>
       )}

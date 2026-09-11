@@ -15,13 +15,18 @@ import { initials, clock } from './format.js';
 import { Icon, Loading, ErrorPanel } from './components/ui.jsx';
 import { Wordmark, WordmarkFallback, Modal, Toasts } from './components/shell-bits.jsx';
 import { findDocument, pendingDocuments, shortMaterials, contractsToWatch, openSituations, teamsNeedingNudge } from './selectors.js';
-import { answer, SUGGESTIONS } from './assistant.js';
+// SUGGESTIONS are the chips under the Ask box. `answer` used to live here too; the
+// answering moved to the server when Ask learned to act - see server/src/domain/ask.js.
+import { SUGGESTIONS } from './assistant.js';
 
 import Login from './screens/Login.jsx';
 import Overview from './screens/Overview.jsx';
 import Approvals from './screens/Approvals.jsx';
 import DocumentDetail from './screens/DocumentDetail.jsx';
 import Stock from './screens/Stock.jsx';
+import PRCreation from './screens/PRCreation.jsx';
+import POCreation, { convertibleRequisitions } from './screens/POCreation.jsx';
+import ShipmentTracking, { trackedOrders } from './screens/ShipmentTracking.jsx';
 import Commitments from './screens/Commitments.jsx';
 import Vendors from './screens/Vendors.jsx';
 import Teams from './screens/Teams.jsx';
@@ -57,6 +62,9 @@ export default function App() {
   const [showAsk, setShowAsk] = useState(false);
   const [chat, setChat] = useState([]);
   const [askText, setAskText] = useState('');
+  // What Ask was last talking about, so "approve it" and "which vendor?" mean something.
+  // The server works it out and hands it back; this just carries it to the next question.
+  const [askMemory, setAskMemory] = useState({});
 
   // --- Session ---------------------------------------------------------------
 
@@ -215,6 +223,75 @@ export default function App() {
     }
   }
 
+  // Raising a requisition. The list is reloaded afterwards because the new document has
+  // to appear in the approval queue, in the open requests and in the counts on the tabs -
+  // and working any of those out here would be a second copy of what the server decided.
+  async function createRequisition(form) {
+    setBusy('createpr');
+    try {
+      const made = await api.createRequisition(form);
+      await load();
+      toast(
+        'pos',
+        'check',
+        made.next
+          ? `Requisition ${made.id} raised for ${made.material}. After you approve it, it goes to ${made.next.name}.`
+          : `Requisition ${made.id} raised for ${made.material}. It is yours to release.`
+      );
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Raising an order. Same shape as raising a requisition: the server decides the number
+  // and the chain, and the whole dashboard is reloaded rather than patched, because a new
+  // order changes the approval queue, the commitments and the tab counts at once.
+  async function createOrder(form) {
+    setBusy('createpo');
+    try {
+      const made = await api.createOrder(form);
+      await load();
+      const from = made.fromRequisition ? ` from requisition ${made.fromRequisition}` : '';
+      toast(
+        'pos',
+        'check',
+        made.next
+          ? `Order ${made.id} raised${from}. After you approve it, it goes to ${made.next.name}.`
+          : `Order ${made.id} raised${from}. It is yours to release.`
+      );
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Recording where a released order has got to.
+  //
+  // The stage is sent along with the order, so a screen that has been open a while cannot
+  // skip a step: the server checks it against where the order actually is and refuses if
+  // the two disagree.
+  async function advanceShipment(document, stage, note) {
+    setBusy(document.id);
+    try {
+      const moved = await api.advanceShipment(document.id, stage, note);
+      await load();
+      toast(
+        moved.complete ? 'pos' : 'pri',
+        moved.complete ? 'check' : 'truck',
+        moved.complete
+          ? `${document.id} booked into stock. ${document.material} is complete.`
+          : `${document.id} is now "${moved.label}". ${moved.describe}`
+      );
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function sendMail() {
     const draft = mailDraft;
     setBusy('mail');
@@ -248,14 +325,54 @@ export default function App() {
     }
   }
 
-  function ask(question) {
+  // Asking moved to the server when Ask learned to do things.
+  //
+  // A question could safely be answered in the browser, because answering only reads data
+  // the page already has. Acting cannot: anything the browser decides is decided by whoever
+  // is holding the browser. So the server reads the question, and anything that would change
+  // something comes back as a proposal to be confirmed rather than as a change already made.
+  async function ask(question) {
     if (!question.trim()) return;
     setChat((c) => [...c, { who: 'u', text: question }]);
-    const result = answer(question, data, plant);
-    if (result.plant) setPlant(result.plant);
-    if (result.goTo) navigate(result.goTo);
-    if (result.openDocument) openDocument(result.openDocument);
-    setTimeout(() => setChat((c) => [...c, { who: 'a', text: result.text }]), 200);
+    try {
+      const result = await api.ask(question, plant, askMemory);
+      if (result.memory) setAskMemory(result.memory);
+      if (result.plant) setPlant(result.plant);
+      if (result.goTo) navigate(result.goTo);
+      if (result.openDocument) openDocument(result.openDocument);
+      if (result.kind === 'proposal') {
+        setChat((c) => [...c, { who: 'a', proposal: result }]);
+      } else {
+        setChat((c) => [...c, { who: 'a', text: result.text }]);
+      }
+    } catch (error) {
+      setChat((c) => [...c, { who: 'a', text: error.message }]);
+    }
+  }
+
+  // Carrying out something Ask offered to do.
+  //
+  // This is the only place a proposal turns into a change, and it does it by calling the
+  // same endpoint the corresponding button calls. There is no privileged path: if the
+  // ordinary rules would refuse the action, they refuse it here too, and the refusal is
+  // shown in the conversation where the offer was made.
+  async function confirmProposal(index, proposal) {
+    setBusy('ask');
+    try {
+      await api.confirmProposal(proposal.action);
+      await load();
+      setChat((c) => c.map((m, i) => (i === index ? { ...m, done: true } : m)));
+      toast('pos', 'check', `Done. ${proposal.summary}.`);
+    } catch (error) {
+      setChat((c) => [...c, { who: 'a', text: error.message }]);
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function cancelProposal(index) {
+    setChat((c) => c.map((m, i) => (i === index ? { ...m, cancelled: true } : m)));
   }
 
   async function signOut() {
@@ -291,6 +408,9 @@ export default function App() {
   const TABS = [
     { key: 'overview', label: 'Overview', icon: 'chart' },
     { key: 'approvals', label: 'Waiting for approval', icon: 'doc', count: pendingDocuments(data.documents, plant).length },
+    { key: 'createpr', label: 'Raise a requisition', icon: 'doc' },
+    { key: 'createpo', label: 'Raise an order', icon: 'file', count: convertibleRequisitions(data.documents, plant).length },
+    { key: 'shipments', label: 'Shipment tracking', icon: 'truck', count: trackedOrders(data.documents, plant).length },
     { key: 'stock', label: 'Stock risk', icon: 'box', count: shortMaterials(data.materials, plant).length },
     { key: 'open', label: 'Open orders and contracts', icon: 'file', count: contractsToWatch(data.contracts, plant).length },
     { key: 'suppliers', label: 'Vendors', icon: 'truck' },
@@ -408,6 +528,22 @@ export default function App() {
           />
         )}
 
+        {tab === 'createpr' && (
+          <PRCreation data={data} plant={plant} canDecide={data.canDecide} onCreate={createRequisition} busy={busy === 'createpr'} />
+        )}
+        {tab === 'createpo' && (
+          <POCreation data={data} plant={plant} canDecide={data.canDecide} onCreate={createOrder} busy={busy === 'createpo'} />
+        )}
+        {tab === 'shipments' && (
+          <ShipmentTracking
+            data={data}
+            plant={plant}
+            canDecide={data.canDecide}
+            onAdvance={advanceShipment}
+            busyId={busy}
+            onOpenDocument={openDocument}
+          />
+        )}
         {tab === 'stock' && (
           <Stock data={data} plant={plant} canDecide={data.canDecide} onRaiseRequest={raiseRequest} busyCode={busy} />
         )}
@@ -592,12 +728,27 @@ export default function App() {
             <div className="abd">
               {chat.length === 0 && (
                 <div className="msg a">
-                  Ask me what is waiting for you, what will run out, or say show only Pune.
+                  Ask me what is waiting, what is short, or where an order has got to.
+                  I can also raise requisitions and orders and approve documents — anything
+                  that changes something is shown to you first and only happens when you confirm it.
                 </div>
               )}
               {chat.map((m, i) => (
                 <div key={i} className={`msg ${m.who === 'u' ? 'u' : 'a'}`}>
-                  {m.who === 'u' ? m.text : <Rich text={m.text} />}
+                  {m.proposal ? (
+                    <Proposal
+                      proposal={m.proposal}
+                      done={m.done}
+                      cancelled={m.cancelled}
+                      busy={busy === 'ask'}
+                      onConfirm={() => confirmProposal(i, m.proposal)}
+                      onCancel={() => cancelProposal(i)}
+                    />
+                  ) : m.who === 'u' ? (
+                    m.text
+                  ) : (
+                    <Rich text={m.text} />
+                  )}
                 </div>
               ))}
             </div>
@@ -626,6 +777,40 @@ export default function App() {
 
       <Toasts items={toasts} onDismiss={(id) => setToasts((list) => list.filter((t) => t.id !== id))} />
     </>
+  );
+}
+
+// What Ask is offering to do, and the two buttons that settle it.
+//
+// The offer is spelled out before it happens - what document, whose money, and whether
+// confirming releases anything - because the whole point of the confirm step is that a
+// person reads it. A button that says only "Confirm" would be a worse version of letting
+// the bot act on its own: it would carry the same risk while looking careful.
+function Proposal({ proposal, done, cancelled, busy, onConfirm, onCancel }) {
+  return (
+    <div className="cq">
+      <div className="cqh">
+        <Icon name={done ? 'check' : cancelled ? 'alert' : 'shield'} size={13} /> {proposal.summary}
+      </div>
+      {proposal.detail.map((line, i) => (
+        <div key={i} className="cqt">{line}</div>
+      ))}
+      {proposal.warning && (
+        <div className="flagline"><Icon name="alert" size={13} /> {proposal.warning}</div>
+      )}
+      {done ? (
+        <div className="cqt"><b>Done.</b></div>
+      ) : cancelled ? (
+        <div className="cqt"><b>Cancelled.</b> Nothing was changed.</div>
+      ) : (
+        <div className="tacts">
+          <button className="btn" type="button" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button className="btn emph" type="button" onClick={onConfirm} disabled={busy}>
+            {busy ? 'Saving…' : proposal.confirmLabel}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

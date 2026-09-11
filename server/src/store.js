@@ -154,6 +154,98 @@ export async function saveStockRequest(input) {
 
 // --- Mail ----------------------------------------------------------------------
 
+// --- Where the goods are ------------------------------------------------------
+
+// Records that a released order has moved on to the next shipment stage.
+//
+// The same shape as a decision: write the change, then log it. The stage is stored on
+// the document rather than as its own table, because there is exactly one of them per
+// order and it only ever moves forwards - a history table would be a second copy of the
+// action log, which already holds every move with its time and who recorded it.
+export async function saveShipmentStage(input) {
+  if (config.dataSource === 'db') {
+    return database.saveShipmentStage(input);
+  }
+
+  if (config.dataSource === 'excel') {
+    await excel.updateDocument(input.documentId, {
+      shipmentStage: input.stage,
+      shipmentStageAt: input.at,
+      shipmentNote: input.note || ''
+    });
+
+    await excel
+      .appendActionLog({
+        at: input.at,
+        action: input.actionLabel,
+        documentId: input.documentId,
+        documentType: input.document.kind,
+        supplierName: input.document.supplierName || '',
+        value: input.document.total || input.document.basic || 0,
+        decidedBy: input.recordedBy,
+        note: input.note || '',
+        emailTo: '',
+        emailStatus: ''
+      })
+      .catch((error) => console.error('[api] stage saved but not logged:', error.message));
+
+    return;
+  }
+
+  refuse();
+}
+
+// --- Raising a document -------------------------------------------------------
+
+// Saves a document that did not exist a moment ago, with its approval chain.
+//
+// The two stores disagree about where a requisition's "open request" lives, and the
+// difference is structural rather than a detail. SQLite derives open requests from the
+// documents themselves - a released requisition IS the open request, which is what the
+// 'unconverted' status means - so nothing extra is written. The workbook keeps a separate
+// OpenRequests sheet, so a row has to be put there by hand or the requisition is invisible
+// on the commitments screen.
+export async function createDocument(input) {
+  if (config.dataSource === 'db') {
+    return database.createDocument(input);
+  }
+
+  if (config.dataSource === 'excel') {
+    const { document, item, chain, raisedBy, openRequest } = input;
+
+    // Flattened into the workbook's shape: the approver objects become columns, because a
+    // spreadsheet cannot hold an object. excel-store reads them back into objects.
+    const row = {
+      ...document,
+      hoursWaiting: 0,
+      sourceDocument: document.sourceDocument || '',
+      step: chain.step || '',
+      createdByName: raisedBy?.name || '',
+      createdByTitle: raisedBy?.title || '',
+      createdByWhen: raisedBy?.when || '',
+      nextName: chain.next?.name || '',
+      nextTitle: chain.next?.title || '',
+      nextLevel: chain.next?.level || '',
+      status: 'pending',
+      decidedBy: '',
+      decidedAt: '',
+      decisionNote: ''
+    };
+
+    await excel.appendDocument({ document: row, item, openRequest });
+    return { id: document.id };
+  }
+
+  refuse();
+}
+
+// The numbers already in use, so a new document can be given the next one.
+export async function usedDocumentNumbers() {
+  if (config.dataSource === 'db') return database.allDocumentNumbers();
+  if (config.dataSource === 'excel') return excel.allDocumentIds();
+  return [];
+}
+
 export async function saveMail(input) {
   if (config.dataSource === 'db') return database.saveMail(input);
 

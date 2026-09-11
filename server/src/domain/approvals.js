@@ -23,9 +23,38 @@ export function alreadyDecided(document) {
   return Boolean(document.decidedAt);
 }
 
+// Whose signature the next click actually records.
+//
+// Not always this manager. Once they have approved, the document is sitting on the
+// person after them, and that person does not sign in here - there is one login and it
+// is the manager's. So the manager records what the next approver decided, and the step
+// is stamped with THAT person's name.
+//
+// Stamping it with the manager's name instead would be the easy version and a lie: the
+// log would say one person signed a document twice, and an audit trail that misnames
+// who approved something is worse than not having one.
+export function whoseTurn(document, manager) {
+  if (!alreadyDecided(document)) return { name: manager, self: true };
+  if (document.next && document.next.name) {
+    return { name: document.next.name, title: document.next.title || '', self: false };
+  }
+  return { name: manager, self: true };
+}
+
 // True only when the buttons should work.
+//
+// A document is actionable while it is pending and somebody still has to sign it. That
+// is either this manager, or - once they have signed - the approver it moved to.
 export function canDecide(document) {
-  return document.status === 'pending' && !alreadyDecided(document);
+  if (document.status !== 'pending') return false;
+  if (!alreadyDecided(document)) return true;
+  return Boolean(document.next && document.next.name);
+}
+
+// True when the click would be recording somebody else's decision rather than making
+// one. The screen says so on the button, because the two are not the same act.
+export function isRecordingForNext(document) {
+  return canDecide(document) && alreadyDecided(document);
 }
 
 // The single decision this feature turns on.
@@ -38,6 +67,13 @@ export function canDecide(document) {
 export function outcomeOf(document, action) {
   if (action === 'reject') {
     return { status: 'rejected', final: true, movedTo: null, step: document.step };
+  }
+
+  // The second signature finishes it. Once the approver it moved to has decided, there
+  // is nobody after them in the chain, so the document is released rather than passed on
+  // again - which would otherwise loop for ever against the same name.
+  if (alreadyDecided(document)) {
+    return { status: 'approved', final: true, movedTo: null, step: document.next?.level || document.step };
   }
 
   // Approved, but somebody comes after them: the document keeps waiting, one step further

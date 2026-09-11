@@ -16,10 +16,13 @@
 
 import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
-import { getDocuments, getSituations, getStock } from '../data-service.js';
+import { getDocuments, getSituations, getStock, getSupplierScores } from '../data-service.js';
 import * as store from '../store.js';
 import { sendDecisionEmail, sendInitiatorEmail, sendPlainEmail } from '../mailer.js';
-import { canDecide, outcomeOf, outcomeSentence } from '../domain/approvals.js';
+import { canDecide, outcomeOf, outcomeSentence, whoseTurn } from '../domain/approvals.js';
+import { chainFor, nextDocumentNumber } from '../domain/creation.js';
+import { canAdvanceTo, LAST_STAGE } from '../domain/shipment.js';
+import { readIntent } from '../domain/ask.js';
 import { recipientFor, maskedAddress } from '../domain/recipients.js';
 import { config } from '../config.js';
 
@@ -59,12 +62,6 @@ async function decide(req, res, action) {
 
   const documentId = req.params.id;
   const note = String(req.body?.note || '').trim();
-  // Taken from the signed-in session, never from the request body. If the browser could
-  // tell us who approved something, anyone could approve as anyone.
-  const decidedBy = req.user.name;
-  // Kept separately because a mail has to be routable: this is what a reply goes to.
-  const decidedByAddress = req.user.username;
-
   const documents = await getDocuments();
   const document = documents.find((d) => d.id === documentId);
 
@@ -74,21 +71,30 @@ async function decide(req, res, action) {
 
   // Guards against a double click, a stale browser tab, or two people acting at once.
   //
-  // A document can be pending and still not be theirs to act on: they approved it and it
-  // moved to the next person. That case has to say so, because "already approved" on a
-  // screen that still shows Approve is the sort of message people file a ticket about.
+  // Only a document that is finished with lands here now. One that has moved on to the next
+  // approver is still open to a decision - the manager records theirs - so it passes the
+  // guard rather than being refused by it.
   if (!canDecide(document)) {
-    const alreadyMoved = document.status === 'pending' && document.decidedAt;
     return res.status(409).json({
-      error: alreadyMoved
-        ? `You approved ${documentId} at ${document.decidedAt}. It is now with ${
-            document.next?.name || 'the next approver'
-          } and is no longer yours to act on. Refresh to see the current position.`
-        : `${documentId} was already ${document.status}${
-            document.decidedBy ? ` by ${document.decidedBy}` : ''
-          }. Refresh to see the current position.`
+      error: `${documentId} was already ${document.status}${
+        document.decidedBy ? ` by ${document.decidedBy}` : ''
+      }. Refresh to see the current position.`
     });
   }
+
+  // Whose decision this is.
+  //
+  // Usually the manager's own. On a document they have already signed it is the approver
+  // it moved to, whose decision they are recording - so the step is stamped with THAT
+  // name. It is worked out here, after the document has been found and checked, because
+  // it is a fact about the document rather than about the request.
+  const actingFor = whoseTurn(document, req.user.name);
+  const decidedBy = actingFor.name;
+  // The mailbox a reply goes to is always the person at the keyboard, whoever the
+  // decision belongs to: they are the one who can answer a question about it. Never taken
+  // from the request body - if the browser could say who approved something, anyone could
+  // approve as anyone.
+  const decidedByAddress = req.user.username;
 
   // The one decision this route is really making. Everything below carries it out.
   const outcome = outcomeOf(document, action);
@@ -219,6 +225,427 @@ actionsRouter.post(
     });
 
     res.json({ code: material.code, plant: material.plant, quantity, unit: material.unit, raisedAt: at });
+  })
+);
+
+// --- Raising a requisition ----------------------------------------------------
+
+// POST /api/requisitions   { materialCode, plant, quantity, neededBy, reason, raisedBy }
+//
+// The other half of the stock screen's "raise request" button, and the thing it never did.
+// That button moved a number and wrote a log line; this creates an actual requisition, with
+// a number, an approval chain and a place in the queue.
+//
+// The rate comes from the material's own record rather than from the browser. A price
+// posted by a client is a price anybody can choose, and it decides the value, which decides
+// who has to approve it.
+actionsRouter.post(
+  '/requisitions',
+  asyncHandler(async (req, res) => {
+    if (!requireWritableSource(res)) return;
+
+    const materialCode = String(req.body?.materialCode || '').trim();
+    const plant = String(req.body?.plant || '').trim();
+    const quantity = Number(req.body?.quantity);
+    const neededBy = String(req.body?.neededBy || '').trim();
+    const reason = String(req.body?.reason || '').trim();
+    const raisedByName = String(req.body?.raisedBy || '').trim() || req.user.name;
+
+    if (!materialCode || !plant) {
+      return res.status(400).json({ error: 'A requisition needs a material and a plant.' });
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return res.status(400).json({ error: 'Quantity must be a number greater than zero.' });
+    }
+
+    const materials = await getStock();
+    const material = materials.find((m) => m.code === materialCode && m.plant === plant);
+    if (!material) {
+      return res.status(404).json({ error: `${materialCode} is not held at ${plant}.` });
+    }
+
+    // A material's record holds how much there is, not what it costs: the rate lives on the
+    // documents it has been bought on. So the last rate paid for it is the estimate, and a
+    // buyer who knows better can say so on the form.
+    //
+    // It matters more than an estimate usually would, because the value decides the
+    // approval chain. A requisition priced at nothing would route as if it were free.
+    const documents = await getDocuments();
+    const lastBuy = documents
+      .filter((d) => d.materialCode === material.code && Number(d.rate) > 0)
+      .sort((a, b) => Number(b.rate) - Number(a.rate))[0];
+
+    const typedRate = Number(req.body?.rate);
+    const rate = Number.isFinite(typedRate) && typedRate > 0 ? Math.round(typedRate) : Number(lastBuy?.rate) || 0;
+
+    if (rate <= 0) {
+      return res.status(400).json({
+        error:
+          `There is no rate on file for ${material.name}, so its value cannot be worked out. ` +
+          `Enter an estimated rate per ${material.unit || 'unit'} and raise it again.`
+      });
+    }
+
+    const basic = Math.round(quantity * rate);
+    const chain = chainFor({ kind: 'PR', basic });
+
+    const used = await store.usedDocumentNumbers();
+    const id = nextDocumentNumber('PR', used);
+    const at = stamp();
+
+    const document = {
+      id,
+      kind: 'PR',
+      docType: 'Purchase requisition',
+      trade: 'Domestic',
+      incoterm: '',
+      supplierId: lastBuy?.supplierId || '',
+      material: material.name,
+      materialCode: material.code,
+      plant,
+      quantity,
+      unit: material.unit || '',
+      rate,
+      basic,
+      freight: 0,
+      loading: 0,
+      transport: '',
+      payTerms: '',
+      cashDiscount: '',
+      rebate: '',
+      deliveryDate: neededBy,
+      reason,
+      department: 'Central procurement'
+    };
+
+    await store.createDocument({
+      document,
+      item: {
+        documentId: id,
+        pos: 10,
+        materialCode: material.code,
+        material: material.name,
+        quantity,
+        unit: material.unit || '',
+        rate
+      },
+      chain: { step: chain.step, next: chain.next, approverName: req.user.name },
+      raisedBy: { name: raisedByName, title: 'Buyer, Procurement', when: at },
+      // The row that makes it visible as an open request. The workbook needs it; SQLite
+      // works this out from the document itself.
+      openRequest: {
+        id,
+        dept: 'Central procurement',
+        plant,
+        material: material.name,
+        value: basic,
+        ageDays: 0,
+        note: reason || `${quantity} ${material.unit || ''} for ${plant}`.trim()
+      }
+    });
+
+    await store
+      .saveMail({
+        to: '',
+        subject: `Requisition ${id} raised for ${material.name}`,
+        body: reason,
+        sentAt: at,
+        sentBy: req.user.name,
+        sentByAddress: req.user.username,
+        mail: { status: 'not a message, a record of the requisition being raised' }
+      })
+      .catch(() => {});
+
+    res.json({
+      id,
+      kind: 'PR',
+      material: material.name,
+      quantity,
+      unit: material.unit || '',
+      plant,
+      basic,
+      step: chain.step,
+      next: chain.next,
+      raisedBy: raisedByName,
+      raisedAt: at
+    });
+  })
+);
+
+// --- Raising a purchase order --------------------------------------------------
+
+// POST /api/orders
+//   { fromRequisition?, materialCode?, plant?, quantity?, supplierId, rate?,
+//     freight?, loading?, incoterm?, transport?, payTerms?, deliveryDate? }
+//
+// The second step of the cycle. An order can be raised on its own, but the ordinary way
+// in is to convert a requisition that has finished its approvals: the material, plant and
+// quantity come across from it, and the order records which requisition it came from.
+//
+// That link is what stops one requisition quietly becoming two orders. A requisition says
+// something is needed once, and nothing in a spreadsheet would otherwise notice it being
+// spent twice.
+actionsRouter.post(
+  '/orders',
+  asyncHandler(async (req, res) => {
+    if (!requireWritableSource(res)) return;
+
+    const documents = await getDocuments();
+    const fromRequisition = String(req.body?.fromRequisition || '').trim();
+
+    let source = null;
+    if (fromRequisition) {
+      source = documents.find((d) => d.id === fromRequisition);
+      if (!source) {
+        return res.status(404).json({ error: `There is no requisition numbered ${fromRequisition}.` });
+      }
+      if (source.kind !== 'PR') {
+        return res.status(409).json({ error: `${fromRequisition} is a ${source.kind}, not a requisition.` });
+      }
+      if (source.status !== 'approved') {
+        return res.status(409).json({
+          error:
+            source.status === 'rejected'
+              ? `${fromRequisition} was sent back, so it cannot become an order.`
+              : `${fromRequisition} has not finished its approvals yet, so it cannot become an order.`
+        });
+      }
+      const already = documents.find((d) => d.sourceDocument === fromRequisition);
+      if (already) {
+        return res.status(409).json({
+          error: `${fromRequisition} has already been converted into order ${already.id}.`
+        });
+      }
+    }
+
+    const materialCode = String(req.body?.materialCode || source?.materialCode || '').trim();
+    const plant = String(req.body?.plant || source?.plant || '').trim();
+    const quantity = Number(req.body?.quantity ?? source?.quantity);
+    const supplierId = String(req.body?.supplierId || '').trim();
+
+    if (!materialCode || !plant) {
+      return res.status(400).json({ error: 'An order needs a material and a plant.' });
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      return res.status(400).json({ error: 'Quantity must be a number greater than zero.' });
+    }
+    // A requisition asks; an order commits. Committing needs somebody to commit to.
+    if (!supplierId) {
+      return res
+        .status(400)
+        .json({ error: 'An order needs a vendor. A requisition can go without one, an order cannot.' });
+    }
+
+    const vendors = await getSupplierScores();
+    const vendor = vendors[supplierId];
+    if (!vendor) {
+      return res.status(404).json({ error: `There is no vendor with the code ${supplierId}.` });
+    }
+
+    const materials = await getStock();
+    const material = materials.find((m) => m.code === materialCode && m.plant === plant);
+    const materialName = material?.name || source?.material || materialCode;
+    const unit = material?.unit || source?.unit || vendor.unit || '';
+
+    // Contract rate first, because that is the price actually agreed with this vendor.
+    // Then what the requisition estimated, then the last rate paid for the material.
+    const typedRate = Number(req.body?.rate);
+    const lastBuy = documents
+      .filter((d) => d.materialCode === materialCode && Number(d.rate) > 0)
+      .sort((a, b) => Number(b.rate) - Number(a.rate))[0];
+    const rate =
+      Number.isFinite(typedRate) && typedRate > 0
+        ? Math.round(typedRate)
+        : Number(vendor.contractRate) || Number(source?.rate) || Number(lastBuy?.rate) || 0;
+
+    if (rate <= 0) {
+      return res.status(400).json({
+        error:
+          `There is no rate on file for ${materialName} with ${vendor.name}. ` +
+          `Enter a rate per ${unit || 'unit'}.`
+      });
+    }
+
+    const freight = Math.max(0, Math.round(Number(req.body?.freight) || 0));
+    const loading = Math.max(0, Math.round(Number(req.body?.loading) || 0));
+    const basic = Math.round(quantity * rate);
+    const chain = chainFor({ kind: 'PO', basic });
+
+    const used = await store.usedDocumentNumbers();
+    const id = nextDocumentNumber('PO', used);
+    const at = stamp();
+
+    const document = {
+      id,
+      kind: 'PO',
+      docType: 'Standard purchase order',
+      trade: vendor.category && /import/i.test(vendor.category) ? 'Import' : 'Domestic',
+      incoterm: String(req.body?.incoterm || '').trim(),
+      supplierId,
+      material: materialName,
+      materialCode,
+      plant,
+      quantity,
+      unit,
+      rate,
+      basic,
+      freight,
+      loading,
+      transport: String(req.body?.transport || '').trim(),
+      payTerms: String(req.body?.payTerms || '').trim(),
+      cashDiscount: '',
+      rebate: '',
+      deliveryDate: String(req.body?.deliveryDate || source?.deliveryDate || '').trim(),
+      reason: fromRequisition ? `Converted from requisition ${fromRequisition}` : '',
+      department: 'Central procurement',
+      sourceDocument: fromRequisition || ''
+    };
+
+    await store.createDocument({
+      document,
+      item: { documentId: id, pos: 10, materialCode, material: materialName, quantity, unit, rate },
+      chain: { step: chain.step, next: chain.next, approverName: req.user.name },
+      // An order converted from a requisition belongs to whoever asked for it, not to
+      // whoever pressed the button. They are the person who needs to hear what happens.
+      raisedBy: source?.createdBy
+        ? { name: source.createdBy.name, title: source.createdBy.title || '', when: at }
+        : { name: req.user.name, title: 'Procurement Manager', when: at }
+    });
+
+    res.json({
+      id,
+      kind: 'PO',
+      material: materialName,
+      quantity,
+      unit,
+      plant,
+      vendor: vendor.name,
+      rate,
+      basic,
+      total: basic + freight + loading,
+      step: chain.step,
+      next: chain.next,
+      fromRequisition: fromRequisition || null,
+      raisedAt: at
+    });
+  })
+);
+
+// --- Where the goods are -------------------------------------------------------
+
+// POST /api/shipments/:id/advance   { stage?, note? }
+//
+// Moves a released order one step along. `stage` is optional and is checked rather than
+// obeyed: sending it lets a stale screen say which move it thought it was making, and the
+// rule refuses if that is no longer the next one. Without it the order simply advances.
+//
+// Nothing is mailed. Every other action here tells somebody something; this one records
+// what a vendor or a gate clerk has already done, and the people who would be told are
+// the ones who told us.
+actionsRouter.post(
+  '/shipments/:id/advance',
+  asyncHandler(async (req, res) => {
+    if (!requireWritableSource(res)) return;
+
+    const documents = await getDocuments();
+    const document = documents.find((d) => d.id === req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: `No document found with the number ${req.params.id}.` });
+    }
+
+    const wanted = String(req.body?.stage || '').trim();
+    const verdict = canAdvanceTo(document, wanted || null);
+    if (!verdict.ok) {
+      return res.status(409).json({ error: verdict.why });
+    }
+
+    const at = stamp();
+    const note = String(req.body?.note || '').trim();
+
+    await store.saveShipmentStage({
+      documentId: document.id,
+      document,
+      stage: verdict.stage.key,
+      at,
+      note,
+      actionLabel: verdict.stage.label.toLowerCase(),
+      recordedBy: req.user.name,
+      recordedByAddress: req.user.username
+    });
+
+    res.json({
+      id: document.id,
+      stage: verdict.stage.key,
+      label: verdict.stage.label,
+      describe: verdict.stage.describe,
+      at,
+      complete: verdict.stage.key === LAST_STAGE
+    });
+  })
+);
+
+// --- Ask -----------------------------------------------------------------------
+
+// POST /api/ask   { question, plant }
+//
+// Answers a question, or offers to do something. It never does it.
+//
+// A proposal comes back describing the action in words plus the ordinary endpoint that
+// would carry it out - the same one the buttons use. The browser shows it, the person
+// confirms, and the confirm is an ordinary authenticated request like any other. Ask has
+// no private way into the store, so the worst a misread question can cost is a click.
+//
+// This is a POST rather than a GET because the question is a body, and because a URL that
+// reads "?question=approve 4500178401" is the kind of thing that ends up in a log, a
+// browser history and a bookmark.
+actionsRouter.post(
+  '/ask',
+  asyncHandler(async (req, res) => {
+    const question = String(req.body?.question || '').trim();
+    const plant = String(req.body?.plant || 'all').trim();
+    // What was being talked about a moment ago, sent back by the browser.
+    //
+    // Held there rather than here on purpose: the server stays stateless, two people
+    // cannot end up sharing a train of thought, and nothing has to be expired. It carries
+    // no authority - only which material or document was last named - so a browser that
+    // tampers with it can at most confuse itself.
+    const memory = req.body?.memory && typeof req.body.memory === 'object' ? req.body.memory : {};
+
+    if (question.length > 500) {
+      return res.status(400).json({ error: 'That is longer than I can read. Ask me something shorter.' });
+    }
+
+    const [documents, materials, vendors] = await Promise.all([
+      getDocuments(),
+      getStock(),
+      getSupplierScores()
+    ]);
+
+    // Filtered the same way the screens are, so an answer matches what is on them.
+    const inPlant = (rows) => (plant === 'all' ? rows : rows.filter((r) => !r.plant || r.plant === plant));
+
+    const result = readIntent(question, {
+      documents: inPlant(documents),
+      materials: inPlant(materials),
+      vendors: Object.values(vendors),
+      plant,
+      manager: req.user.name,
+      memory
+    });
+
+    // A proposal that would write anything is refused outright against a read-only source,
+    // rather than offered and failing at the confirm - which would read as the dashboard
+    // changing its mind.
+    if (result.kind === 'proposal' && !store.canWrite()) {
+      return res.json({
+        kind: 'answer',
+        text:
+          `I can tell you about ${result.summary.toLowerCase()}, but nothing can be saved with ` +
+          `DATA_SOURCE="${config.dataSource}". Set it to "excel" or "db" and restart the backend.`
+      });
+    }
+
+    res.json(result);
   })
 );
 

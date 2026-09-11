@@ -78,11 +78,27 @@ export const api = {
   reject: (id, note) => post(`/api/approvals/${encodeURIComponent(id)}/reject`, { note }),
   fixSituation: (id) => post(`/api/situations/${encodeURIComponent(id)}/fix`),
   raiseRequest: (code, plant) => post(`/api/materials/${encodeURIComponent(code)}/request`, { plant }),
+  // Raises a real requisition, with a number and an approval chain, unlike raiseRequest
+  // above which only moves the quantity on order.
+  createRequisition: (body) => post('/api/requisitions', body),
+  // Raises an order, either converted from an approved requisition or directly.
+  createOrder: (body) => post('/api/orders', body),
+  // Moves a released order one shipment stage along. The stage is sent so a stale screen
+  // cannot skip a step without the server noticing.
+  advanceShipment: (id, stage, note) =>
+    post(`/api/shipments/${encodeURIComponent(id)}/advance`, { stage, note }),
   // `toName` is a person named on the dashboard, whose address the backend looks up and
   // never sends here. `to` is an address typed by hand, which is the sender's own business.
   sendMail: ({ toName, to, subject, body }) => post('/api/mail', { toName, to, subject, body }),
   // Looks up one person's mailbox, when the compose window opens. Deliberately not part of
   // the dashboard payload: see the route for why.
   contactAddress: (name) => request(`/api/contact/address?name=${encodeURIComponent(name)}`),
+  // Ask. Answers a question, or comes back with a proposal describing an action and the
+  // ordinary endpoint that would carry it out. It never writes anything itself.
+  ask: (question, plant, memory) => post('/api/ask', { question, plant, memory }),
+  // Carries out a proposal Ask offered, by calling the endpoint it named. Nothing else
+  // is trusted from the proposal: it can only name an /api/ path, and that path applies
+  // its own rules and its own sign-in check exactly as it does for a button press.
+  confirmProposal: (action) => post(action.endpoint, action.body),
   actionLog: () => request('/api/action-log')
 };

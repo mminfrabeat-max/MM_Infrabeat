@@ -13,10 +13,13 @@ import {
   byPlant, pendingDocuments, sumTotals, shortMaterials, contractsToWatch, sumValues
 } from './selectors.js';
 
+// The chips under the Ask box. Two of these ask for an action, on purpose: the quickest
+// way to learn that Ask can do things is to see it offer to.
 export const SUGGESTIONS = [
   'What is waiting for me?',
   'What will run out first?',
-  'Which contracts should I look at?',
+  'Where are my shipments?',
+  'Raise a PR for 400 MT of gypsum at Pune',
   'Can I trust Aditya?',
   'Show only Pune'
 ];

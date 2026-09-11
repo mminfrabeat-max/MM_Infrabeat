@@ -218,6 +218,11 @@ export const dbProvider = {
         // login with neither a signed step nor a person record behind it.
         decidedBy: d.decided_by_step_name || d.decided_by_full_name || d.decided_by_email || '',
         decidedAt: d.decided_at || '',
+        // The requisition this order came from, empty on anything raised directly.
+        sourceDocument: d.source_doc_number || '',
+        shipmentStage: d.shipment_stage || '',
+        shipmentStageAt: d.shipment_stage_at || '',
+        shipmentNote: d.shipment_note || '',
         decisionNote: d.decision_note || ''
       };
     });

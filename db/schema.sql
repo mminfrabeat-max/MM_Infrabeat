@@ -215,6 +215,15 @@ CREATE TABLE purchase_documents (
   -- worse than storing it twice.
   created_by_person_id INTEGER REFERENCES people(id),
   created_by_name    TEXT,
+  -- The requisition this order was created from, by document number rather than by row id,
+  -- so the link survives a reseed and reads plainly in the file. Empty on anything raised
+  -- directly. This is what stops one requisition being turned into two orders.
+  source_doc_number  TEXT,
+  -- Where the goods are once the order has been released. Empty until then, and always
+  -- empty on a requisition: nothing ships against a request to buy.
+  shipment_stage     TEXT,
+  shipment_stage_at  TEXT,
+  shipment_note      TEXT,
   raised_on          TEXT,
   decided_by_user_id INTEGER REFERENCES users(id),
   decided_at         TEXT,

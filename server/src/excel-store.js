@@ -148,6 +148,10 @@ function buildDocuments(documentRows, itemRows) {
       deliveryDate: asText(row.deliveryDate),
       hoursWaiting: asNumber(row.hoursWaiting) ?? 0,
       step: asText(row.step),
+      sourceDocument: asText(row.sourceDocument),
+      shipmentStage: asText(row.shipmentStage),
+      shipmentStageAt: asText(row.shipmentStageAt),
+      shipmentNote: asText(row.shipmentNote),
       reason: asText(row.reason),
       items,
       // Who raised it. Null rather than an empty object, so the mailer can ask "is there
@@ -362,13 +366,14 @@ async function updateRow(sheetName, columns, idKey, idValue, updates, purpose) {
   const sheet = workbook.getWorksheet(sheetName);
   if (!sheet) throw new Error(`The workbook has no "${sheetName}" sheet.`);
 
-  // Work out which spreadsheet column each field lives in, by header text.
-  const columnByKey = new Map();
-  sheet.getRow(1).eachCell((cell, columnNumber) => {
-    const header = asText(cellValue(cell.value));
-    const column = columns.find((c) => c.header === header);
-    if (column) columnByKey.set(column.key, columnNumber);
-  });
+  // Work out which spreadsheet column each field lives in, by header text, creating any
+  // the file does not have yet.
+  //
+  // Creating them matters: this used to skip a field whose header was missing, so writing
+  // a newly added column to an older workbook did nothing at all and said nothing about
+  // it. A save that reports success and stores nothing is the worst kind of bug here,
+  // because the thing it loses is a decision somebody made.
+  const columnByKey = columnPositions(sheet, columns, { create: true });
 
   const idColumn = columnByKey.get(idKey);
   if (!idColumn) throw new Error(`The "${sheetName}" sheet has no column for ${idKey}.`);
@@ -456,6 +461,118 @@ export async function appendActionLog(entry) {
 
   await writeSafely(workbook);
   invalidateCache();
+}
+
+// Writes one row, matching values to the sheet's OWN header order rather than to the order
+// the schema happens to list them in.
+//
+// addRow() writes positionally, so a schema that has gained a column since the file was
+// built would put every later value one cell to the left - a corruption that reads back as
+// plausible nonsense. Matching on the header makes the two independent, and any header the
+// file is missing is appended first, so an older workbook gains the column on first write
+// instead of needing a rebuild.
+// Where each field lives in this sheet, worked out from the header row.
+//
+// With `create`, any header the file is missing is appended rather than skipped. That is
+// what lets a workbook built before a column existed gain it on first write instead of
+// needing a rebuild - and, more importantly, it is what stops a new field being written
+// to a column that is not there and vanishing without a word.
+function columnPositions(sheet, columns, { create = false } = {}) {
+  const headerRow = sheet.getRow(1);
+  const columnByKey = new Map();
+
+  headerRow.eachCell((cell, columnNumber) => {
+    const header = asText(cellValue(cell.value));
+    const column = columns.find((c) => c.header === header);
+    if (column) columnByKey.set(column.key, columnNumber);
+  });
+
+  if (!create) return columnByKey;
+
+  let width = Math.max(sheet.columnCount, headerRow.cellCount);
+  for (const column of columns) {
+    if (columnByKey.has(column.key)) continue;
+    width += 1;
+    headerRow.getCell(width).value = column.header;
+    headerRow.getCell(width).font = { bold: true };
+    sheet.getColumn(width).width = column.width || 16;
+    columnByKey.set(column.key, width);
+  }
+  headerRow.commit();
+
+  return columnByKey;
+}
+
+// Appends one row, matching values to the sheet OWN header order rather than to the order
+// the schema happens to list them in.
+//
+// addRow() writes positionally, so a schema that has gained a column since the file was
+// built would put every later value one cell to the left - a corruption that reads back
+// as plausible nonsense.
+function writeRow(sheet, columns, values) {
+  const columnByKey = columnPositions(sheet, columns, { create: true });
+
+  const row = sheet.getRow(sheet.rowCount + 1);
+  for (const column of columns) {
+    const value = values[column.key];
+    row.getCell(columnByKey.get(column.key)).value = value === undefined || value === null ? '' : value;
+  }
+  row.commit();
+}
+
+// Adds a brand new document to the workbook: the header, its one item line, and - for a
+// requisition - the row that makes it show up as an open request.
+//
+// Three sheets rather than one, because that is where the dashboard reads each piece from.
+// A header alone would appear in the approval list and nowhere else, which is exactly the
+// half-written state that made a raised request look saved when it was not.
+//
+// The sheets are written in one pass and saved once. A spreadsheet has no transactions, so
+// the alternative is three saves and three chances to stop halfway.
+export async function appendDocument({ document, item, openRequest }) {
+  const workbook = await openWorkbook('add a document');
+
+  const sheet = workbook.getWorksheet(SHEETS.documents);
+  if (!sheet) throw new Error(`The workbook has no ${SHEETS.documents} sheet.`);
+
+  // Refuse a number that is already in use. Two documents sharing one would make every
+  // later approval ambiguous, and the workbook has no unique constraint to catch it.
+  const existing = readSheet(workbook, SHEETS.documents, COLUMNS.documents);
+  if (existing.some((row) => asText(row.id) === String(document.id))) {
+    throw new Error(`Document ${document.id} already exists in the workbook.`);
+  }
+
+  writeRow(sheet, COLUMNS.documents, document);
+
+  if (item) {
+    let itemSheet = workbook.getWorksheet(SHEETS.orderItems);
+    if (!itemSheet) {
+      itemSheet = workbook.addWorksheet(SHEETS.orderItems);
+      itemSheet.columns = COLUMNS.orderItems;
+      itemSheet.getRow(1).font = { bold: true };
+    }
+    itemSheet.addRow(COLUMNS.orderItems.map((c) => item[c.key] ?? ''));
+  }
+
+  if (openRequest) {
+    let requestSheet = workbook.getWorksheet(SHEETS.openRequests);
+    if (!requestSheet) {
+      requestSheet = workbook.addWorksheet(SHEETS.openRequests);
+      requestSheet.columns = COLUMNS.openRequests;
+      requestSheet.getRow(1).font = { bold: true };
+    }
+    requestSheet.addRow(COLUMNS.openRequests.map((c) => openRequest[c.key] ?? ''));
+  }
+
+  await writeSafely(workbook);
+  invalidateCache();
+}
+
+// Every document number already in the workbook, so a new one can be given the next in the
+// series without colliding with a seeded row.
+export async function allDocumentIds() {
+  const data = await loadWorkbook();
+  return data.documents.map((d) => d.id);
 }
 
 // Reads the audit trail back, newest first.

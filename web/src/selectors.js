@@ -14,6 +14,20 @@ export function byPlant(rows, plant) {
   return rows.filter((r) => r.plant === plant);
 }
 
+// Mirrors server/src/domain/approvals.js. The server decides for real - it is the only
+// side that can - but the screen has to know whether to draw a button before it asks.
+// If the two ever disagree, the server wins and the click comes back as an error.
+export function stillNeedsSigning(document) {
+  if (document.status !== "pending") return false;
+  if (!document.decidedAt) return true;
+  return Boolean(document.next && document.next.name);
+}
+
+// True when a click records the NEXT approver decision rather than making your own.
+export function recordingForNext(document) {
+  return stillNeedsSigning(document) && Boolean(document.decidedAt);
+}
+
 export function pendingDocuments(documents, plant) {
   return byPlant(documents, plant).filter((d) => d.status === 'pending');
 }

@@ -124,6 +124,134 @@ function saveNotification(db, actionLogId, mail, subject, at) {
 }
 
 // Marks a problem handled.
+// Raises a brand new document.
+//
+// The header, its one item line and the whole approval chain go in together. A document
+// whose steps were written separately could exist for a moment with nobody due to approve
+// it, and the approval screen reads exactly that to decide whose signature is next.
+//
+// The chain is stored as rows rather than as flat columns, which is the difference from
+// the workbook: two steps here are two rows, and a third would be a third. The spreadsheet
+// has four columns and therefore a ceiling of one next approver.
+export function createDocument({ document, item, chain, raisedBy }) {
+  return transaction((db) => {
+    const clash = one('SELECT id FROM purchase_documents WHERE doc_number = ?', [document.id]);
+    if (clash) throw new Error(`Document ${document.id} already exists in the database.`);
+
+    const plant = one('SELECT id FROM plants WHERE name = ?', [document.plant]);
+    const vendor = document.supplierId
+      ? one('SELECT id FROM vendors WHERE code = ?', [document.supplierId])
+      : null;
+    // The raiser is a person, not a login: buyers never sign in here. Matching on the name
+    // is what keeps the mail going to the right mailbox, since MAIL_DIRECTORY is keyed the
+    // same way.
+    const raiser = one('SELECT id FROM people WHERE full_name = ?', [raisedBy?.name || '']);
+
+    const inserted = db
+      .prepare(
+        `INSERT INTO purchase_documents
+           (doc_number, kind, doc_type, trade, incoterm, vendor_id, plant_id, department,
+            transport, pay_terms, cash_discount, rebate, basic_value, freight, loading,
+            delivery_date, status, hours_waiting, current_step, note,
+            created_by_person_id, created_by_name, raised_on, source_doc_number)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        document.id,
+        document.kind,
+        document.docType || null,
+        document.trade || null,
+        document.incoterm || null,
+        vendor ? vendor.id : null,
+        plant ? plant.id : null,
+        document.department || null,
+        document.transport || null,
+        document.payTerms || null,
+        document.cashDiscount || null,
+        document.rebate || null,
+        Number(document.basic) || 0,
+        Number(document.freight) || 0,
+        Number(document.loading) || 0,
+        document.deliveryDate || null,
+        'pending',
+        0,
+        chain.step || null,
+        document.reason || null,
+        raiser ? raiser.id : null,
+        raisedBy?.name || null,
+        raisedBy?.when || null,
+        document.sourceDocument || null
+      );
+
+    const documentId = inserted.lastInsertRowid;
+
+    if (item) {
+      const material = item.materialCode
+        ? one('SELECT id FROM materials WHERE code = ?', [item.materialCode])
+        : null;
+      db.prepare(
+        `INSERT INTO purchase_document_items
+           (document_id, position, material_id, material_code, description, quantity, unit, rate)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        documentId,
+        10,
+        material ? material.id : null,
+        item.materialCode || null,
+        item.material || null,
+        Number(item.quantity) || 0,
+        item.unit || null,
+        Number(item.rate) || 0
+      );
+    }
+
+    // Step one is this manager, and it is waiting on them the moment the document exists.
+    db.prepare(
+      `INSERT INTO approval_steps (document_id, step_number, step_label, approver_name, approver_title, status)
+       VALUES (?, 1, ?, ?, ?, 'waiting')`
+    ).run(documentId, chain.step || null, chain.approverName || null, chain.approverTitle || null);
+
+    if (chain.next && chain.next.name) {
+      const person = one('SELECT id FROM people WHERE full_name = ?', [chain.next.name]);
+      db.prepare(
+        `INSERT INTO approval_steps
+           (document_id, step_number, step_label, approver_person_id, approver_name, approver_title, status)
+         VALUES (?, 2, ?, ?, ?, ?, 'waiting')`
+      ).run(documentId, chain.next.level || null, person ? person.id : null, chain.next.name, chain.next.title || null);
+    }
+
+    return { id: document.id };
+  });
+}
+
+// Records a shipment stage against a released order, and logs the move.
+export function saveShipmentStage({ documentId, stage, at, note, actionLabel, recordedBy, recordedByAddress }) {
+  return transaction((db) => {
+    const row = documentRowFor(documentId);
+    if (!row) throw new Error(`Document ${documentId} is not in the database.`);
+
+    db.prepare(
+      `UPDATE purchase_documents
+          SET shipment_stage = ?, shipment_stage_at = ?, shipment_note = ?
+        WHERE id = ?`
+    ).run(stage, at, note || null, row.id);
+
+    const userId = userIdFor(recordedByAddress || recordedBy);
+    db.prepare(
+      `INSERT INTO action_log
+         (occurred_at, action, user_id, acted_by, document_id, document_number, document_kind, vendor_name, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(at, actionLabel, userId, recordedBy, row.id, documentId, row.kind, row.vendor_name, note || null);
+
+    return { id: documentId, stage };
+  });
+}
+
+// Every document number in use, for handing the next one out.
+export function allDocumentNumbers() {
+  return all('SELECT doc_number FROM purchase_documents').map((r) => r.doc_number);
+}
+
 export function saveSituationFix({ reference, fixedAt, fixedBy, fixedByAddress, fix }) {
   return transaction((db) => {
     const row = one('SELECT id, related_to FROM situations WHERE reference = ?', [reference]);
