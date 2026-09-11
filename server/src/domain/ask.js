@@ -362,6 +362,57 @@ function parseIntent(question, context) {
     );
   }
 
+  // "what will run out first", "what is short", "how much gypsum do we have"
+  //
+  // This existed in the browser version and was missed when Ask moved to the server, so
+  // the chip asking it fell through to the help text - which reads as the assistant not
+  // knowing rather than as something simply not wired up.
+  //
+  // Ordered by when each material runs out rather than by how short it is: a material
+  // that is 10 tonnes short and needed on Friday is a worse problem than one that is 400
+  // short and not wanted until next month.
+  if (/\b(run out|runs out|short|stock|inventory|how much|running low)/i.test(lower)) {
+    const named = materialIn(q, materials);
+
+    if (named) {
+      const cover = Number(named.daysOfCover);
+      return answer(
+        `**${named.name}** at ${named.plant}\n` +
+          `${Number(named.onHand).toLocaleString('en-IN')} ${named.unit} in stock` +
+          `${named.openOrderQuantity > 0 ? `, ${Number(named.openOrderQuantity).toLocaleString('en-IN')} on order` : ''}.\n` +
+          `Departments have asked for ${Number(named.totalNeeded).toLocaleString('en-IN')} ${named.unit}` +
+          `${named.shortBy > 0 ? `, which leaves it **${Number(named.shortBy).toLocaleString('en-IN')} ${named.unit} short**` : ', which it covers'}.\n` +
+          `${Number.isFinite(cover) ? `About ${cover} days of cover.` : ''}` +
+          `${named.neededFrom ? ` First needed ${named.neededFrom}.` : ''}` +
+          `${named.kiln ? ' The kiln runs on it.' : ''}`,
+        { goTo: 'stock' }
+      );
+    }
+
+    const short = materials
+      .filter((m) => Number(m.shortBy) > 0)
+      .sort((a, b) => (Number(a.daysOfCover) || 0) - (Number(b.daysOfCover) || 0));
+
+    if (short.length === 0) {
+      return answer('Every material covers what the plants have asked for.', { goTo: 'stock' });
+    }
+
+    return answer(
+      `**${plural(short.length, 'material')} short, soonest first:**\n` +
+        short
+          .map(
+            (m) =>
+              `• ${m.name} at ${m.plant} — ${Number(m.shortBy).toLocaleString('en-IN')} ${m.unit} short` +
+              `${Number.isFinite(Number(m.daysOfCover)) ? `, ${m.daysOfCover} days of cover` : ''}` +
+              `${m.neededFrom ? `, needed ${m.neededFrom}` : ''}` +
+              `${m.kiln ? ' (kiln)' : ''}`
+          )
+          .join('\n') +
+        `\n\nAsk me which vendor to use for any of them.`,
+      { goTo: 'stock' }
+    );
+  }
+
   const vendor = vendorIn(q, vendors);
   if (vendor) {
     if (!vendor.scored) return answer(`${vendor.name} has no completed orders yet, so there is nothing to judge them on.`, { goTo: 'suppliers' });
