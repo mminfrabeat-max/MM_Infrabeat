@@ -23,7 +23,6 @@
 // money() is this project's rupee formatter - 'inr' is the browser-side name for it.
 import { money as inr, plural } from './format.js';
 import { canDecide, whoseTurn } from './approvals.js';
-import { chainFor } from './creation.js';
 import { isTrackable, currentStage, nextStage, stageByKey } from './shipment.js';
 import { recommendFor, verdictFor } from './vendor-choice.js';
 
@@ -39,8 +38,6 @@ export const TOOLS = [
   { name: 'stock_position', writes: false, describe: 'Which materials are short, and by how much.' },
   { name: 'vendor_record', writes: false, describe: 'How a vendor has actually performed.' },
   { name: 'shipments', writes: false, describe: 'Where released orders have got to.' },
-  { name: 'raise_requisition', writes: true, describe: 'Raise a purchase requisition for a material.' },
-  { name: 'raise_order', writes: true, describe: 'Raise a purchase order, optionally from an approved requisition.' },
   { name: 'approve_document', writes: true, describe: 'Approve a document that is waiting.' },
   { name: 'reject_document', writes: true, describe: 'Send a document back.' },
   { name: 'advance_shipment', writes: true, describe: 'Record that a released order has moved a stage.' }
@@ -48,21 +45,11 @@ export const TOOLS = [
 
 // --- Small helpers -------------------------------------------------------------
 
-const NUMBER_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, ten: 10 };
-
 function plantIn(text) {
   if (/mumbai/i.test(text)) return 'Mumbai';
   if (/nagpur/i.test(text)) return 'Nagpur';
   if (/pune/i.test(text)) return 'Pune';
   return null;
-}
-
-// A quantity written the way people write them: "500", "500 MT", "1,200 tonnes", "two".
-function quantityIn(text) {
-  const digits = /(\d[\d,]*(?:\.\d+)?)\s*(mt|kg|nos|mtr|kl|trip|tonnes?|tons?)?/i.exec(text);
-  if (digits) return Number(String(digits[1]).replace(/,/g, ''));
-  const word = /\b(a|an|one|two|three|four|five|ten)\b/i.exec(text);
-  return word ? NUMBER_WORDS[word[1].toLowerCase()] : null;
 }
 
 function documentIn(text) {
@@ -94,15 +81,6 @@ function vendorIn(text, vendors) {
     vendors.find((v) => lower.includes(String(v.name).toLowerCase().split(' ')[0])) ||
     null
   );
-}
-
-// The last rate a material was actually bought at. The same rule the create routes use, so
-// the value Ask quotes is the value the document will be given.
-function lastRateFor(code, documents) {
-  const bought = documents
-    .filter((d) => d.materialCode === code && Number(d.rate) > 0)
-    .sort((a, b) => Number(b.rate) - Number(a.rate))[0];
-  return bought ? Number(bought.rate) : 0;
 }
 
 // --- Answers -------------------------------------------------------------------
@@ -153,7 +131,6 @@ export function nextMemory(question, context, result, expanded) {
 
   // What the assistant is waiting to be told, so a bare "400 MT" means something next time.
   memory.awaiting = result?.awaiting || null;
-  memory.awaitingKind = result?.awaitingKind || null;
 
   return memory;
 }
@@ -172,12 +149,6 @@ export function expand(question, context) {
   // "approve it", "where is that one", "send it back"
   if (memory.documentId && !documentIn(q) && /\b(it|that|this|that one|the order|the document)\b/i.test(lower)) {
     q = `${q} ${memory.documentId}`;
-  }
-
-  // A bare quantity, when a quantity is what was asked for.
-  if (memory.awaiting === 'quantity' && memory.materialCode && /^[\d,]+(\.\d+)?\s*[a-z]*$/i.test(q)) {
-    const material = materials.find((m) => m.code === memory.materialCode);
-    if (material) q = `raise a ${memory.awaitingKind === 'PO' ? 'purchase order' : 'PR'} for ${q} of ${material.name}`;
   }
 
   // A question about a material without naming it again: "which vendor?", "how much is short?"
@@ -298,97 +269,6 @@ function parseIntent(question, context) {
     });
   }
 
-  // Raise a requisition or an order.
-  const raiseVerb = /\b(raise|create|make|order|buy|need|short of|running out of)\b/i.test(lower);
-  if (raiseVerb) {
-    const saysRequisition = /\b(pr|requisition)\b/i.test(lower);
-    const saysOrder = /\b(purchase order|po)\b/i.test(lower);
-    const namedVendor = vendorIn(q, vendors);
-    // Naming a vendor is what turns "order some gypsum" into a purchase order, because an
-    // order is a commitment to somebody and a requisition is not. Saying "PR" outright wins
-    // over that, since it is an explicit statement of which one is wanted.
-    const wantsOrder = !saysRequisition && (saysOrder || (/\b(order|buy)\b/i.test(lower) && Boolean(namedVendor)));
-    const material = materialIn(q, materials);
-
-    if (!material) {
-      return answer(
-        'Which material? Name it or give its code, for example "raise a PR for 400 MT of gypsum at Pune".',
-        { goTo: wantsOrder ? 'createpo' : 'createpr' }
-      );
-    }
-
-    const where = plantIn(q) || (plant !== 'all' ? plant : material.plant);
-    const atPlant = materials.find((m) => m.code === material.code && m.plant === where) || material;
-    // No quantity given, so suggest what the stock position says is actually needed.
-    const suggested = Number(atPlant.suggestedOrderQuantity) || 0;
-    const quantity = quantityIn(q.replace(/\b(45\d{8}|10\d{8})\b/g, '')) || suggested;
-
-    if (!quantity) {
-      // Recorded as awaiting a quantity, so a bare "400 MT" next turn is understood as the
-      // answer to this question rather than as a new one.
-      return {
-        ...answer(
-          `How much ${atPlant.name} at ${atPlant.plant}? It is not short at the moment, so I have nothing to suggest.`,
-          { goTo: wantsOrder ? 'createpo' : 'createpr' }
-        ),
-        awaiting: 'quantity',
-        awaitingKind: wantsOrder ? 'PO' : 'PR'
-      };
-    }
-
-    const rate = lastRateFor(atPlant.code, documents);
-    if (!rate) {
-      return answer(
-        `There is no rate on file for ${atPlant.name}, so I cannot work out what it would be worth. ` +
-          `Raise it on the form and enter an estimated rate.`,
-        { goTo: wantsOrder ? 'createpo' : 'createpr' }
-      );
-    }
-
-    const basic = Math.round(quantity * rate);
-    const kind = wantsOrder ? 'PO' : 'PR';
-    const chain = chainFor({ kind, basic });
-    const vendor = wantsOrder ? namedVendor : null;
-
-    if (wantsOrder && !vendor) {
-      return answer(
-        `An order needs a vendor. ${atPlant.name} is usually bought from ${atPlant.supplierName || 'nobody on file'}. ` +
-          `Say "order ${quantity} ${atPlant.unit} of ${atPlant.name} from ${atPlant.supplierName}" and I will set it up.`,
-        { goTo: 'createpo' }
-      );
-    }
-
-    return proposal({
-      summary: `Raise a ${kind === 'PR' ? 'requisition' : 'purchase order'} for ${quantity.toLocaleString('en-IN')} ${atPlant.unit} of ${atPlant.name}`,
-      detail: [
-        `${atPlant.plant} plant`,
-        vendor ? `Vendor ${vendor.name}` : 'No vendor yet — a requisition asks, it does not commit',
-        `${inr(rate)} per ${atPlant.unit}, last rate paid`,
-        `Worth about ${inr(basic)}`,
-        chain.next ? `You approve it, then it goes to ${chain.next.name}.` : 'Yours to release on your own signature.',
-        quantity === suggested ? 'Quantity is what the stock position says is short.' : ''
-      ].filter(Boolean),
-      warning: basic >= 50000000 ? `Above your five crore release limit.` : null,
-      endpoint: wantsOrder ? '/api/orders' : '/api/requisitions',
-      body: wantsOrder
-        ? {
-            materialCode: atPlant.code,
-            plant: atPlant.plant,
-            quantity,
-            supplierId: vendor.supplierId,
-            transport: 'Road',
-            payTerms: '30 days from receipt'
-          }
-        : {
-            materialCode: atPlant.code,
-            plant: atPlant.plant,
-            quantity,
-            reason: `Raised from Ask: ${q}`
-          },
-      confirmLabel: `Raise the ${kind === 'PR' ? 'requisition' : 'order'}`
-    });
-  }
-
   // --- Questions -------------------------------------------------------------
 
   // "which vendor should I use for gypsum", "who should I buy clinker from"
@@ -502,8 +382,6 @@ function parseIntent(question, context) {
   const SCREENS = [
     { keys: /\b(overview|home|dashboard|summary)/i, tab: 'overview', name: 'Overview' },
     { keys: /\b(approval|waiting|inbox)/i, tab: 'approvals', name: 'Waiting for approval' },
-    { keys: /\b(raise|new).{0,12}\b(requisition|pr)\b|\bpr creation\b/i, tab: 'createpr', name: 'Raise a requisition' },
-    { keys: /\b(raise|new).{0,12}\b(order|po)\b|\bpo creation\b/i, tab: 'createpo', name: 'Raise an order' },
     { keys: /\b(shipment|tracking|delivery|on its way)/i, tab: 'shipments', name: 'Shipment tracking' },
     { keys: /\b(stock|material|inventory|short)/i, tab: 'stock', name: 'Stock risk' },
     { keys: /\b(contract|commitment|open order)/i, tab: 'open', name: 'Open orders and contracts' },
@@ -526,7 +404,7 @@ function parseIntent(question, context) {
     'I can tell you what is waiting, what is short, where an order has got to, or about any vendor.\n' +
       'I can advise: "which vendor should I use for gypsum".\n' +
       'I can take you places: "open shipment tracking".\n' +
-      'And I can do things: "raise a PR for 400 MT of gypsum at Pune", "approve 4500178401", "mark it dispatched".\n' +
+      'And I can do things: "approve 4500178401", "send back 4500178401", "mark it dispatched".\n' +
       'You can keep talking - say "approve it" or "which vendor?" and I will know what you mean.\n' +
       'Anything that changes something is shown to you first and only happens when you confirm it.'
   );

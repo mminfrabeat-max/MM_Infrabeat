@@ -24,8 +24,6 @@ import Overview from './screens/Overview.jsx';
 import Approvals from './screens/Approvals.jsx';
 import DocumentDetail from './screens/DocumentDetail.jsx';
 import Stock from './screens/Stock.jsx';
-import PRCreation from './screens/PRCreation.jsx';
-import POCreation, { convertibleRequisitions } from './screens/POCreation.jsx';
 import ShipmentTracking, { trackedOrders } from './screens/ShipmentTracking.jsx';
 import Commitments from './screens/Commitments.jsx';
 import Vendors from './screens/Vendors.jsx';
@@ -223,51 +221,6 @@ export default function App() {
     }
   }
 
-  // Raising a requisition. The list is reloaded afterwards because the new document has
-  // to appear in the approval queue, in the open requests and in the counts on the tabs -
-  // and working any of those out here would be a second copy of what the server decided.
-  async function createRequisition(form) {
-    setBusy('createpr');
-    try {
-      const made = await api.createRequisition(form);
-      await load();
-      toast(
-        'pos',
-        'check',
-        made.next
-          ? `Requisition ${made.id} raised for ${made.material}. After you approve it, it goes to ${made.next.name}.`
-          : `Requisition ${made.id} raised for ${made.material}. It is yours to release.`
-      );
-    } catch (error) {
-      toast('neg', 'alert', error.message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // Raising an order. Same shape as raising a requisition: the server decides the number
-  // and the chain, and the whole dashboard is reloaded rather than patched, because a new
-  // order changes the approval queue, the commitments and the tab counts at once.
-  async function createOrder(form) {
-    setBusy('createpo');
-    try {
-      const made = await api.createOrder(form);
-      await load();
-      const from = made.fromRequisition ? ` from requisition ${made.fromRequisition}` : '';
-      toast(
-        'pos',
-        'check',
-        made.next
-          ? `Order ${made.id} raised${from}. After you approve it, it goes to ${made.next.name}.`
-          : `Order ${made.id} raised${from}. It is yours to release.`
-      );
-    } catch (error) {
-      toast('neg', 'alert', error.message);
-    } finally {
-      setBusy(null);
-    }
-  }
-
   // Recording where a released order has got to.
   //
   // The stage is sent along with the order, so a screen that has been open a while cannot
@@ -408,8 +361,6 @@ export default function App() {
   const TABS = [
     { key: 'overview', label: 'Overview', icon: 'chart' },
     { key: 'approvals', label: 'Waiting for approval', icon: 'doc', count: pendingDocuments(data.documents, plant).length },
-    { key: 'createpr', label: 'Raise a requisition', icon: 'doc' },
-    { key: 'createpo', label: 'Raise an order', icon: 'file', count: convertibleRequisitions(data.documents, plant).length },
     { key: 'shipments', label: 'Shipment tracking', icon: 'truck', count: trackedOrders(data.documents, plant).length },
     { key: 'stock', label: 'Stock risk', icon: 'box', count: shortMaterials(data.materials, plant).length },
     { key: 'open', label: 'Open orders and contracts', icon: 'file', count: contractsToWatch(data.contracts, plant).length },
@@ -528,12 +479,6 @@ export default function App() {
           />
         )}
 
-        {tab === 'createpr' && (
-          <PRCreation data={data} plant={plant} canDecide={data.canDecide} onCreate={createRequisition} busy={busy === 'createpr'} />
-        )}
-        {tab === 'createpo' && (
-          <POCreation data={data} plant={plant} canDecide={data.canDecide} onCreate={createOrder} busy={busy === 'createpo'} />
-        )}
         {tab === 'shipments' && (
           <ShipmentTracking
             data={data}

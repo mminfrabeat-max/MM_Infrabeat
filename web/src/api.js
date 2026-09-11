@@ -78,11 +78,7 @@ export const api = {
   reject: (id, note) => post(`/api/approvals/${encodeURIComponent(id)}/reject`, { note }),
   fixSituation: (id) => post(`/api/situations/${encodeURIComponent(id)}/fix`),
   raiseRequest: (code, plant) => post(`/api/materials/${encodeURIComponent(code)}/request`, { plant }),
-  // Raises a real requisition, with a number and an approval chain, unlike raiseRequest
-  // above which only moves the quantity on order.
-  createRequisition: (body) => post('/api/requisitions', body),
-  // Raises an order, either converted from an approved requisition or directly.
-  createOrder: (body) => post('/api/orders', body),
+
   // Moves a released order one shipment stage along. The stage is sent so a stale screen
   // cannot skip a step without the server noticing.
   advanceShipment: (id, stage, note) =>
