@@ -51,7 +51,11 @@ async function snapshot() {
   return {
     dashboard: {
       ...everything,
-      user: { email: config.auth.username },
+      // Both, exactly as /api/dashboard sends them. The address identifies the account;
+      // the name is what gets written down and shown. The shim below stamps decisions with
+      // the name, so an approval clicked in the offline copy reads the same as one made
+      // for real - which matters, because this file is what people review the app by.
+      user: { email: config.auth.username, name: config.auth.displayName || config.auth.username },
       canDecide: canWrite(),
       dataSource: config.dataSource
     },
@@ -114,7 +118,7 @@ function buildShim(data) {
     }
 
     doc.status = status;
-    doc.decidedBy = DATA.dashboard.user.email;
+    doc.decidedBy = DATA.dashboard.user.name;
     doc.decidedAt = now();
     doc.decisionNote = note || "";
 
@@ -170,7 +174,7 @@ function buildShim(data) {
       s.status = "fixed";
       DATA.actionLog.entries.unshift({
         at: now(), action: "problem fixed", documentId: ref, documentType: "",
-        supplierName: s.relatedTo, value: "", decidedBy: DATA.dashboard.user.email,
+        supplierName: s.relatedTo, value: "", decidedBy: DATA.dashboard.user.name,
         note: s.fix, emailTo: "", emailStatus: ""
       });
       return reply({ id: ref, status: "fixed", fixedAt: now(), fix: s.fix });
@@ -194,7 +198,7 @@ function buildShim(data) {
 
       DATA.actionLog.entries.unshift({
         at: now(), action: "request raised", documentId: code, documentType: "",
-        supplierName: m.supplierName, value: "", decidedBy: DATA.dashboard.user.email,
+        supplierName: m.supplierName, value: "", decidedBy: DATA.dashboard.user.name,
         note: qty + " " + m.unit + " of " + m.name + " at " + m.plant,
         emailTo: "", emailStatus: ""
       });
@@ -204,7 +208,7 @@ function buildShim(data) {
     if (url.indexOf("/api/mail") === 0) {
       DATA.actionLog.entries.unshift({
         at: now(), action: "mail sent", documentId: "", documentType: "", supplierName: "",
-        value: "", decidedBy: DATA.dashboard.user.email, note: body.subject || "",
+        value: "", decidedBy: DATA.dashboard.user.name, note: body.subject || "",
         emailTo: body.to || "", emailStatus: OFFLINE_MAIL.status
       });
       return reply({ sent: false, to: body.to, status: OFFLINE_MAIL.status });
