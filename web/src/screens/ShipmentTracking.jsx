@@ -98,8 +98,20 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
   const next = nextStageOf(document);
   const complete = index === STAGES.length - 1;
   const tracking = document.trackingId;
-  const enRoute = Boolean(tracking) && (stage === 'dispatched' || stage === 'transit');
-  const waitingForNumber = stage === 'sent' && !tracking;
+
+  // A sea order is not followed the way a lorry is, and trying to do both left it with
+  // neither: the simulated feed took the ordinary buttons away, and the consignment panel
+  // that replaces them is not drawn for a vessel because a vessel already has a real map.
+  // An import order reaching the gate had nothing at all to press.
+  //
+  // So a vessel opts out of the whole simulated flow. It has a position from an actual
+  // feed and a bill of lading to follow it by, and it keeps the plain one-step bar from
+  // released through to goods receipt.
+  const bySea = Boolean(document.vessel);
+  const enRoute = Boolean(tracking) && !bySea && (stage === 'dispatched' || stage === 'transit');
+
+  // Nor is it asked for a tracking number it already has under another name.
+  const waitingForNumber = stage === 'sent' && !tracking && !bySea;
 
   // One timer per report, all cleared together. Restarted whenever the order or its number
   // changes, so a card that has been re-rendered does not inherit a stale run.
@@ -227,8 +239,9 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
       )}
 
       {/* On the road, with a number to follow it by. A sea order already has a real map
-          above, so it does not get a simulated one as well. */}
-      {canDecide && enRoute && !document.vessel && (
+          above, so it does not get a simulated one as well - and `enRoute` is false for
+          one, so the ordinary bar below stays in place for it. */}
+      {canDecide && enRoute && (
         <div className="vsplit">
           <div className="vsq">
             <ConsignmentMap
