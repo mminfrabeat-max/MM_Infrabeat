@@ -49,6 +49,38 @@ function coverText(d) {
   );
 }
 
+// Where a requisition stands, in one chip, naming whoever is holding it.
+//
+// "Pending" on its own is the least useful thing a status column can say: it covers a
+// document nobody has touched and one that is sitting on a director's desk, which are
+// not the same problem. The state comes from the server with the document, so this only
+// has to draw it.
+export function RequisitionStatus({ document }) {
+  const state = document.approvalState;
+  if (!state) return <Chip tone="mut">Unknown</Chip>;
+
+  if (state.state === 'approved') {
+    return <Chip tone="pos" icon="check">Approved</Chip>;
+  }
+  if (state.state === 'rejected') {
+    return <Chip tone="neg">Sent back</Chip>;
+  }
+  if (state.state === 'partial') {
+    return (
+      <>
+        <Chip tone="pri" icon="clock">Partially approved</Chip>
+        <div className="sub">with {state.holder}</div>
+      </>
+    );
+  }
+  return (
+    <>
+      <Chip tone="warn" icon="clock">Pending</Chip>
+      <div className="sub">with you</div>
+    </>
+  );
+}
+
 // Who the document is sitting with, in the words the row needs. A pending document that
 // this manager has already signed is with the next approver, not with them.
 function holder(d) {
@@ -120,7 +152,6 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
                   <th className="rt">Short by</th>
                   <th className="rt">Value</th>
                   <th>Raised by</th>
-                  <th>With now</th>
                   <th>Status</th>
                 </tr>
               )}
@@ -156,8 +187,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
                       </td>
                       <td className="rt n">{inr(d.total)}</td>
                       <td className="sub">{d.createdBy ? d.createdBy.name : 'not recorded'}</td>
-                      <td className="sub">{holder(d)}</td>
-                      <td><StatusChip status={d.status} document={d} /></td>
+                      <td><RequisitionStatus document={d} /></td>
                     </tr>
                   ))
                 : documents

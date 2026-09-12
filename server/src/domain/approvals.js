@@ -85,6 +85,60 @@ export function outcomeOf(document, action) {
   return { status: 'approved', final: true, movedTo: null, step: document.step };
 }
 
+// Where a document stands, and whose desk it is on.
+//
+// Four states, and the middle one is the whole reason this exists. "Pending" covers two
+// completely different situations - nobody has signed it, and this manager has signed it
+// and it has moved on - which look identical in storage and mean opposite things to the
+// person reading a list. Telling them apart, and naming who is holding it, is the
+// difference between a status column and a status column worth looking at.
+//
+// `holder` is null when it is the signed-in manager: the screen says "you", and the name
+// of whoever is signed in is not this rule's business.
+export function approvalStateOf(document) {
+  if (document.status === 'approved') {
+    return {
+      state: 'approved',
+      label: 'Approved',
+      holder: null,
+      holderTitle: null,
+      signedBy: document.decidedBy || '',
+      signedAt: document.decidedAt || ''
+    };
+  }
+
+  if (document.status === 'rejected') {
+    return {
+      state: 'rejected',
+      label: 'Sent back',
+      holder: null,
+      holderTitle: null,
+      signedBy: document.decidedBy || '',
+      signedAt: document.decidedAt || ''
+    };
+  }
+
+  if (alreadyDecided(document) && document.next && document.next.name) {
+    return {
+      state: 'partial',
+      label: 'Partially approved',
+      holder: document.next.name,
+      holderTitle: document.next.title || '',
+      signedBy: document.decidedBy || '',
+      signedAt: document.decidedAt || ''
+    };
+  }
+
+  return {
+    state: 'waiting',
+    label: 'Pending',
+    holder: null,
+    holderTitle: null,
+    signedBy: '',
+    signedAt: ''
+  };
+}
+
 // One sentence saying where the document stands, written for the person who raised it
 // rather than for a procurement team. Used as the opening line of their mail and as the
 // caption under the chain on screen, so the two can never drift apart.

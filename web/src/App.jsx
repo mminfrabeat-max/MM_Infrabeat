@@ -23,6 +23,7 @@ import Login from './screens/Login.jsx';
 import Overview from './screens/Overview.jsx';
 import Approvals from './screens/Approvals.jsx';
 import DocumentDetail from './screens/DocumentDetail.jsx';
+import RequisitionDetail, { reminderDraft } from './screens/RequisitionDetail.jsx';
 import Stock from './screens/Stock.jsx';
 import ShipmentTracking, { trackedOrders } from './screens/ShipmentTracking.jsx';
 import Commitments from './screens/Commitments.jsx';
@@ -474,7 +475,21 @@ export default function App() {
         {tab === 'requisitions' && !openDoc && (
           <Approvals data={data} plant={plant} kind="PR" onOpenDocument={openDocument} />
         )}
-        {(tab === 'approvals' || tab === 'requisitions') && openDoc && (
+        {/* Two detail screens, because they answer different questions. An order page is
+            laid out as a commercial document; a requisition page leads with the stock
+            position it came out of, and none of the order terms are settled on one. */}
+        {tab === 'requisitions' && openDoc && (
+          <RequisitionDetail
+            document={openDoc}
+            canDecide={data.canDecide}
+            busy={busy}
+            error={decideError}
+            onBack={() => setOpenDocumentId(null)}
+            onDecide={(action, note) => decide(openDoc.id, action, note)}
+            onRemind={(d) => writeMail(reminderDraft(d))}
+          />
+        )}
+        {tab === 'approvals' && openDoc && (
           <DocumentDetail
             data={data}
             document={openDoc}
