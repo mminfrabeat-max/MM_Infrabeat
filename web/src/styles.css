@@ -402,6 +402,31 @@ th.rt, td.rt { text-align: right; }
   background: var(--surface); color: var(--ink-3); line-height: 0;
 }
 .jleg.moving .jvehicle { color: var(--pos); }
+
+/* A vehicle actually crossing the leg, for the stage line on the tracking screen.
+
+   The other journeys draw a vehicle parked in the middle of a leg as a label - what
+   that line says is whether the leg has started, not where anything is. This one is a
+   position: it leaves one stage and arrives at the next over the time the carrier
+   report takes, and the line fills in behind it so the progress is legible even in a
+   screenshot with the animation frozen.
+
+   Duration comes from --roll, set where the feed interval is known, so the truck and
+   the report it represents cannot drift apart. */
+.jleg .jfill {
+  position: absolute; top: 12px; left: 0; width: 0; height: 0;
+  border-top: 2px solid var(--pos);
+}
+.jleg .jrunner {
+  position: absolute; top: 12px; left: 0; z-index: 2;
+  transform: translate(-50%, -50%);
+  padding: 0 4px; line-height: 0;
+  color: var(--pos); background: var(--surface);
+}
+.jleg.rolling .jfill { animation: jfill var(--roll, 5s) linear forwards; }
+.jleg.rolling .jrunner { animation: jroll var(--roll, 5s) linear forwards; }
+@keyframes jfill { from { width: 0; } to { width: 100%; } }
+@keyframes jroll { from { left: 0%; } to { left: 100%; } }
 .jleg .jsub { font-size: 11.4px; color: var(--ink-3); text-align: center; margin-top: 3px; line-height: 1.35; }
 
 /* The map. A fixed aspect rather than a fixed height, so it keeps its shape on a phone
@@ -440,6 +465,16 @@ th.rt, td.rt { text-align: right; }
   .jleg.moving .jtrack::before { border-top: 0; border-left: 2px solid var(--pos); }
   .jvehicle { position: absolute; left: -7px; top: 8px; padding: 4px 0; }
   .jleg .jsub { text-align: left; padding-left: 18px; margin-top: -6px; padding-bottom: 6px; }
+
+  /* The line runs downwards here, so the truck does too. Same duration, same meaning,
+     turned ninety degrees - animating `left` against a 2px-wide track would leave it
+     sitting still while the report claimed it was moving. */
+  .jleg .jfill { top: 0; left: 0; width: 0; border-top: 0; border-left: 2px solid var(--pos); }
+  .jleg .jrunner { top: 0; left: 0; }
+  .jleg.rolling .jfill { animation: jfilld var(--roll, 5s) linear forwards; }
+  .jleg.rolling .jrunner { animation: jrolld var(--roll, 5s) linear forwards; }
+  @keyframes jfilld { from { height: 0; } to { height: 100%; } }
+  @keyframes jrolld { from { top: 0%; } to { top: 100%; } }
 }
 
 .chain .stepline.done:not(:last-child)::before { background: var(--pos); }
@@ -655,6 +690,11 @@ th.rt, td.rt { text-align: right; }
   .toast { animation: none; }
   .pulse { animation: none; }
   .jdot.reported { animation: none; }
+  /* Without motion the truck would sit at the start and read as stuck, so it is placed
+     where it has got to and the line behind it is filled in. */
+  /* Parked at the far end with the line filled: the same fact, held still. */
+  .jleg.rolling .jrunner { animation: none; left: 100%; }
+  .jleg.rolling .jfill { animation: none; width: 100%; height: 100%; }
   .tile:hover { transform: none; }
 }
 

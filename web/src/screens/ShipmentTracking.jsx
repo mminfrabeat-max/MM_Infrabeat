@@ -82,10 +82,14 @@ function Count({ label, value, sub, tone = 'mut' }) {
 // before the dashboard says it arrived, and it is what the vendor is mailed about. A timer
 // writing that would be forging a receipt. So the feed reports the lorry at the gate, the
 // Delivered node pulses to say as much, and a person decides whether it is actually there.
+// Seconds between one report and the next. The truck crossing a leg takes exactly this,
+// so what the animation shows and what the feed claims are the same thing.
+const REPORT_GAP = 5;
+
 const FEED = [
   { at: 0, progress: 0.12, says: 'Left the vendor', detail: 'Picked up and on the road.' },
-  { at: 5, progress: 0.5, says: 'In transit', detail: 'About halfway.' },
-  { at: 10, progress: 1, says: 'At the gate', detail: 'Arrived at the plant.' }
+  { at: REPORT_GAP, progress: 0.5, says: 'In transit', detail: 'About halfway.' },
+  { at: REPORT_GAP * 2, progress: 1, says: 'At the gate', detail: 'Arrived at the plant.' }
 ];
 
 // One released order: its stage line, its map while it is moving, and whatever there is to
@@ -126,6 +130,11 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
   const report = enRoute ? FEED[reportIndex] : null;
   const atGate = Boolean(report) && reportIndex === FEED.length - 1;
 
+  // Which leg the vehicle is crossing: always into the stage after the one on record.
+  // Once the carrier says it is at the gate it stops travelling and the Delivered node
+  // pulses instead - it has arrived, and what is left is somebody agreeing that it has.
+  const travellingTo = enRoute && !atGate ? index + 1 : -1;
+
   // The in-transit report goes into the record, once. Guarded on the recorded stage rather
   // than on a flag, so a re-render, a reload or a second card cannot write it twice: after
   // the first one the stage is no longer "dispatched" and the test fails.
@@ -163,6 +172,9 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
         }
         atIndex={index}
         reportedIndex={atGate ? DELIVERED_AT : -1}
+        travellingTo={travellingTo}
+        travelSeconds={REPORT_GAP}
+        vehicle={modeIcon(document.transport)}
       />
 
       {(document.shipmentStageAt || document.shipmentNote) && (

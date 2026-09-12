@@ -208,14 +208,34 @@ export function ConsignmentMap({ from, to, progress = 0, trackingId, label }) {
 // `reportedIndex` is a stage the carrier has reported but nobody has recorded. It pulses
 // one step ahead of the solid ones, which is exactly what it means: something has
 // happened out there and the dashboard is waiting to be told it is true.
-export function StageJourney({ stages, atIndex, reportedIndex = -1 }) {
+// `reportedIndex` is a stage the carrier has reported but nobody has recorded. It pulses
+// one step ahead of the solid ones, which is exactly what it means: something has happened
+// out there and the dashboard is waiting to be told it is true.
+//
+// `travellingTo` is the stage something is on its way to. The leg before it gets a vehicle
+// that crosses it over `travelSeconds`, filling the line in behind. Everywhere else a
+// vehicle is a label meaning "this leg has started"; here it is a position, and it is worth
+// the difference because this is the one journey the screen is watching in real time.
+export function StageJourney({ stages, atIndex, reportedIndex = -1, travellingTo = -1, travelSeconds = 5, vehicle = "truck" }) {
   return (
     <div className="journey">
       {stages.map((stage, i) => (
         <Fragment key={stage.key}>
           {i > 0 && (
-            <div className={`jleg ${i <= atIndex ? 'moving' : ''}`}>
-              <div className="jtrack" />
+            <div
+              className={`jleg ${i <= atIndex ? 'moving' : ''} ${i === travellingTo ? 'rolling' : ''}`}
+              style={i === travellingTo ? { '--roll': `${travelSeconds}s` } : undefined}
+            >
+              <div className="jtrack">
+                {i === travellingTo && (
+                  <>
+                    <span className="jfill" />
+                    <span className="jrunner">
+                      <Icon name={vehicle} size={15} />
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           )}
           <Node
