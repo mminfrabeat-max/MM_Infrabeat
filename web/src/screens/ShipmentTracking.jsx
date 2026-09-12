@@ -14,11 +14,11 @@
 // an order being at sea are two different questions asked at two different times, and the
 // page for deciding whether to approve something is not the page for watching it travel.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { inr } from '../format.js';
 import { byPlant } from '../selectors.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
-import { StageJourney, VesselMap, modeIcon } from '../components/journey.jsx';
+import { StageJourney, VesselMap, ConsignmentMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
 // can draw the line and the button before asking.
@@ -64,7 +64,129 @@ function Count({ label, value, sub, tone = 'mut' }) {
   );
 }
 
-export default function ShipmentTracking({ data, plant, canDecide, onAdvance, busyId, onOpenDocument }) {
+// How long the carrier "takes" to get from the road to the gate, once a tracking number
+// has been entered.
+//
+// Ten seconds, and it is a demonstration, not a delivery. There is no carrier feed behind
+// any of this: the map moves because a timer said so. What that buys is being able to
+// show somebody the whole cycle in a minute instead of a fortnight, and the screen says
+// as much rather than letting it pass for live tracking.
+//
+// The important half is what it does NOT do: nothing is recorded when the timer fires.
+// The order still sits at the stage it was at until a person presses the button. A
+// simulation that wrote to the audit trail would be forging it.
+const CARRIER_SECONDS = 10;
+
+// The tracking flow for one order: enter the number, watch it, confirm it arrived.
+function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
+  const [trackingId, setTrackingId] = useState('');
+  const [note, setNote] = useState('');
+  const [atGate, setAtGate] = useState(false);
+
+  const stage = document.shipmentStage || 'released';
+  const tracking = document.trackingId;
+  const enRoute = Boolean(tracking) && (stage === 'dispatched' || stage === 'transit');
+
+  // The timer runs only while something is actually on the road. It is cleared on the way
+  // out so a card that is closed or re-rendered does not leave one running behind it.
+  useEffect(() => {
+    if (!enRoute) {
+      setAtGate(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setAtGate(true), CARRIER_SECONDS * 1000);
+    return () => clearTimeout(timer);
+  }, [enRoute, document.id, tracking]);
+
+  // Waiting for the vendor to send a number back.
+  if (stage === 'sent' && !tracking) {
+    return (
+      <div className="cq">
+        <div className="cqh">
+          <Icon name="mail" size={13} /> Waiting for the vendor
+        </div>
+        <div className="cqt">
+          The order has gone to {document.supplierName}. When they reply with a tracking
+          number, put it in here and the consignment can be followed to the plant.
+        </div>
+        <div className="footerbar">
+          <input
+            className="noteinput"
+            placeholder="Tracking number from the vendor, for example 12345678"
+            value={trackingId}
+            onChange={(e) => setTrackingId(e.target.value)}
+            disabled={busy}
+          />
+          <button
+            className="btn emph"
+            type="button"
+            disabled={busy || !trackingId.trim()}
+            onClick={() => onTrack(document, trackingId.trim())}
+          >
+            <Icon name="truck" size={13} />
+            {busy ? 'Saving…' : 'Track this consignment'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // On the road, with a number to follow it by.
+  if (enRoute) {
+    return (
+      <div className="vsplit">
+        <div className="vsq">
+          <ConsignmentMap
+            from={document.supplierCity || document.supplierName}
+            to={document.plant}
+            arrived={atGate}
+            trackingId={tracking}
+          />
+        </div>
+        <div className="vfacts">
+          <div className="kv"><span>Tracking number</span><b>{tracking}</b></div>
+          <div className="kv"><span>Carrier</span><b>{document.supplierName}</b></div>
+          <div className="kv"><span>Going to</span><b>{document.plant} plant</b></div>
+          <div className="kv">
+            <span>Reported</span>
+            <b>{atGate ? 'At the gate' : 'On the way'}</b>
+          </div>
+
+          {atGate ? (
+            <>
+              <div className="flagline">
+                <Icon name="check" size={14} />
+                The carrier reports it at the {document.plant} gate. Confirm it is actually
+                there and the delivery is recorded.
+              </div>
+              <div className="footerbar">
+                <input
+                  className="noteinput"
+                  placeholder="Note, for example a gate pass number"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  disabled={busy}
+                />
+                <button className="btn emph" type="button" disabled={busy} onClick={() => onArrive(document, note)}>
+                  <Icon name="check" size={13} />
+                  {busy ? 'Saving…' : 'Confirm delivered'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="footnote mut">
+              Following {tracking}. The map updates as the carrier reports in.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export default function ShipmentTracking({ data, plant, canDecide, onAdvance, onTrack, onArrive, busyId, onOpenDocument }) {
   const orders = trackedOrders(data.documents, plant);
   const [notes, setNotes] = useState({});
 
@@ -121,6 +243,9 @@ export default function ShipmentTracking({ data, plant, canDecide, onAdvance, bu
           const next = nextStageOf(d);
           const busy = busyId === d.id;
           const complete = index === STAGES.length - 1;
+          // The consignment flow owns the card from "sent to vendor" until it is delivered:
+          // that is the span a tracking number covers.
+          const tracked = STAGES[index].key === 'sent' || ((d.trackingId) && (STAGES[index].key === 'dispatched' || STAGES[index].key === 'transit'));
 
           return (
             <Card
@@ -170,7 +295,18 @@ export default function ShipmentTracking({ data, plant, canDecide, onAdvance, bu
                 </div>
               )}
 
-              {next && canDecide ? (
+              {/* Once a tracking number is in play the consignment takes over the bottom of
+                  the card: there is a map to look at and one thing to do, rather than a
+                  step to tick. Everything before and after that is the ordinary bar. */}
+              {canDecide && tracked ? (
+                <Consignment
+                  document={d}
+                  busy={busy}
+                  onTrack={onTrack}
+                  onArrive={onArrive}
+                  onAdvance={onAdvance}
+                />
+              ) : next && canDecide ? (
                 <div className="footerbar">
                   <input
                     className="noteinput"

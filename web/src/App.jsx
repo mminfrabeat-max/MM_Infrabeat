@@ -230,6 +230,39 @@ export default function App() {
   // The stage is sent along with the order, so a screen that has been open a while cannot
   // skip a step: the server checks it against where the order actually is and refuses if
   // the two disagree.
+  // The vendor's tracking number, and the dispatch it implies.
+  async function trackShipment(document, trackingId) {
+    setBusy(document.id);
+    try {
+      await api.trackShipment(document.id, trackingId);
+      await load();
+      toast('pri', 'truck', `${document.id} is on its way. Following ${trackingId}.`);
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Confirming it reached the gate. The carrier feed can say it has arrived; only this
+  // records that it did.
+  async function confirmArrival(document, note) {
+    setBusy(document.id);
+    try {
+      const result = await api.confirmArrival(document.id, note);
+      await load();
+      toast(
+        'pos',
+        'check',
+        `${document.id} recorded as delivered. Book the goods receipt when it is in stock.`
+      );
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function advanceShipment(document, stage, note) {
     setBusy(document.id);
     try {
@@ -507,6 +540,8 @@ export default function App() {
             plant={plant}
             canDecide={data.canDecide}
             onAdvance={advanceShipment}
+            onTrack={trackShipment}
+            onArrive={confirmArrival}
             busyId={busy}
             onOpenDocument={openDocument}
           />

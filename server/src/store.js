@@ -156,6 +156,42 @@ export async function saveStockRequest(input) {
 
 // --- Where the goods are ------------------------------------------------------
 
+// Records the tracking number the vendor sent back.
+//
+// Kept apart from the stages because it is a different kind of fact: a stage is
+// something we observed, a tracking number is something we were told. It is also the
+// only identifier on the document that belongs to somebody else.
+export async function saveTrackingId(input) {
+  if (config.dataSource === 'db') return database.saveTrackingId(input);
+
+  if (config.dataSource === 'excel') {
+    await excel.updateDocument(input.documentId, {
+      trackingId: input.trackingId,
+      trackingAt: input.at
+    });
+
+    await excel
+      .appendActionLog({
+        at: input.at,
+        action: 'tracking number',
+        documentId: input.documentId,
+        documentType: input.document.kind,
+        supplierName: input.document.supplierName || '',
+        value: '',
+        decidedBy: input.recordedBy,
+        note: input.trackingId,
+        emailTo: '',
+        emailStatus: ''
+      })
+      .catch((error) => console.error('[api] tracking saved but not logged:', error.message));
+
+    return;
+  }
+
+  refuse();
+}
+
+
 // Records that a released order has moved on to the next shipment stage.
 //
 // The same shape as a decision: write the change, then log it. The stage is stored on

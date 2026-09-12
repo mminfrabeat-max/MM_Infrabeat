@@ -230,6 +230,8 @@ export const dbProvider = {
         shipmentStage: d.shipment_stage || '',
         shipmentStageAt: d.shipment_stage_at || '',
         shipmentNote: d.shipment_note || '',
+        trackingId: d.tracking_id || '',
+        trackingAt: d.tracking_at || '',
         decisionNote: d.decision_note || ''
       };
     });

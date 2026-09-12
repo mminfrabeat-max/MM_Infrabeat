@@ -57,7 +57,9 @@ function upgradeInPlace(db) {
     { table: 'purchase_documents', column: 'source_doc_number', type: 'TEXT' },
     { table: 'purchase_documents', column: 'shipment_stage', type: 'TEXT' },
     { table: 'purchase_documents', column: 'shipment_stage_at', type: 'TEXT' },
-    { table: 'purchase_documents', column: 'shipment_note', type: 'TEXT' }
+    { table: 'purchase_documents', column: 'shipment_note', type: 'TEXT' },
+    { table: 'purchase_documents', column: 'tracking_id', type: 'TEXT' },
+    { table: 'purchase_documents', column: 'tracking_at', type: 'TEXT' }
   ];
 
   for (const { table, column, type } of wanted) {

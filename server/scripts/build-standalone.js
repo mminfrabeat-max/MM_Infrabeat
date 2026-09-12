@@ -260,6 +260,69 @@ function buildShim(data) {
       });
     }
 
+    // The vendor sending back a tracking number, and the dispatch that implies.
+    if (url.indexOf("/api/shipments/") === 0 && url.indexOf("/tracking") !== -1) {
+      var trackId = decodeURIComponent(url.split("/api/shipments/")[1].split("/")[0]);
+      var trackDoc = DATA.dashboard.documents.find(function (d) { return d.id === trackId; });
+      if (!trackDoc) return reply({ error: "No document found with the number " + trackId + "." }, 404);
+
+      var given = (body.trackingId || "").trim();
+      if (!given) return reply({ error: "Enter the tracking number the vendor sent back." }, 400);
+      if (trackDoc.kind !== "PO" || trackDoc.status !== "approved") {
+        return reply({ error: trackId + " has not been released yet." }, 409);
+      }
+
+      trackDoc.trackingId = given;
+      trackDoc.trackingAt = now();
+      if ((trackDoc.shipmentStage || "released") === "sent") {
+        trackDoc.shipmentStage = "dispatched";
+        trackDoc.shipmentStageAt = trackDoc.trackingAt;
+        trackDoc.shipmentNote = "Tracking number " + given + " from the vendor";
+      }
+
+      DATA.actionLog.entries.unshift({
+        at: trackDoc.trackingAt, action: "tracking number", documentId: trackId,
+        documentType: trackDoc.kind, supplierName: trackDoc.supplierName, value: "",
+        decidedBy: DATA.dashboard.user.name, note: given, emailTo: "", emailStatus: ""
+      });
+
+      return reply({ id: trackId, trackingId: given, at: trackDoc.trackingAt, stage: trackDoc.shipmentStage });
+    }
+
+    // Confirming it is at the gate, recording every stage in between rather than jumping.
+    if (url.indexOf("/api/shipments/") === 0 && url.indexOf("/arrive") !== -1) {
+      var arrId = decodeURIComponent(url.split("/api/shipments/")[1].split("/")[0]);
+      var arrDoc = DATA.dashboard.documents.find(function (d) { return d.id === arrId; });
+      if (!arrDoc) return reply({ error: "No document found with the number " + arrId + "." }, 404);
+      if (!arrDoc.trackingId) {
+        return reply({ error: arrId + " has no tracking number, so there is nothing to confirm." }, 409);
+      }
+
+      var order = ["released", "sent", "dispatched", "transit", "delivered", "received"];
+      var where = order.indexOf(arrDoc.shipmentStage || "released");
+      var stop = order.indexOf("delivered");
+      if (where >= stop) return reply({ error: arrId + " is already at " + arrDoc.shipmentStage + "." }, 409);
+
+      var walked = [];
+      while (where < stop) {
+        where = where + 1;
+        arrDoc.shipmentStage = order[where];
+        arrDoc.shipmentStageAt = now();
+        arrDoc.shipmentNote =
+          order[where] === "delivered"
+            ? (body.note || "Confirmed at the gate against " + arrDoc.trackingId)
+            : "From the carrier feed for " + arrDoc.trackingId;
+        walked.push(order[where]);
+        DATA.actionLog.entries.unshift({
+          at: arrDoc.shipmentStageAt, action: order[where], documentId: arrId,
+          documentType: arrDoc.kind, supplierName: arrDoc.supplierName, value: arrDoc.total,
+          decidedBy: DATA.dashboard.user.name, note: arrDoc.shipmentNote, emailTo: "", emailStatus: ""
+        });
+      }
+
+      return reply({ id: arrId, recorded: walked, stage: arrDoc.shipmentStage });
+    }
+
     // Ask needs the rules that live on the server, and there is no server here. Saying so
     // is better than a bare 404, which the screen would show as an unexplained failure.
     if (url.indexOf("/api/ask") === 0) {

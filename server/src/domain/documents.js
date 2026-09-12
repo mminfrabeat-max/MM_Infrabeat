@@ -109,6 +109,9 @@ export function enrichDocument(document, scoresById, materials = [], contracts =
     items: itemsOf(document),
     total: totalValue(document),
     supplierName: score ? score.name : 'Unknown vendor',
+    // Where the vendor ships from. Only used to place a consignment between there and the
+    // plant; the dashboard has no other use for a vendor's address.
+    supplierCity: score ? score.city || '' : '',
     supplierScore: score,
     percentOverContract,
     isOverdue: document.hoursWaiting > OVERDUE_HOURS,

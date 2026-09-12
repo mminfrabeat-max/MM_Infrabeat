@@ -152,6 +152,8 @@ function buildDocuments(documentRows, itemRows) {
       shipmentStage: asText(row.shipmentStage),
       shipmentStageAt: asText(row.shipmentStageAt),
       shipmentNote: asText(row.shipmentNote),
+      trackingId: asText(row.trackingId),
+      trackingAt: asText(row.trackingAt),
       reason: asText(row.reason),
       items,
       // Who raised it. Null rather than an empty object, so the mailer can ask "is there

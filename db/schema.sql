@@ -224,6 +224,9 @@ CREATE TABLE purchase_documents (
   shipment_stage     TEXT,
   shipment_stage_at  TEXT,
   shipment_note      TEXT,
+  -- The vendor's own tracking number, sent back when they dispatched.
+  tracking_id        TEXT,
+  tracking_at        TEXT,
   raised_on          TEXT,
   decided_by_user_id INTEGER REFERENCES users(id),
   decided_at         TEXT,

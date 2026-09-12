@@ -125,6 +125,68 @@ function Leg({ mode, started, sub }) {
   );
 }
 
+// Where the places on a road or rail consignment are.
+//
+// A short table rather than a lookup service, because there are nine vendor towns and
+// three plants and that is the whole world this dashboard has. A geocoder would be a
+// network call, a key and a failure mode, to answer a question whose answer never changes.
+const PLACES = {
+  Mumbai: { lat: 19.076, lng: 72.877 },
+  Pune: { lat: 18.52, lng: 73.856 },
+  Nagpur: { lat: 21.146, lng: 79.088 },
+  Bhilai: { lat: 21.209, lng: 81.428 },
+  Rajkot: { lat: 22.303, lng: 70.802 },
+  Raipur: { lat: 21.251, lng: 81.629 },
+  Udaipur: { lat: 24.585, lng: 73.712 },
+  Kolhapur: { lat: 16.705, lng: 74.243 },
+  Nashik: { lat: 19.997, lng: 73.79 },
+  Muscat: { lat: 23.588, lng: 58.383 },
+  Dubai: { lat: 25.204, lng: 55.27 }
+};
+
+export function placeOf(name) {
+  const key = String(name || '').split(',')[0].trim();
+  return PLACES[key] || null;
+}
+
+// The consignment on a map, between the vendor and the plant.
+//
+// Two positions only: somewhere on the way, and at the gate. Not a track - there is no
+// feed behind this and drawing a route would be inventing one. The midpoint is honest
+// about being an approximation; a precise dot in the middle of a field would not be.
+export function ConsignmentMap({ from, to, arrived, trackingId }) {
+  const start = placeOf(from);
+  const end = placeOf(to);
+  if (!end) return null;
+
+  const at = arrived || !start ? end : { lat: (start.lat + end.lat) / 2, lng: (start.lng + end.lng) / 2 };
+  const q = `${at.lat.toFixed(3)},${at.lng.toFixed(3)}`;
+  const zoom = arrived ? 11 : 6;
+  const embed = `https://maps.google.com/maps?q=${q}&z=${zoom}&output=embed`;
+  const full = `https://www.google.com/maps?q=${q}`;
+
+  return (
+    <div className="vmap">
+      <iframe
+        title={arrived ? `Consignment at ${to}` : `Consignment between ${from} and ${to}`}
+        src={embed}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      <div className="vmapfoot">
+        <span>
+          <Icon name={arrived ? "factory" : "truck"} size={13} />{" "}
+          {arrived ? `At the ${to} plant gate` : `On the way to ${to}`}
+          {trackingId ? ` · ${trackingId}` : ''}
+        </span>
+        <a href={full} target="_blank" rel="noreferrer noopener">
+          Open in Google Maps
+        </a>
+      </div>
+    </div>
+  );
+}
+
 // The stages a released order goes through, drawn as one line.
 //
 // The same shape as the journeys below, and deliberately so: this is the same idea at a

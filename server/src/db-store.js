@@ -247,6 +247,29 @@ export function saveShipmentStage({ documentId, stage, at, note, actionLabel, re
   });
 }
 
+// Records the vendor's tracking number against the order.
+export function saveTrackingId({ documentId, trackingId, at, recordedBy, recordedByAddress }) {
+  return transaction((db) => {
+    const row = documentRowFor(documentId);
+    if (!row) throw new Error(`Document ${documentId} is not in the database.`);
+
+    db.prepare('UPDATE purchase_documents SET tracking_id = ?, tracking_at = ? WHERE id = ?').run(
+      trackingId,
+      at,
+      row.id
+    );
+
+    const userId = userIdFor(recordedByAddress || recordedBy);
+    db.prepare(
+      `INSERT INTO action_log
+         (occurred_at, action, user_id, acted_by, document_id, document_number, document_kind, vendor_name, note)
+       VALUES (?, 'tracking number', ?, ?, ?, ?, ?, ?, ?)`
+    ).run(at, userId, recordedBy, row.id, documentId, row.kind, row.vendor_name, trackingId);
+
+    return { id: documentId, trackingId };
+  });
+}
+
 // Every document number in use, for handing the next one out.
 export function allDocumentNumbers() {
   return all('SELECT doc_number FROM purchase_documents').map((r) => r.doc_number);

@@ -456,6 +456,68 @@ function initiatorHtml(document, outcome, decidedBy, note, sentence, target, rai
 }
 
 // A plain mail the manager typed themselves, from the Write a mail box.
+// The order itself, to the vendor, the moment it is released.
+//
+// This is the first message in the whole flow that leaves the company. Everything else
+// the dashboard sends is internal - a decision, a reminder, a record - and goes to
+// somebody who already knows what the document is. A vendor does not, so this one has
+// to stand on its own: what to send, how much, where, by when, on what terms.
+//
+// It ends by asking for a tracking number, because that reply is what the dashboard is
+// waiting for. Everything after this point on the tracking screen starts with it.
+export async function sendVendorOrder({ document, releasedBy }) {
+  // Vendors are not in MAIL_DIRECTORY - it holds colleagues - so this resolves to
+  // nothing and goes to the operator with a banner saying who it was meant for. That is
+  // the right behaviour for a prototype: a real order mailed to a real vendor by
+  // accident is not a mistake you get to undo.
+  const target = addressee(document.supplierName);
+  const to = target.box || config.mail.to || config.mail.user;
+
+  if (!mailConfigured()) {
+    return { sent: false, to, status: 'Not sent: email is not configured in .env' };
+  }
+
+  const lines = [
+    ...redirectLineText(document.supplierName, target),
+    `${document.kind} ${document.id} has been released and is now with you.`,
+    '',
+    `Material        ${document.material} (${document.materialCode})`,
+    `Quantity        ${Number(document.quantity).toLocaleString('en-IN')} ${document.unit}`,
+    `Rate            ${money(document.rate)} per ${document.unit}`,
+    `Deliver to      ${document.plant} plant`,
+    `Required by     ${document.deliveryDate || 'as soon as possible'}`,
+    `Transport       ${document.transport || 'your choice'}`,
+    `Incoterm        ${document.incoterm || 'not applicable'}`,
+    '',
+    `Order value     ${money(totalValue(document))}`,
+    `Payment terms   ${document.payTerms || 'as per contract'}`,
+    '',
+    'Please confirm dispatch and send us the tracking number for the consignment. We',
+    'follow the delivery against it from our side, so the sooner we have it the less we',
+    'need to ask.',
+    '',
+    `Released by ${releasedBy} on the InfraBeat procurement dashboard.`
+  ];
+
+  try {
+    const info = await getTransport().sendMail({
+      from: config.mail.from || config.mail.user,
+      to,
+      subject: `${document.kind} ${document.id} released — ${document.material} for ${document.plant}`,
+      text: lines.join('\n')
+    });
+    return {
+      sent: true,
+      to,
+      delivered: !target.redirected,
+      status: `Sent ${info.messageId || ''}`.trim(),
+      preview: previewLink(info)
+    };
+  } catch (error) {
+    return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
+  }
+}
+
 export async function sendPlainEmail({ to, subject, body, from }) {
   if (!mailConfigured()) {
     return { sent: false, to, status: 'Not sent: email is not configured in .env' };

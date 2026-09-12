@@ -18,9 +18,11 @@ import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
 import { getDocuments, getSituations, getStock, getSupplierScores } from '../data-service.js';
 import * as store from '../store.js';
-import { sendDecisionEmail, sendInitiatorEmail, sendPlainEmail } from '../mailer.js';
+import { sendDecisionEmail, sendInitiatorEmail, sendPlainEmail, sendVendorOrder } from '../mailer.js';
 import { canDecide, outcomeOf, outcomeSentence, whoseTurn } from '../domain/approvals.js';
-import { canAdvanceTo, LAST_STAGE } from '../domain/shipment.js';
+import { canAdvanceTo, currentStage, isTrackable, LAST_STAGE, STAGES } from '../domain/shipment.js';
+
+const STAGE_COUNT = STAGES.length;
 import { readIntent } from '../domain/ask.js';
 import { recipientFor, maskedAddress } from '../domain/recipients.js';
 import { config } from '../config.js';
@@ -133,9 +135,19 @@ async function decide(req, res, action) {
     initiatorMail
   });
 
+  // A released purchase order goes to the vendor, and only then. Not on the first
+  // approval of a two step order - that one is not released and mailing it would be
+  // telling a vendor to start on something that has not been agreed - and never for a
+  // requisition, which commits nobody to anything.
+  let vendorMail = null;
+  if (outcome.final && outcome.status === 'approved' && document.kind === 'PO') {
+    vendorMail = await sendVendorOrder({ document, releasedBy: decidedBy });
+  }
+
   res.json({
     status: outcome.status,
     final: outcome.final,
+    vendorEmail: withoutAddress(vendorMail),
     movedTo: outcome.movedTo,
     step: outcome.step,
     sentence,
@@ -277,6 +289,130 @@ actionsRouter.post(
       at,
       complete: verdict.stage.key === LAST_STAGE
     });
+  })
+);
+
+// POST /api/shipments/:id/tracking   { trackingId }
+//
+// The number the vendor sent back when they dispatched. Recording it also moves the order
+// on, because a vendor handing over a tracking number IS the dispatch - waiting for a
+// separate click to say so would be recording the same event twice.
+//
+// It is stored as given. No format is imposed: every carrier numbers differently, and a
+// dashboard that rejected a real number because it did not match a pattern would be wrong
+// in the one way that matters.
+actionsRouter.post(
+  '/shipments/:id/tracking',
+  asyncHandler(async (req, res) => {
+    if (!requireWritableSource(res)) return;
+
+    const documents = await getDocuments();
+    const document = documents.find((d) => d.id === req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: `No document found with the number ${req.params.id}.` });
+    }
+
+    const trackingId = String(req.body?.trackingId || '').trim();
+    if (!trackingId) {
+      return res.status(400).json({ error: 'Enter the tracking number the vendor sent back.' });
+    }
+    if (trackingId.length > 60) {
+      return res.status(400).json({ error: 'That is longer than any tracking number.' });
+    }
+
+    if (!isTrackable(document)) {
+      return res.status(409).json({ error: `${document.id} has not been released yet.` });
+    }
+
+    const at = stamp();
+    await store.saveTrackingId({
+      documentId: document.id,
+      document,
+      trackingId,
+      at,
+      recordedBy: req.user.name,
+      recordedByAddress: req.user.username
+    });
+
+    // Move it to dispatched if it is not there yet. One step at a time, as always.
+    const verdict = canAdvanceTo(document, null);
+    let stage = currentStage(document);
+    if (verdict.ok && verdict.stage.key === 'dispatched') {
+      await store.saveShipmentStage({
+        documentId: document.id,
+        document,
+        stage: verdict.stage.key,
+        at,
+        note: `Tracking number ${trackingId} from the vendor`,
+        actionLabel: verdict.stage.label.toLowerCase(),
+        recordedBy: req.user.name,
+        recordedByAddress: req.user.username
+      });
+      stage = verdict.stage.key;
+    }
+
+    res.json({ id: document.id, trackingId, at, stage });
+  })
+);
+
+// POST /api/shipments/:id/arrive   { note }
+//
+// Confirms the consignment is at the gate, recording every stage between where it was and
+// there rather than jumping.
+//
+// Jumping would be easier and would be a lie: "delivered" on an order with no dispatch
+// behind it is how goods get booked in that nobody ever saw leave. So the steps are
+// written one at a time, each with its own time, and the ones inferred from the carrier
+// say so in their note rather than pretending somebody watched them.
+actionsRouter.post(
+  '/shipments/:id/arrive',
+  asyncHandler(async (req, res) => {
+    if (!requireWritableSource(res)) return;
+
+    let documents = await getDocuments();
+    let document = documents.find((d) => d.id === req.params.id);
+    if (!document) {
+      return res.status(404).json({ error: `No document found with the number ${req.params.id}.` });
+    }
+    if (!document.trackingId) {
+      return res.status(409).json({ error: `${document.id} has no tracking number, so there is nothing to confirm.` });
+    }
+
+    const note = String(req.body?.note || '').trim();
+    const recorded = [];
+
+    // Walk forwards to "delivered" and no further. Booking it into stock stays a separate
+    // decision, because that is the one that puts the material on the books.
+    for (let step = 0; step < STAGE_COUNT; step++) {
+      const verdict = canAdvanceTo(document, null);
+      if (!verdict.ok || currentStage(document) === 'delivered') break;
+
+      const at = stamp();
+      await store.saveShipmentStage({
+        documentId: document.id,
+        document,
+        stage: verdict.stage.key,
+        at,
+        note:
+          verdict.stage.key === 'delivered'
+            ? note || `Confirmed at the gate against ${document.trackingId}`
+            : `From the carrier feed for ${document.trackingId}`,
+        actionLabel: verdict.stage.label.toLowerCase(),
+        recordedBy: req.user.name,
+        recordedByAddress: req.user.username
+      });
+      recorded.push(verdict.stage.key);
+
+      documents = await getDocuments();
+      document = documents.find((d) => d.id === req.params.id);
+      if (currentStage(document) === 'delivered') break;
+    }
+
+    if (recorded.length === 0) {
+      return res.status(409).json({ error: `${document.id} is already at ${currentStage(document)}.` });
+    }
+
+    res.json({ id: document.id, recorded, stage: currentStage(document) });
   })
 );
 

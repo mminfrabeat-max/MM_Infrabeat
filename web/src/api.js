@@ -83,6 +83,12 @@ export const api = {
   // cannot skip a step without the server noticing.
   advanceShipment: (id, stage, note) =>
     post(`/api/shipments/${encodeURIComponent(id)}/advance`, { stage, note }),
+  // The vendor's tracking number. Recording it also dispatches the order, because a
+  // vendor handing one over is the dispatch.
+  trackShipment: (id, trackingId) =>
+    post(`/api/shipments/${encodeURIComponent(id)}/tracking`, { trackingId }),
+  // Confirms it is at the gate, recording every stage between there and where it was.
+  confirmArrival: (id, note) => post(`/api/shipments/${encodeURIComponent(id)}/arrive`, { note }),
   // `toName` is a person named on the dashboard, whose address the backend looks up and
   // never sends here. `to` is an address typed by hand, which is the sender's own business.
   sendMail: ({ toName, to, subject, body }) => post('/api/mail', { toName, to, subject, body }),

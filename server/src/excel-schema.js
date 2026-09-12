@@ -109,7 +109,11 @@ export const COLUMNS = {
     // request to buy.
     { key: 'shipmentStage', header: 'Shipment stage', width: 18 },
     { key: 'shipmentStageAt', header: 'Stage recorded at', width: 22 },
-    { key: 'shipmentNote', header: 'Shipment note', width: 40 }
+    { key: 'shipmentNote', header: 'Shipment note', width: 40 },
+    // What the vendor sent back when they dispatched. It is their number, not ours, and
+    // it is the only thing on the document that came from outside the company.
+    { key: 'trackingId', header: 'Tracking number', width: 18 },
+    { key: 'trackingAt', header: 'Tracking recorded at', width: 22 }
   ],
 
   orderItems: [
