@@ -99,19 +99,21 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
   const complete = index === STAGES.length - 1;
   const tracking = document.trackingId;
 
-  // A sea order is not followed the way a lorry is, and trying to do both left it with
-  // neither: the simulated feed took the ordinary buttons away, and the consignment panel
-  // that replaces them is not drawn for a vessel because a vessel already has a real map.
-  // An import order reaching the gate had nothing at all to press.
+  // An import makes two journeys and they are followed differently.
   //
-  // So a vessel opts out of the whole simulated flow. It has a position from an actual
-  // feed and a bill of lading to follow it by, and it keeps the plain one-step bar from
-  // released through to goods receipt.
+  // The sea leg has a real position from an AIS feed, and no tracking number would
+  // improve on it. The inland leg - the landing port to the plant - is the one a lorry
+  // makes, and that is what the vendor's number follows. So an import gets the same
+  // consignment tracking a domestic order gets; it simply starts at the port rather
+  // than at the vendor, because nothing drives from Oman.
   const bySea = Boolean(document.vessel);
-  const enRoute = Boolean(tracking) && !bySea && (stage === 'dispatched' || stage === 'transit');
+  const enRoute = Boolean(tracking) && (stage === 'dispatched' || stage === 'transit');
+  const waitingForNumber = stage === 'sent' && !tracking;
 
-  // Nor is it asked for a tracking number it already has under another name.
-  const waitingForNumber = stage === 'sent' && !tracking && !bySea;
+  // Where the road part begins. For an import that is wherever the ship docked.
+  const leavesFrom = bySea
+    ? document.vessel.to
+    : document.supplierCity || document.supplierName;
 
   // One timer per report, all cleared together. Restarted whenever the order or its number
   // changes, so a card that has been re-rendered does not inherit a stale run.
@@ -185,9 +187,10 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
         </div>
       )}
 
-      {/* A vessel at sea has a real position from a real feed. Shown whenever there is one,
-          whatever stage the order is at. */}
-      {document.vessel && (
+      {/* A vessel at sea has a real position from a real feed. It gives way once the
+          goods are inland and a lorry is carrying them, because two maps of two
+          different legs side by side is a puzzle, not an answer. */}
+      {document.vessel && !enRoute && (
         <div className="vsplit">
           <div className="vsq">
             <VesselMap vessel={document.vessel} />
@@ -215,7 +218,12 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
           </div>
           <div className="cqt">
             The order has gone to {document.supplierName}. When they reply with a tracking
-            number, put it in here and the consignment can be followed to the plant.
+            number, put it in here and the consignment can be followed to the plant
+            {bySea ? ` once it clears ${document.vessel.to}` : ''}.
+          </div>
+          <div className="cqt">
+            {bySea &&
+              `The vessel is tracked above until it docks; this number follows the inland leg.`}
           </div>
           <div className="footerbar">
             <input
@@ -245,7 +253,7 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
         <div className="vsplit">
           <div className="vsq">
             <ConsignmentMap
-              from={document.supplierCity || document.supplierName}
+              from={leavesFrom}
               to={document.plant}
               progress={report.progress}
               trackingId={tracking}
@@ -254,7 +262,7 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
           </div>
           <div className="vfacts">
             <div className="kv"><span>Tracking number</span><b>{tracking}</b></div>
-            <div className="kv"><span>From</span><b>{document.supplierCity || document.supplierName}</b></div>
+            <div className="kv"><span>From</span><b>{leavesFrom}</b></div>
             <div className="kv"><span>Going to</span><b>{document.plant} plant</b></div>
             <div className="kv"><span>Carrier reports</span><b>{report.says}</b></div>
             <div className="kv"><span>Recorded so far</span><b>{STAGES[index].label}</b></div>

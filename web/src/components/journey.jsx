@@ -141,7 +141,13 @@ const PLACES = {
   Kolhapur: { lat: 16.705, lng: 74.243 },
   Nashik: { lat: 19.997, lng: 73.79 },
   Muscat: { lat: 23.588, lng: 58.383 },
-  Dubai: { lat: 25.204, lng: 55.27 }
+  Dubai: { lat: 25.204, lng: 55.27 },
+  // Landing ports. An import is followed from here to the plant, because that is the
+  // leg a lorry makes - the water before it is the vessel map’s job.
+  Mundra: { lat: 22.839, lng: 69.721 },
+  Kandla: { lat: 23.033, lng: 70.221 },
+  Salalah: { lat: 17.019, lng: 54.089 },
+  'Jebel Ali': { lat: 25.011, lng: 55.061 }
 };
 
 export function placeOf(name) {
