@@ -70,11 +70,16 @@ function Count({ label, value, sub, tone = 'mut' }) {
 // not a delivery: there is no feed behind any of it and the screen says so. What it buys
 // is showing somebody the whole cycle in half a minute instead of a fortnight.
 //
-// The important half is what it does NOT do. Nothing is recorded when a timer fires. The
-// order sits at the stage it was at until a person presses the button, and a simulation
-// that wrote to the audit trail would be forging it. So there are two things on screen at
-// once - what the carrier says, and what has been recorded - and they are labelled
-// separately because they are not the same claim.
+// What a report is allowed to write is the line worth being careful about.
+//
+// "In transit" is recorded when the carrier says so, because that is exactly the kind of
+// thing a carrier knows and nobody here can see - and leaving the stage line one step
+// behind the feed made the screen argue with itself.
+//
+// "Delivered" is not. It is the last point at which somebody can look at what turned up
+// before the dashboard says it arrived, and it is what the vendor is mailed about. A
+// timer writing that would be forging a receipt, so the feed reports the lorry at the
+// gate and stops, and a person decides whether it is actually there.
 const FEED = [
   { at: 0, progress: 0.12, says: 'Left the vendor', detail: 'Picked up and on the road.' },
   { at: 5, progress: 0.5, says: 'In transit', detail: 'About halfway.' },
@@ -82,7 +87,7 @@ const FEED = [
 ];
 
 // The tracking flow for one order: enter the number, watch it, confirm it arrived.
-function Consignment({ document, busy, onTrack, onArrive }) {
+function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
   const [trackingId, setTrackingId] = useState('');
   const [note, setNote] = useState('');
   const [reportIndex, setReportIndex] = useState(0);
@@ -107,6 +112,16 @@ function Consignment({ document, busy, onTrack, onArrive }) {
 
   const report = FEED[reportIndex];
   const atGate = reportIndex === FEED.length - 1;
+
+  // The in-transit report goes into the record, once. Guarded on the recorded stage
+  // rather than on a flag, so a re-render, a reload or a second card cannot write it
+  // twice: after the first one the stage is no longer "dispatched" and the test fails.
+  useEffect(() => {
+    if (report?.says === 'In transit' && stage === 'dispatched' && !busy) {
+      onAdvance(document, 'transit', `From the carrier feed for ${tracking}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report, stage]);
 
   // Waiting for the vendor to send a number back.
   if (stage === 'sent' && !tracking) {
@@ -166,6 +181,12 @@ function Consignment({ document, busy, onTrack, onArrive }) {
             <span>Recorded so far</span>
             <b>{STAGES.find((x) => x.key === stage)?.label || stage}</b>
           </div>
+          {atGate && (
+            <div className="footnote mut">
+              The carrier has reported it in; the delivery itself is recorded when you
+              confirm it, because that is what the vendor is told.
+            </div>
+          )}
 
           {atGate ? (
             <>
@@ -319,6 +340,7 @@ export default function ShipmentTracking({ data, plant, canDecide, onAdvance, on
                   busy={busy}
                   onTrack={onTrack}
                   onArrive={onArrive}
+                  onAdvance={onAdvance}
                 />
               ) : next && canDecide ? (
                 <div className="footerbar">
