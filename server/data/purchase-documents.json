@@ -23,21 +23,63 @@
       "loading": 42000,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "SP-2210", "material": "Refractory bricks, kiln inlet", "type": "ERSA", "typeText": "Spare part", "group": "REF-01", "groupText": "Refractories", "quantity": 80, "unit": "MT", "rate": 43800 },
-        { "pos": 20, "materialCode": "SP-2214", "material": "Castable, cooler throat", "type": "ERSA", "typeText": "Spare part", "group": "REF-01", "groupText": "Refractories", "quantity": 45, "unit": "MT", "rate": 128000 },
-        { "pos": 30, "materialCode": "SP-2231", "material": "Insulation bricks", "type": "ERSA", "typeText": "Spare part", "group": "REF-02", "groupText": "Insulation", "quantity": 60, "unit": "MT", "rate": 39600 }
+        {
+          "pos": 10,
+          "materialCode": "SP-2210",
+          "material": "Refractory bricks, kiln inlet",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "REF-01",
+          "groupText": "Refractories",
+          "quantity": 80,
+          "unit": "MT",
+          "rate": 43800
+        },
+        {
+          "pos": 20,
+          "materialCode": "SP-2214",
+          "material": "Castable, cooler throat",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "REF-01",
+          "groupText": "Refractories",
+          "quantity": 45,
+          "unit": "MT",
+          "rate": 128000
+        },
+        {
+          "pos": 30,
+          "materialCode": "SP-2231",
+          "material": "Insulation bricks",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "REF-02",
+          "groupText": "Insulation",
+          "quantity": 60,
+          "unit": "MT",
+          "rate": 39600
+        }
       ],
       "payTerms": "45 days from invoice date",
       "cashDiscount": "2 percent if paid within 10 days",
       "rebate": "1.5 percent per quarter above 2 crore",
       "hoursWaiting": 41,
       "step": "Step 2 of 2, final",
-      "prev": { "name": "A. Deshmukh", "level": "Step 1 of 2", "when": "3 Sep, 11:40", "note": "Rates checked against the last order" },
+      "prev": {
+        "name": "A. Deshmukh",
+        "level": "Step 1 of 2",
+        "when": "3 Sep, 11:40",
+        "note": "Rates checked against the last order"
+      },
       "vessel": null,
       "deliveryDate": "22 Sep 2026",
       "reason": "Waiting at the final step",
       "status": "pending",
-      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "28 Aug, 11:20" },
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "28 Aug, 11:20"
+      },
       "next": null
     },
     {
@@ -58,7 +100,18 @@
       "loading": 120000,
       "transport": "Sea",
       "items": [
-        { "pos": 10, "materialCode": "RM-1042", "material": "Gypsum, imported", "type": "ROH", "typeText": "Raw material", "group": "RM-02", "groupText": "Minerals", "quantity": 560, "unit": "MT", "rate": 8600 }
+        {
+          "pos": 10,
+          "materialCode": "RM-1042",
+          "material": "Gypsum, imported",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RM-02",
+          "groupText": "Minerals",
+          "quantity": 560,
+          "unit": "MT",
+          "rate": 8600
+        }
       ],
       "payTerms": "Letter of credit, 90 days usance",
       "cashDiscount": "None",
@@ -81,8 +134,16 @@
       "deliveryDate": "18 Sep 2026",
       "reason": "Approver on leave, no stand-in was set",
       "status": "pending",
-      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "5 Sep, 09:05" },
-      "next": { "name": "Mr. Kiran Raghavan", "title": "Finance head", "level": "Step 2 of 2, final" }
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "5 Sep, 09:05"
+      },
+      "next": {
+        "name": "Mr. Kiran Raghavan",
+        "title": "Finance head",
+        "level": "Step 2 of 2, final"
+      }
     },
     {
       "id": "1000442190",
@@ -102,20 +163,44 @@
       "loading": 9500,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "SP-1177", "material": "Grinding media, 30mm", "type": "ERSA", "typeText": "Spare part", "group": "SP-14", "groupText": "Grinding media", "quantity": 18, "unit": "MT", "rate": 164000 }
+        {
+          "pos": 10,
+          "materialCode": "SP-1177",
+          "material": "Grinding media, 30mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-14",
+          "groupText": "Grinding media",
+          "quantity": 18,
+          "unit": "MT",
+          "rate": 164000
+        }
       ],
       "payTerms": "30 days from invoice date",
       "cashDiscount": "1 percent if paid within 7 days",
       "rebate": "None",
       "hoursWaiting": 29,
       "step": "Purchasing step",
-      "prev": { "name": "K. Raghavan", "level": "Cost centre owner", "when": "3 Sep, 09:15", "note": "Budget confirmed for the quarter" },
+      "prev": {
+        "name": "K. Raghavan",
+        "level": "Cost centre owner",
+        "when": "3 Sep, 09:15",
+        "note": "Budget confirmed for the quarter"
+      },
       "vessel": null,
       "deliveryDate": "29 Sep 2026",
       "reason": "Waiting for purchasing release",
       "status": "pending",
-      "createdBy": { "name": "P. Kamat", "title": "Buyer, Spares", "when": "2 Sep, 08:30" },
-      "next": { "name": "Mr. Anil Deshmukh", "title": "Head of Procurement", "level": "Release step, final" }
+      "createdBy": {
+        "name": "P. Kamat",
+        "title": "Buyer, Spares",
+        "when": "2 Sep, 08:30"
+      },
+      "next": {
+        "name": "Mr. Anil Deshmukh",
+        "title": "Head of Procurement",
+        "level": "Release step, final"
+      }
     },
     {
       "id": "4500178266",
@@ -135,19 +220,39 @@
       "loading": 10600,
       "transport": "Rail",
       "items": [
-        { "pos": 10, "materialCode": "SV-4400", "material": "Clinker movement, Mumbai to Pune", "type": "DIEN", "typeText": "Service", "group": "SV-20", "groupText": "Freight services", "quantity": 790, "unit": "TRIP", "rate": 2360 }
+        {
+          "pos": 10,
+          "materialCode": "SV-4400",
+          "material": "Clinker movement, Mumbai to Pune",
+          "type": "DIEN",
+          "typeText": "Service",
+          "group": "SV-20",
+          "groupText": "Freight services",
+          "quantity": 790,
+          "unit": "TRIP",
+          "rate": 2360
+        }
       ],
       "payTerms": "15 days from invoice date",
       "cashDiscount": "None",
       "rebate": "2 percent above 4 crore per year",
       "hoursWaiting": 19,
       "step": "Step 1 of 1",
-      "prev": { "name": "A. Deshmukh", "level": "Logistics head", "when": "3 Sep, 16:05", "note": "Rail rake availability confirmed" },
+      "prev": {
+        "name": "A. Deshmukh",
+        "level": "Logistics head",
+        "when": "3 Sep, 16:05",
+        "note": "Rail rake availability confirmed"
+      },
       "vessel": null,
       "deliveryDate": "Rolling, monthly",
       "reason": "In the queue",
       "status": "pending",
-      "createdBy": { "name": "D. Ghorpade", "title": "Planner, Raw materials", "when": "30 Aug, 10:00" },
+      "createdBy": {
+        "name": "D. Ghorpade",
+        "title": "Planner, Raw materials",
+        "when": "30 Aug, 10:00"
+      },
       "next": null
     },
     {
@@ -168,19 +273,39 @@
       "loading": 4000,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "SP-3090", "material": "Roller bearings, mill", "type": "ERSA", "typeText": "Spare part", "group": "SP-11", "groupText": "Bearings", "quantity": 48, "unit": "NOS", "rate": 19580 }
+        {
+          "pos": 10,
+          "materialCode": "SP-3090",
+          "material": "Roller bearings, mill",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-11",
+          "groupText": "Bearings",
+          "quantity": 48,
+          "unit": "NOS",
+          "rate": 19580
+        }
       ],
       "payTerms": "30 days from invoice date",
       "cashDiscount": "1 percent if paid within 7 days",
       "rebate": "None",
       "hoursWaiting": 8,
       "step": "Step 1 of 1",
-      "prev": { "name": "S. Bose", "level": "Maintenance head", "when": "4 Sep, 07:50", "note": "Replacement due at the next shutdown" },
+      "prev": {
+        "name": "S. Bose",
+        "level": "Maintenance head",
+        "when": "4 Sep, 07:50",
+        "note": "Replacement due at the next shutdown"
+      },
       "vessel": null,
       "deliveryDate": "12 Oct 2026",
       "reason": "In the queue",
       "status": "pending",
-      "createdBy": { "name": "N. Shirke", "title": "Buyer, Packing", "when": "29 Aug, 14:45" },
+      "createdBy": {
+        "name": "N. Shirke",
+        "title": "Buyer, Packing",
+        "when": "29 Aug, 14:45"
+      },
       "next": null
     },
     {
@@ -201,20 +326,51 @@
       "loading": 11500,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "SP-4120", "material": "Conveyor belt, 1200mm, clinker line", "type": "ERSA", "typeText": "Spare part", "group": "CNV-01", "groupText": "Conveyor", "quantity": 620, "unit": "MTR", "rate": 1985 },
-        { "pos": 20, "materialCode": "SP-4136", "material": "Carrying idlers, 152mm", "type": "ERSA", "typeText": "Spare part", "group": "CNV-01", "groupText": "Conveyor", "quantity": 180, "unit": "NOS", "rate": 1240 }
+        {
+          "pos": 10,
+          "materialCode": "SP-4120",
+          "material": "Conveyor belt, 1200mm, clinker line",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "CNV-01",
+          "groupText": "Conveyor",
+          "quantity": 620,
+          "unit": "MTR",
+          "rate": 1985
+        },
+        {
+          "pos": 20,
+          "materialCode": "SP-4136",
+          "material": "Carrying idlers, 152mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "CNV-01",
+          "groupText": "Conveyor",
+          "quantity": 180,
+          "unit": "NOS",
+          "rate": 1240
+        }
       ],
       "payTerms": "45 days from invoice date",
       "cashDiscount": "None",
       "rebate": "None",
       "hoursWaiting": 52,
       "step": "Step 2 of 2, final",
-      "prev": { "name": "K. Raghavan", "level": "Step 1 of 2", "when": "7 Sep, 09:15", "note": "Belt length checked against the drawing" },
+      "prev": {
+        "name": "K. Raghavan",
+        "level": "Step 1 of 2",
+        "when": "7 Sep, 09:15",
+        "note": "Belt length checked against the drawing"
+      },
       "vessel": null,
       "deliveryDate": "26 Sep 2026",
       "reason": "Waiting at the final step",
       "status": "pending",
-      "createdBy": { "name": "P. Kamat", "title": "Buyer, Spares", "when": "1 Sep, 16:10" },
+      "createdBy": {
+        "name": "P. Kamat",
+        "title": "Buyer, Spares",
+        "when": "1 Sep, 16:10"
+      },
       "next": null
     },
     {
@@ -235,7 +391,18 @@
       "loading": 640000,
       "transport": "Sea",
       "items": [
-        { "pos": 10, "materialCode": "RM-1201", "material": "Coal, imported, 6000 kcal", "type": "ROH", "typeText": "Raw material", "group": "FUE-01", "groupText": "Fuel", "quantity": 9000, "unit": "MT", "rate": 10250 }
+        {
+          "pos": 10,
+          "materialCode": "RM-1201",
+          "material": "Coal, imported, 6000 kcal",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "FUE-01",
+          "groupText": "Fuel",
+          "quantity": 9000,
+          "unit": "MT",
+          "rate": 10250
+        }
       ],
       "payTerms": "Letter of credit, 90 days usance",
       "cashDiscount": "None",
@@ -258,8 +425,16 @@
       "deliveryDate": "27 Sep 2026",
       "reason": "Waiting for the second approval step",
       "status": "pending",
-      "createdBy": { "name": "Hrutik Patil", "title": "Buyer, Procurement", "when": "4 Sep, 15:40" },
-      "next": { "name": "Mr. Sunil Kulkarni", "title": "Director, Operations", "level": "Step 2 of 2, final" }
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "4 Sep, 15:40"
+      },
+      "next": {
+        "name": "Mr. Sunil Kulkarni",
+        "title": "Director, Operations",
+        "level": "Step 2 of 2, final"
+      }
     },
     {
       "id": "1000442310",
@@ -279,20 +454,44 @@
       "loading": 0,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "CH-5510", "material": "Grinding aid, cement mill", "type": "ROH", "typeText": "Raw material", "group": "CHM-01", "groupText": "Process chemicals", "quantity": 24, "unit": "KL", "rate": 96500 }
+        {
+          "pos": 10,
+          "materialCode": "CH-5510",
+          "material": "Grinding aid, cement mill",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "CHM-01",
+          "groupText": "Process chemicals",
+          "quantity": 24,
+          "unit": "KL",
+          "rate": 96500
+        }
       ],
       "payTerms": "30 days from invoice date",
       "cashDiscount": "1 percent if paid within 7 days",
       "rebate": "None",
       "hoursWaiting": 16,
       "step": "Purchasing step",
-      "prev": { "name": "M. Joshi", "level": "Department step", "when": "8 Sep, 16:05", "note": "Consumption checked against last quarter" },
+      "prev": {
+        "name": "M. Joshi",
+        "level": "Department step",
+        "when": "8 Sep, 16:05",
+        "note": "Consumption checked against last quarter"
+      },
       "vessel": null,
       "deliveryDate": "30 Sep 2026",
       "reason": "Waiting for purchasing release",
       "status": "pending",
-      "createdBy": { "name": "N. Shirke", "title": "Buyer, Packing", "when": "3 Sep, 09:50" },
-      "next": { "name": "Mr. Anil Deshmukh", "title": "Head of Procurement", "level": "Release step, final" }
+      "createdBy": {
+        "name": "N. Shirke",
+        "title": "Buyer, Packing",
+        "when": "3 Sep, 09:50"
+      },
+      "next": {
+        "name": "Mr. Anil Deshmukh",
+        "title": "Head of Procurement",
+        "level": "Release step, final"
+      }
     },
     {
       "id": "4500178530",
@@ -312,7 +511,18 @@
       "loading": 68000,
       "transport": "Road",
       "items": [
-        { "pos": 10, "materialCode": "RM-1088", "material": "Fly ash, dry", "type": "ROH", "typeText": "Raw material", "group": "RAW-02", "groupText": "Blending material", "quantity": 4800, "unit": "MT", "rate": 8600 }
+        {
+          "pos": 10,
+          "materialCode": "RM-1088",
+          "material": "Fly ash, dry",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RAW-02",
+          "groupText": "Blending material",
+          "quantity": 4800,
+          "unit": "MT",
+          "rate": 8600
+        }
       ],
       "payTerms": "45 days from invoice date",
       "cashDiscount": "2 percent if paid within 10 days",
@@ -324,7 +534,400 @@
       "deliveryDate": "21 Sep 2026",
       "reason": "In the queue",
       "status": "pending",
-      "createdBy": { "name": "D. Ghorpade", "title": "Planner, Raw materials", "when": "6 Sep, 12:25" },
+      "createdBy": {
+        "name": "D. Ghorpade",
+        "title": "Planner, Raw materials",
+        "when": "6 Sep, 12:25"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442401",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10024",
+      "material": "Castable, cooler throat",
+      "materialCode": "SP-2214",
+      "plant": "Mumbai",
+      "quantity": 40,
+      "unit": "MT",
+      "rate": 52000,
+      "basic": 2080000,
+      "freight": 34000,
+      "loading": 11000,
+      "transport": "Road",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "SP-2214",
+          "material": "Castable, cooler throat",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-11",
+          "groupText": "Refractories",
+          "quantity": 40,
+          "unit": "MT",
+          "rate": 52000
+        }
+      ],
+      "payTerms": "30 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 0,
+      "step": "Release step, final",
+      "prev": {
+        "name": "S. Bose",
+        "level": "Cost centre owner",
+        "when": "2 Sep, 10:20",
+        "note": "Cooler campaign budget"
+      },
+      "vessel": null,
+      "deliveryDate": "20 Sep 2026",
+      "reason": "",
+      "status": "approved",
+      "decidedBy": "Mr. Anil Deshmukh",
+      "decidedAt": "8 Sep 2026, 11:42 am",
+      "decisionNote": "Released. Cooler throat cannot wait for the next campaign.",
+      "createdBy": {
+        "name": "N. Shirke",
+        "title": "Buyer, Packing",
+        "when": "1 Sep, 09:05"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442402",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10203",
+      "material": "HDPE bags, 50kg",
+      "materialCode": "PK-3301",
+      "plant": "Pune",
+      "quantity": 120000,
+      "unit": "NOS",
+      "rate": 14,
+      "basic": 1680000,
+      "freight": 26000,
+      "loading": 8000,
+      "transport": "Road",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "PK-3301",
+          "material": "HDPE bags, 50kg",
+          "type": "VERP",
+          "typeText": "Packaging",
+          "group": "PK-02",
+          "groupText": "Bags",
+          "quantity": 120000,
+          "unit": "NOS",
+          "rate": 14
+        }
+      ],
+      "payTerms": "45 days from invoice date",
+      "cashDiscount": "1 percent if paid within 10 days",
+      "rebate": "None",
+      "hoursWaiting": 0,
+      "step": "Step 1 of 1",
+      "prev": null,
+      "vessel": null,
+      "deliveryDate": "5 Oct 2026",
+      "reason": "",
+      "status": "approved",
+      "decidedBy": "Arjun P",
+      "decidedAt": "9 Sep 2026, 04:15 pm",
+      "decisionNote": "Within my limit and the packing line is covered. Released.",
+      "createdBy": {
+        "name": "N. Shirke",
+        "title": "Buyer, Packing",
+        "when": "5 Sep, 14:40"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442403",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10141",
+      "material": "Conveyor belt, 1200mm",
+      "materialCode": "SP-4120",
+      "plant": "Nagpur",
+      "quantity": 400,
+      "unit": "MTR",
+      "rate": 1985,
+      "basic": 794000,
+      "freight": 21000,
+      "loading": 6500,
+      "transport": "Road",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "SP-4120",
+          "material": "Conveyor belt, 1200mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-21",
+          "groupText": "Conveying",
+          "quantity": 400,
+          "unit": "MTR",
+          "rate": 1985
+        }
+      ],
+      "payTerms": "30 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 41,
+      "step": "Release step, final",
+      "prev": {
+        "name": "M. Rao",
+        "level": "Cost centre owner",
+        "when": "4 Sep, 08:50",
+        "note": "Clinker line splice failing"
+      },
+      "vessel": null,
+      "deliveryDate": "18 Sep 2026",
+      "reason": "Waiting for release after purchasing",
+      "status": "pending",
+      "decidedBy": "Arjun P",
+      "decidedAt": "10 Sep 2026, 09:30 am",
+      "decisionNote": "Agreed, the splice will not last the month. Passing on for release.",
+      "createdBy": {
+        "name": "P. Kamat",
+        "title": "Buyer, Spares",
+        "when": "3 Sep, 16:10"
+      },
+      "next": {
+        "name": "Mr. Anil Deshmukh",
+        "title": "Head of Procurement",
+        "level": "Release step, final"
+      }
+    },
+    {
+      "id": "1000442404",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Import",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-20044",
+      "material": "Coal, imported",
+      "materialCode": "RM-1201",
+      "plant": "Mumbai",
+      "quantity": 6000,
+      "unit": "MT",
+      "rate": 9450,
+      "basic": 56700000,
+      "freight": 0,
+      "loading": 0,
+      "transport": "Sea",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "RM-1201",
+          "material": "Coal, imported",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RM-01",
+          "groupText": "Fuel",
+          "quantity": 6000,
+          "unit": "MT",
+          "rate": 9450
+        }
+      ],
+      "payTerms": "Letter of credit at sight",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 63,
+      "step": "Step 2 of 2, final",
+      "prev": {
+        "name": "R. Iyer",
+        "level": "Cost centre owner",
+        "when": "1 Sep, 11:05",
+        "note": "Quarter fuel plan"
+      },
+      "vessel": null,
+      "deliveryDate": "10 Oct 2026",
+      "reason": "Above my release limit, with the director",
+      "status": "pending",
+      "decidedBy": "Arjun P",
+      "decidedAt": "9 Sep 2026, 02:05 pm",
+      "decisionNote": "Volumes check out against the fuel plan. Above my limit, so passing it up.",
+      "createdBy": {
+        "name": "D. Ghorpade",
+        "title": "Planner, Raw materials",
+        "when": "31 Aug, 09:20"
+      },
+      "next": {
+        "name": "Mr. Sunil Kulkarni",
+        "title": "Director, Operations",
+        "level": "Step 2 of 2, final"
+      }
+    },
+    {
+      "id": "1000442405",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10008",
+      "material": "Iron ore fines",
+      "materialCode": "RM-1305",
+      "plant": "Nagpur",
+      "quantity": 900,
+      "unit": "MT",
+      "rate": 10250,
+      "basic": 9225000,
+      "freight": 118000,
+      "loading": 24000,
+      "transport": "Rail",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "RM-1305",
+          "material": "Iron ore fines",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RM-03",
+          "groupText": "Corrective",
+          "quantity": 900,
+          "unit": "MT",
+          "rate": 10250
+        }
+      ],
+      "payTerms": "30 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "2 percent above 5000 MT in the year",
+      "hoursWaiting": 8,
+      "step": "Purchasing step",
+      "prev": {
+        "name": "M. Rao",
+        "level": "Cost centre owner",
+        "when": "11 Sep, 08:15",
+        "note": "Corrective blend running thin"
+      },
+      "vessel": null,
+      "deliveryDate": "17 Sep 2026",
+      "reason": "Waiting for purchasing release",
+      "status": "pending",
+      "decidedBy": "",
+      "decidedAt": "",
+      "decisionNote": "",
+      "createdBy": {
+        "name": "D. Ghorpade",
+        "title": "Planner, Raw materials",
+        "when": "11 Sep, 07:50"
+      },
+      "next": {
+        "name": "Mr. Anil Deshmukh",
+        "title": "Head of Procurement",
+        "level": "Release step, final"
+      }
+    },
+    {
+      "id": "1000442406",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-20011",
+      "material": "Gypsum, imported",
+      "materialCode": "RM-1042",
+      "plant": "Pune",
+      "quantity": 500,
+      "unit": "MT",
+      "rate": 8600,
+      "basic": 4300000,
+      "freight": 62000,
+      "loading": 15000,
+      "transport": "Road",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "RM-1042",
+          "material": "Gypsum, imported",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RM-02",
+          "groupText": "Additive",
+          "quantity": 500,
+          "unit": "MT",
+          "rate": 8600
+        }
+      ],
+      "payTerms": "30 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 22,
+      "step": "Step 1 of 1",
+      "prev": null,
+      "vessel": null,
+      "deliveryDate": "25 Sep 2026",
+      "reason": "Waiting for your approval",
+      "status": "pending",
+      "decidedBy": "",
+      "decidedAt": "",
+      "decisionNote": "",
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "11 Sep, 10:05"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442311",
+      "kind": "PR",
+      "docType": "Purchase requisition",
+      "trade": "Domestic",
+      "incoterm": "",
+      "supplierId": "V-10112",
+      "material": "Grinding media, 30mm",
+      "materialCode": "SP-1177",
+      "plant": "Nagpur",
+      "quantity": 5666,
+      "unit": "MT",
+      "rate": 1,
+      "basic": 5666,
+      "freight": 0,
+      "loading": 0,
+      "transport": "",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "SP-1177",
+          "material": "Grinding media, 30mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-14",
+          "groupText": "Grinding media",
+          "quantity": 5666,
+          "unit": "MT",
+          "rate": 1
+        }
+      ],
+      "payTerms": "",
+      "cashDiscount": "",
+      "rebate": "",
+      "hoursWaiting": 0,
+      "step": "Step 1 of 1",
+      "prev": null,
+      "vessel": null,
+      "deliveryDate": "4 sep 2026",
+      "reason": "",
+      "status": "pending",
+      "decidedBy": "",
+      "decidedAt": "",
+      "decisionNote": "",
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "11/9/2026, 3:45:07 pm"
+      },
       "next": null
     }
   ]

@@ -216,7 +216,14 @@ export const dbProvider = {
         status: d.status,
         // The name, as the workbook records it. The address is the last resort, for a
         // login with neither a signed step nor a person record behind it.
-        decidedBy: d.decided_by_step_name || d.decided_by_full_name || d.decided_by_email || '',
+        //
+        // Gated on the document's own decided_at, because the step subquery finds any step
+        // that has been acted on - including the cost centre owner who signed BEFORE this
+        // manager. Without the gate a requisition still waiting on you reported itself as
+        // decided by somebody else, which the workbook never did.
+        decidedBy: d.decided_at
+          ? d.decided_by_step_name || d.decided_by_full_name || d.decided_by_email || ''
+          : '',
         decidedAt: d.decided_at || '',
         // The requisition this order came from, empty on anything raised directly.
         sourceDocument: d.source_doc_number || '',

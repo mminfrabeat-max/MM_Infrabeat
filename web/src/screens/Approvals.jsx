@@ -161,9 +161,17 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
                 ? byPriority(documents).map((d, index) => (
                     <tr key={d.id} className="clickrow" onClick={() => onOpenDocument(d.id)}>
                       <td>
-                        <Chip tone={bandToneFor(d.priority)} icon={d.priority?.band === 'critical' ? 'alert' : undefined}>
-                          {index + 1}
-                        </Chip>
+                        {/* Numbered only while it still needs your signature. A rank on a
+                            released requisition would read as a queue position it is not in. */}
+                        {d.approvalState?.state === 'waiting' ? (
+                          <Chip tone={bandToneFor(d.priority)} icon={d.priority?.band === 'critical' ? 'alert' : undefined}>
+                            {index + 1}
+                          </Chip>
+                        ) : d.approvalState?.state === 'partial' ? (
+                          <Chip tone="mut" icon="clock">–</Chip>
+                        ) : (
+                          <Chip tone="mut" icon="check">–</Chip>
+                        )}
                       </td>
                       <td>
                         <b>{d.id}</b>

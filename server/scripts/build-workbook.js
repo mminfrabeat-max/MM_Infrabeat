@@ -199,13 +199,17 @@ async function main() {
     vesselAfterPort: d.vessel ? d.vessel.afterPort : '',
     vesselUpdated: d.vessel ? d.vessel.updated : '',
     vesselSource: d.vessel ? d.vessel.source : '',
-    // A decision carried over from the previous workbook wins over the JSON, which only
-    // ever says "pending".
+    // A decision already made in the workbook wins over the seed: it is a real decision
+    // somebody made, and rebuilding the file must not quietly undo it.
+    //
+    // Failing that, the seed's own decision is used. It usually says nothing, but seeded
+    // documents can arrive already approved or already passed on - a dashboard whose
+    // sample data is all one state shows nothing about how it behaves in the others.
     ...(kept.decisions.get(String(d.id)) || {
       status: d.status,
-      decidedBy: '',
-      decidedAt: '',
-      decisionNote: ''
+      decidedBy: d.decidedBy || '',
+      decidedAt: d.decidedAt || '',
+      decisionNote: d.decisionNote || ''
     })
   }));
 

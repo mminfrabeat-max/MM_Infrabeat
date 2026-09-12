@@ -39,13 +39,39 @@ export function pendingOfKind(documents, plant, kind) {
 }
 
 // Everything of one kind, whatever its status - what each approval list shows.
-// Requisitions, most urgent first. The score is worked out on the server from the stock
-// position - see server/src/domain/requisition-priority.js - and arrives on each document.
-// This only puts them in that order, so the two can never disagree about what is urgent.
+// Requisitions in the order they should be worked through. Mirrors
+// server/src/domain/requisition-priority.js, which computes the urgency score itself.
+// Most urgent first, but only among the ones that still need a decision.
+//
+// The list exists to answer "what should I approve next", so a requisition already
+// released has no business competing for the top of it however short the material is.
+// Three groups, in the order somebody works through them: waiting on you, then waiting on
+// somebody else (chase those), then finished. Urgency orders within each group.
+function actionGroup(document) {
+  const state = document.approvalState?.state;
+  if (state === 'waiting') return 0;
+  if (state === 'partial') return 1;
+  return 2;
+}
+
+// The band is what the row actually says - "Approve today", "Approve this week" - so it has
+// to lead the ordering. Sorting by the raw score alone put a "this week" above a "today",
+// which reads as the list contradicting itself however defensible the arithmetic was.
+const BANDS = ['critical', 'urgent', 'soon', 'routine'];
+
+function bandRank(document) {
+  const at = BANDS.indexOf(document.priority?.band);
+  return at === -1 ? BANDS.length : at;
+}
+
 export function byPriority(documents) {
   return [...documents].sort((a, b) => {
-    const difference = (b.priority?.score || 0) - (a.priority?.score || 0);
-    if (difference !== 0) return difference;
+    const group = actionGroup(a) - actionGroup(b);
+    if (group !== 0) return group;
+    const band = bandRank(a) - bandRank(b);
+    if (band !== 0) return band;
+    const urgency = (b.priority?.score || 0) - (a.priority?.score || 0);
+    if (urgency !== 0) return urgency;
     return (b.total || 0) - (a.total || 0);
   });
 }
