@@ -143,7 +143,8 @@
         "name": "Mr. Kiran Raghavan",
         "title": "Finance head",
         "level": "Step 2 of 2, final"
-      }
+      },
+      "sourceDocument": "1000442409"
     },
     {
       "id": "1000442190",
@@ -371,7 +372,8 @@
         "title": "Buyer, Spares",
         "when": "1 Sep, 16:10"
       },
-      "next": null
+      "next": null,
+      "sourceDocument": "1000442407"
     },
     {
       "id": "4500178498",
@@ -434,7 +436,8 @@
         "name": "Mr. Sunil Kulkarni",
         "title": "Director, Operations",
         "level": "Step 2 of 2, final"
-      }
+      },
+      "sourceDocument": "1000442408"
     },
     {
       "id": "1000442310",
@@ -927,6 +930,174 @@
         "name": "Hrutik Patil",
         "title": "Buyer, Procurement",
         "when": "11/9/2026, 3:45:07 pm"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442407",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-10141",
+      "material": "Conveyor belt, 1200mm, clinker line",
+      "materialCode": "SP-4120",
+      "plant": "Nagpur",
+      "quantity": 620,
+      "unit": "MTR",
+      "rate": 1985,
+      "basic": 1230700,
+      "freight": 0,
+      "loading": 0,
+      "transport": "Road",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "SP-4120",
+          "material": "Conveyor belt, 1200mm, clinker line",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "CNV-01",
+          "groupText": "Conveyor",
+          "quantity": 620,
+          "unit": "MTR",
+          "rate": 1985
+        }
+      ],
+      "payTerms": "45 days from invoice date",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 0,
+      "step": "Release step, final",
+      "prev": {
+        "name": "K. Raghavan",
+        "level": "Cost centre owner",
+        "when": "22 Aug, 15:10",
+        "note": "Belt is due for change at the shutdown"
+      },
+      "vessel": null,
+      "deliveryDate": "26 Sep 2026",
+      "reason": "",
+      "status": "approved",
+      "decidedBy": "Mr. Anil Deshmukh",
+      "decidedAt": "26 Aug 2026, 10:15 am",
+      "decisionNote": "Released to purchasing. Get the contract rate quoted.",
+      "createdBy": {
+        "name": "P. Kamat",
+        "title": "Buyer, Spares",
+        "when": "20 Aug, 10:40"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442408",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-20044",
+      "material": "Coal, imported",
+      "materialCode": "RM-1201",
+      "plant": "Mumbai",
+      "quantity": 9000,
+      "unit": "MT",
+      "rate": 10250,
+      "basic": 92250000,
+      "freight": 0,
+      "loading": 0,
+      "transport": "Sea",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "RM-1201",
+          "material": "Coal, imported",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "FUE-01",
+          "groupText": "Fuel",
+          "quantity": 9000,
+          "unit": "MT",
+          "rate": 10250
+        }
+      ],
+      "payTerms": "Letter of credit, 90 days usance",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 0,
+      "step": "Release step, final",
+      "prev": {
+        "name": "S. Bose",
+        "level": "Cost centre owner",
+        "when": "21 Aug, 11:05",
+        "note": "Quarterly fuel cover for the kiln"
+      },
+      "vessel": null,
+      "deliveryDate": "27 Sep 2026",
+      "reason": "",
+      "status": "approved",
+      "decidedBy": "Mr. Sunil Kulkarni",
+      "decidedAt": "24 Aug 2026, 16:40 pm",
+      "decisionNote": "Released. Start the enquiry, the vessel takes fifteen days.",
+      "createdBy": {
+        "name": "Hrutik Patil",
+        "title": "Buyer, Procurement",
+        "when": "18 Aug, 09:25"
+      },
+      "next": null
+    },
+    {
+      "id": "1000442409",
+      "kind": "PR",
+      "docType": "ZP, requisition",
+      "trade": "Domestic",
+      "incoterm": "Not applicable on a requisition",
+      "supplierId": "V-20011",
+      "material": "Gypsum, imported",
+      "materialCode": "RM-1042",
+      "plant": "Pune",
+      "quantity": 560,
+      "unit": "MT",
+      "rate": 8600,
+      "basic": 4816000,
+      "freight": 0,
+      "loading": 0,
+      "transport": "Sea",
+      "items": [
+        {
+          "pos": 10,
+          "materialCode": "RM-1042",
+          "material": "Gypsum, imported",
+          "type": "ROH",
+          "typeText": "Raw material",
+          "group": "RM-02",
+          "groupText": "Minerals",
+          "quantity": 560,
+          "unit": "MT",
+          "rate": 8600
+        }
+      ],
+      "payTerms": "Letter of credit, 90 days usance",
+      "cashDiscount": "None",
+      "rebate": "None",
+      "hoursWaiting": 0,
+      "step": "Release step, final",
+      "prev": {
+        "name": "M. Joshi",
+        "level": "Cost centre owner",
+        "when": "19 Aug, 09:50",
+        "note": "Kiln 1 and Kiln 2 both drawing on it"
+      },
+      "vessel": null,
+      "deliveryDate": "18 Sep 2026",
+      "reason": "",
+      "status": "approved",
+      "decidedBy": "Mr. Anil Deshmukh",
+      "decidedAt": "22 Aug 2026, 12:30 pm",
+      "decisionNote": "Released to purchasing against the import plan.",
+      "createdBy": {
+        "name": "D. Ghorpade",
+        "title": "Planner, Raw materials",
+        "when": "16 Aug, 14:00"
       },
       "next": null
     }

@@ -33,7 +33,24 @@ async function readJson(name) {
 
 // A frozen bold header with filter dropdowns is not decoration: it is what makes a
 // 200-row sheet usable by a person in Excel.
+// Every column the sheet declares should be something the builder actually fills.
+//
+// This is written because the opposite happened: a column existed in the schema, the
+// seed carried the value, and the row mapper simply did not mention it - so the field
+// went in one end and never came out, with nothing anywhere reporting a problem. A
+// silent drop is the worst kind, and it costs one loop to make it loud.
+function warnAboutMissingColumns(sheetName, columns, rows) {
+  if (!rows.length) return;
+  const written = new Set(Object.keys(rows[0]));
+  const missing = columns.map((c) => c.key).filter((key) => !written.has(key));
+  if (missing.length) {
+    console.log(`  WARNING  ${sheetName} declares ${missing.join(', ')} but nothing is written into it`);
+  }
+}
+
 function addSheet(workbook, name, columns, rows, headerColour = 'FFEEF2F7') {
+  warnAboutMissingColumns(name, columns, rows);
+
   const sheet = workbook.addWorksheet(name);
   sheet.columns = columns;
   for (const row of rows) sheet.addRow(row);
@@ -179,6 +196,17 @@ async function main() {
     hoursWaiting: d.hoursWaiting,
     step: d.step,
     reason: d.reason,
+    // The requisition this order was created from. Without it an order has come from
+    // nowhere, and no requisition can ever show the order that answered it.
+    sourceDocument: d.sourceDocument || '',
+    // Where a shipment has got to. Empty on a fresh build, because nothing has shipped
+    // yet - but written rather than left out, so the column is filled by the same hand
+    // that declares it and a seed carrying a stage would be honoured.
+    shipmentStage: d.shipmentStage || '',
+    shipmentStageAt: d.shipmentStageAt || '',
+    shipmentNote: d.shipmentNote || '',
+    trackingId: d.trackingId || '',
+    trackingAt: d.trackingAt || '',
     createdByName: d.createdBy ? d.createdBy.name : '',
     createdByTitle: d.createdBy ? d.createdBy.title : '',
     createdByWhen: d.createdBy ? d.createdBy.when : '',

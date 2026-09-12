@@ -8,7 +8,7 @@
 // in between - and the counts on the tabs then mean something on their own.
 
 import { inr, num } from '../format.js';
-import { documentsOfKind, byPriority, sumTotals } from '../selectors.js';
+import { documentsOfKind, byPriority, sumTotals, requisitionAction } from '../selectors.js';
 import { Card, Banner, Chip, Score, Icon, Count } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
@@ -140,6 +140,62 @@ function StatBand({ parts }) {
   );
 }
 
+// What to do with a requisition next, as a cell.
+//
+// The button has to say what pressing it does, and the two here do very different things.
+// "View PO" moves you to a document. "Raise PO" asks a person to make one, and asking a
+// person is not the same as it being done - so the row still reads "no order yet"
+// afterwards, because that is still true until the buyer acts.
+function RequisitionAction({ documents, document, onOpenDocument, onRaisePO }) {
+  const next = requisitionAction(documents, document);
+
+  if (next.state === 'ordered') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDocument(next.order.id);
+          }}
+        >
+          <Icon name="doc" size={12} />
+          View PO
+        </button>
+        <div className="sub n">{next.order.id}</div>
+      </>
+    );
+  }
+
+  if (next.state === 'to-order') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm emph"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRaisePO(document);
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Raise PO
+        </button>
+        <div className="sub">no order yet</div>
+      </>
+    );
+  }
+
+  if (next.state === 'closed') {
+    return <span className="sub">back with {document.createdBy ? document.createdBy.name : 'the raiser'}</span>;
+  }
+
+  // Still being approved. The row itself opens it, so a button here would be a second way
+  // to do the same thing, and two ways to do one thing is how people end up doing neither.
+  return <span className="sub">waiting for approval</span>;
+}
+
 // The requisitions split by status, counted.
 //
 // The list below answers "what should I do next"; this answers "where does everything
@@ -219,7 +275,7 @@ function RequisitionCounts({ documents }) {
 }
 
 // `kind` is 'PO' or 'PR'. Everything else on the screen follows from it.
-export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) {
+export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, onRaisePO }) {
   const documents = documentsOfKind(data.documents, plant, kind);
   const isOrder = kind === 'PO';
   const noun = isOrder ? 'order' : 'requisition';
@@ -283,6 +339,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
                   <th className="rt">Value</th>
                   <th>Raised by</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               )}
             </thead>
@@ -326,6 +383,14 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
                       <td className="rt n">{inr(d.total)}</td>
                       <td className="sub">{d.createdBy ? d.createdBy.name : 'not recorded'}</td>
                       <td><RequisitionStatus document={d} /></td>
+                      <td>
+                        <RequisitionAction
+                          documents={data.documents}
+                          document={d}
+                          onOpenDocument={onOpenDocument}
+                          onRaisePO={onRaisePO}
+                        />
+                      </td>
                     </tr>
                   ))
                 : documents

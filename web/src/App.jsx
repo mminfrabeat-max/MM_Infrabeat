@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, setSignedOutHandler } from './api.js';
 import { COMPANY, PRODUCT, APPROVER_NAME, USER_PROFILE, PLANTS } from './brand.js';
-import { initials, clock } from './format.js';
+import { initials, clock, num, inr, firstName } from './format.js';
 import { Icon, Loading, ErrorPanel } from './components/ui.jsx';
 import { Wordmark, WordmarkFallback, Modal, Toasts } from './components/shell-bits.jsx';
 import { findDocument, pendingOfKind, shortMaterials, contractsToWatch, openSituations, teamsNeedingNudge } from './selectors.js';
@@ -223,6 +223,44 @@ export default function App() {
     } finally {
       setBusy(null);
     }
+  }
+
+  // Asking a buyer to turn a released requisition into an order.
+  //
+  // It opens the mail rather than sending it, for the same reason every other mail on this
+  // dashboard does: you can see what is going out and change it before it goes. The draft
+  // carries what the buyer needs to raise the order without opening anything - material,
+  // quantity, plant, when it is wanted, and the requisition number to convert.
+  //
+  // Who it goes to is the person who raised it. They are named on the row already, and in
+  // this data they are buyers. If a different desk converts requisitions to orders, that
+  // is a name this has to learn.
+  function raisePurchaseOrder(requisition) {
+    const buyer = requisition.createdBy?.name || '';
+    const wanted = requisition.deliveryDate || 'no date given';
+    const quantity = `${num(requisition.quantity)} ${requisition.unit}`;
+
+    writeMail({
+      toName: buyer,
+      subject: `Raise a PO against ${requisition.id}, ${requisition.material}`,
+      body: [
+        `Hi ${firstName(buyer) || 'there'},`,
+        '',
+        `Requisition ${requisition.id} is fully approved and has no order against it yet.`,
+        '',
+        `  Material    ${requisition.material} (${requisition.materialCode})`,
+        `  Quantity    ${quantity}`,
+        `  Plant       ${requisition.plant}`,
+        `  Wanted by   ${wanted}`,
+        `  Value       ${inr(requisition.total)}`,
+        '',
+        'Could you raise the purchase order and send me the number once it is in?',
+        '',
+        'Thanks,',
+        `${APPROVER_NAME}
+${USER_PROFILE.role}, ${COMPANY}`
+      ].join('\n')
+    });
   }
 
   // Recording where a released order has got to.
@@ -506,7 +544,13 @@ export default function App() {
           <Approvals data={data} plant={plant} kind="PO" onOpenDocument={openDocument} />
         )}
         {tab === 'requisitions' && !openDoc && (
-          <Approvals data={data} plant={plant} kind="PR" onOpenDocument={openDocument} />
+          <Approvals
+            data={data}
+            plant={plant}
+            kind="PR"
+            onOpenDocument={openDocument}
+            onRaisePO={raisePurchaseOrder}
+          />
         )}
         {/* Two detail screens, because they answer different questions. An order page is
             laid out as a commercial document; a requisition page leads with the stock

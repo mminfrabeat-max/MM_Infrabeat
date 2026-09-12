@@ -129,3 +129,37 @@ export function materialFor(materials, document) {
   if (!document) return null;
   return (materials || []).find((m) => m.code === document.materialCode) || null;
 }
+
+// What a requisition needs next, as one answer the screen can draw.
+//
+// Four states, and they are not the same question as the approval status. "Approved" says
+// the signing is finished; it does not say whether anybody has bought anything, and that
+// is the gap a requisition falls down. A released requisition with no order against it is
+// the most expensive row on the list precisely because it looks finished.
+//
+// The link is read from the order end: a purchase order carries the requisition it was
+// created from, the way a PO item does in SAP, so finding the order means looking for the
+// one that names this requisition.
+export function orderRaisedFrom(documents, requisition) {
+  return (documents || []).find((d) => d.kind === 'PO' && d.sourceDocument === requisition.id) || null;
+}
+
+export function requisitionAction(documents, requisition) {
+  if (requisition.status === 'rejected') {
+    // Nothing to do here. It went back to whoever raised it, and the next move is theirs.
+    return { state: 'closed', label: 'Sent back' };
+  }
+
+  if (requisition.status !== 'approved') {
+    // Still being signed. The action is the approval itself, which the row already offers
+    // by being clickable, so the column says who it is with rather than repeating it.
+    return { state: 'approving' };
+  }
+
+  const order = orderRaisedFrom(documents, requisition);
+  if (order) {
+    return { state: 'ordered', label: 'View PO', order };
+  }
+
+  return { state: 'to-order', label: 'Raise PO' };
+}
