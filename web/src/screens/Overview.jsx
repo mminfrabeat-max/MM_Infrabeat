@@ -17,6 +17,7 @@ import {
 // of past days yet, so they show a plausible direction rather than a measured one.
 const SHAPES = {
   approvals: [3, 4, 4, 5, 4, 6, 5],
+  requisitions: [2, 3, 3, 4, 5, 5, 6],
   stock: [1, 1, 2, 2, 2, 3, 2],
   orders: [5, 5, 6, 6, 6, 7, 6],
   requests: [3, 4, 4, 5, 5, 5, 5],
@@ -26,10 +27,18 @@ const SHAPES = {
 
 export default function Overview({ data, plant, onNavigate, onOpenDocument, onOpenLog, savedMinutes, actionCount }) {
   const pending = pendingDocuments(data.documents, plant);
-  // Split, because approving happens on two tabs now and this tile lands on one of them.
+  // Split, because approving happens on two tabs now and each tile lands on one of them.
   // A tile reading 10 that opens a list of 7 is the sort of thing people stop trusting.
   const pendingOrders = pendingOfKind(data.documents, plant, 'PO');
   const pendingRequisitions = pendingOfKind(data.documents, plant, 'PR');
+
+  // "Pending" covers two different things on a requisition: waiting on you, and already
+  // signed by you and sitting with somebody else. The tile counts the first - that is what
+  // there is to do - and names the second underneath, because those need chasing, not
+  // approving.
+  const requisitionsForYou = pendingRequisitions.filter((d) => d.approvalState?.state === 'waiting');
+  const requisitionsElsewhere = pendingRequisitions.filter((d) => d.approvalState?.state === 'partial');
+  const requisitionsToday = requisitionsForYou.filter((d) => d.priority?.band === 'critical');
   const overdue = overdueDocuments(data.documents, plant);
   const short = shortMaterials(data.materials, plant);
   const openOrders = byPlant(data.openOrders, plant);
@@ -128,15 +137,37 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
           value={pendingOrders.length}
           sub={inr(waitingValue)}
           tone={overdue.length ? 'neg' : 'pos'}
-          footer={
-            pendingRequisitions.length
-              ? `${overdue.length} over a day old \u00b7 ${pendingRequisitions.length} requisition${
-                  pendingRequisitions.length === 1 ? '' : 's'
-                } waiting too`
-              : `${overdue.length} over a day old`
-          }
+          footer={`${overdue.length} over a day old`}
           spark={<SparkArea values={SHAPES.approvals} colour={toneColour(overdue.length ? 'neg' : 'pos')} />}
           onClick={() => onNavigate('approvals')}
+        />
+        {/* Requisitions get their own tile because they are their own decision, and because
+            the thing worth knowing about them is not the count but how many cannot wait:
+            a requisition is a material the plant is running out of. */}
+        <Tile
+          icon="box"
+          label="Waiting for PR approval"
+          value={requisitionsForYou.length}
+          sub={
+            requisitionsToday.length
+              ? `${requisitionsToday.length} cannot wait`
+              : requisitionsForYou.length
+                ? 'none urgent'
+                : 'nothing waiting'
+          }
+          tone={requisitionsToday.length ? 'neg' : requisitionsForYou.length ? 'warn' : 'pos'}
+          footer={
+            requisitionsElsewhere.length
+              ? `${requisitionsElsewhere.length} more sitting with someone else`
+              : 'none waiting on anyone else'
+          }
+          spark={
+            <SparkArea
+              values={SHAPES.requisitions}
+              colour={toneColour(requisitionsToday.length ? 'neg' : requisitionsForYou.length ? 'warn' : 'pos')}
+            />
+          }
+          onClick={() => onNavigate('requisitions')}
         />
         <Tile
           icon="box"
