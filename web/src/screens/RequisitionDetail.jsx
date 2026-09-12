@@ -18,8 +18,8 @@ import { stillNeedsSigning, recordingForNext } from '../selectors.js';
 // The urgency band as a colour, matching the list.
 function bandTone(band) {
   if (band === 'critical') return 'neg';
-  if (band === 'urgent') return 'warn';
-  if (band === 'soon') return 'pri';
+  if (band === 'high') return 'warn';
+  if (band === 'medium') return 'pri';
   return 'mut';
 }
 
@@ -71,7 +71,7 @@ export default function RequisitionDetail({
         tone={tone}
         title={`${num(document.quantity)} ${document.unit} of ${document.material}`}
         subtitle={`${document.plant} plant · requisition ${document.id}`}
-        action={<Chip tone={tone} icon={priority?.band === 'critical' ? 'alert' : 'clock'}>{priority?.label || 'No date pressure'}</Chip>}
+        action={<Chip tone={tone} icon={priority?.band === 'critical' ? 'alert' : 'clock'}>{priority?.label || 'Low'}: {priority?.advice || 'no date pressure'}</Chip>}
       >
         <div className="metrics">
           <Metric label="Wanted" value={wantedText(priority, document.deliveryDate)} tone={priority?.daysUntilNeeded < 0 ? 'neg' : 'mut'} />

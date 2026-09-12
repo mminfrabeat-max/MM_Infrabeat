@@ -17,8 +17,8 @@ import { bandTone } from '../format.js';
 function bandToneFor(priority) {
   if (!priority) return 'mut';
   if (priority.band === 'critical') return 'neg';
-  if (priority.band === 'urgent') return 'warn';
-  if (priority.band === 'soon') return 'pri';
+  if (priority.band === 'high') return 'warn';
+  if (priority.band === 'medium') return 'pri';
   return 'mut';
 }
 
@@ -291,10 +291,11 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
           </>
         ) : (
           <>
-            <b>Ordered by what the plant is about to run out of</b>, not by how long each has
-            been waiting. The figure that decides it is days of cover against the lead time:
-            where cover is shorter, the plant runs dry before a new load can land even if you
-            approve right now, and every day it waits adds to that gap.
+            <b>Critical first, then High, Medium and Low</b> &mdash; and within each, whichever
+            is wanted soonest, with the larger shortage breaking a tie. What decides the band is
+            days of cover against the lead time: where cover is shorter, the plant runs dry
+            before a new load can land even if you approve right now, so a comfortable date and
+            an empty store still read as urgent.
           </>
         )}
       </Banner>
@@ -330,12 +331,12 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                 </tr>
               ) : (
                 <tr>
-                  <th>#</th>
+                  <th>Priority</th>
                   <th>Requisition</th>
                   <th>Plant</th>
                   <th>Wanted</th>
                   <th>Cover against lead time</th>
-                  <th className="rt">Short by</th>
+                  <th className="rt">Stock and shortage</th>
                   <th className="rt">Value</th>
                   <th>Raised by</th>
                   <th>Status</th>
@@ -348,23 +349,23 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                 ? byPriority(documents).map((d, index) => (
                     <tr key={d.id} className="clickrow" onClick={() => onOpenDocument(d.id)}>
                       <td>
-                        {/* Numbered only while it still needs your signature. A rank on a
-                            released requisition would read as a queue position it is not in. */}
-                        {d.approvalState?.state === 'waiting' ? (
-                          <Chip tone={bandToneFor(d.priority)} icon={d.priority?.band === 'critical' ? 'alert' : undefined}>
-                            {index + 1}
-                          </Chip>
-                        ) : d.approvalState?.state === 'partial' ? (
-                          <Chip tone="mut" icon="clock">–</Chip>
-                        ) : (
-                          <Chip tone="mut" icon="check">–</Chip>
+                        <Chip
+                          tone={bandToneFor(d.priority)}
+                          icon={d.priority?.band === 'critical' ? 'alert' : undefined}
+                        >
+                          {d.priority?.label || 'Low'}
+                        </Chip>
+                        {/* The queue position, and only where there is a queue. A rank on a
+                            released requisition would read as a place in a line it left. */}
+                        {d.approvalState?.state === 'waiting' && (
+                          <div className="sub n">#{index + 1} to approve</div>
                         )}
                       </td>
                       <td>
                         <b>{d.id}</b>
                         <div className="sub">{d.material}</div>
                         <div className="sub">
-                          <b>{d.priority?.label}</b>
+                          <b>{d.priority?.advice}</b>
                         </div>
                       </td>
                       <td>
@@ -373,11 +374,33 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                       </td>
                       <td className="sub">{wantedText(d)}</td>
                       <td>{coverText(d)}</td>
+                      {/* Asked for, in stock, and the difference - the three figures the
+                          business states the shortage in, kept in one column so the row
+                          stays readable on a laptop. */}
                       <td className="rt n">
-                        {d.priority?.shortBy > 0 ? (
-                          <b>{num(d.priority.shortBy)} {d.priority.unit}</b>
+                        {d.priority?.shortageAgainstStock > 0 ? (
+                          <Chip tone="neg">
+                            short {num(d.priority.shortageAgainstStock)} {d.priority.unit}
+                          </Chip>
                         ) : (
-                          <span className="mut">covered</span>
+                          <Chip tone="pos">covered</Chip>
+                        )}
+                        <div className="sub n">
+                          {num(d.priority?.askedFor ?? d.quantity)} asked,{' '}
+                          {d.priority?.stockAvailable === null || d.priority?.stockAvailable === undefined
+                            ? 'stock not known'
+                            : `${num(d.priority.stockAvailable)} available`}
+                        </div>
+                        {/* A requisition the stock covers can still sit on a plant that is
+                            about to run dry, and then the row reads "Critical" beside
+                            "covered" and looks like it is arguing with itself. It is not:
+                            one figure is this requisition, the other is the plant. Saying
+                            the second out loud is cheaper than letting somebody decide the
+                            screen cannot be trusted. */}
+                        {d.priority?.shortageAgainstStock === 0 && d.priority?.shortBy > 0 && (
+                          <div className="sub n">
+                            plant short {num(d.priority.shortBy)} {d.priority.unit}
+                          </div>
                         )}
                       </td>
                       <td className="rt n">{inr(d.total)}</td>

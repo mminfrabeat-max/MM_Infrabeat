@@ -121,25 +121,54 @@ export function priorityFor(document, materials, today = new Date()) {
   // because its material is comfortable. Capped, so age can never outrank running out.
   score += Math.min(Number(document.hoursWaiting) || 0, 120) / 12;
 
+  // Four bands, named the way the business names them.
+  //
+  // The three things that decide it are the required date, the stock position and
+  // whether the kiln runs on the material - but the date and the stock are not read
+  // separately, because on their own neither answers the question. A material with
+  // forty days of stock is comfortable until you learn the lead time is sixty, and
+  // then it is already too late however far away the date is. So the figure that
+  // decides the band is cover measured against lead time, which is the same question
+  // the two columns ask, worked out rather than left to the reader.
   const band =
     shortfallDays !== null && shortfallDays < 0 && shortBy > 0
       ? 'critical'
       : (shortfallDays !== null && shortfallDays < 7) || (daysUntilNeeded !== null && daysUntilNeeded <= 7)
-        ? 'urgent'
+        ? 'high'
         : daysUntilNeeded !== null && daysUntilNeeded <= 21
-          ? 'soon'
-          : 'routine';
+          ? 'medium'
+          : 'low';
 
-  const label = {
+  const label = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' }[band];
+
+  // What the band means for the person reading it. The name says how bad it is; this
+  // says what to do about it, and a row that only ranks itself has told you nothing.
+  const advice = {
     critical: 'Approve today',
-    urgent: 'Approve this week',
-    soon: 'Needed this month',
-    routine: 'No date pressure'
+    high: 'Approve this week',
+    medium: 'Needed this month',
+    low: 'No date pressure'
   }[band];
+
+  // Shortage the way the business states it: what this requisition asks for against
+  // what is on hand and already on order. Zero or less means the stock covers it.
+  //
+  // Deliberately not the same number as `shortBy`, which is the whole plant measured
+  // against every department that has asked. Both are true and they answer different
+  // questions, so they are named apart rather than one quietly standing for the other.
+  const askedFor = Number(document.quantity) || 0;
+  const stockAvailable = Number(material?.available);
+  const shortageAgainstStock = Number.isFinite(stockAvailable)
+    ? Math.max(0, Math.round((askedFor - stockAvailable) * 100) / 100)
+    : null;
 
   return {
     band,
     label,
+    advice,
+    askedFor,
+    stockAvailable: Number.isFinite(stockAvailable) ? stockAvailable : null,
+    shortageAgainstStock,
     score: Math.round(score),
     shortfallDays,
     daysUntilNeeded,
@@ -168,21 +197,40 @@ function actionGroup(document) {
 // The band is what the row actually says - "Approve today", "Approve this week" - so it has
 // to lead the ordering. Sorting by the raw score alone put a "this week" above a "today",
 // which reads as the list contradicting itself however defensible the arithmetic was.
-const BANDS = ['critical', 'urgent', 'soon', 'routine'];
+const BANDS = ['critical', 'high', 'medium', 'low'];
 
 function bandRank(document) {
   const at = BANDS.indexOf(document.priority?.band);
   return at === -1 ? BANDS.length : at;
 }
 
+// Critical, then High, then Medium, then Low. Within a band, whichever is wanted soonest.
+// Where two are wanted on the same day, the one with the bigger shortage goes first.
+//
+// Action state still leads all of it, and that is deliberate: a requisition already
+// released has no business competing for the top of a list whose question is "what should
+// I approve next", however short its material is. Waiting on you, then waiting on somebody
+// else to chase, then finished - and the rule above orders each group.
 export function byPriority(documents) {
   return [...documents].sort((a, b) => {
     const group = actionGroup(a) - actionGroup(b);
     if (group !== 0) return group;
+
     const band = bandRank(a) - bandRank(b);
     if (band !== 0) return band;
-    const urgency = (b.priority?.score || 0) - (a.priority?.score || 0);
-    if (urgency !== 0) return urgency;
+
+    // Soonest wanted first. A requisition with no date cannot claim to be urgent, so it
+    // sorts behind every one that has a date rather than ahead of them.
+    const whenA = a.priority?.daysUntilNeeded;
+    const whenB = b.priority?.daysUntilNeeded;
+    const dateA = whenA === null || whenA === undefined ? Infinity : whenA;
+    const dateB = whenB === null || whenB === undefined ? Infinity : whenB;
+    if (dateA !== dateB) return dateA - dateB;
+
+    const shortA = a.priority?.shortageAgainstStock || 0;
+    const shortB = b.priority?.shortageAgainstStock || 0;
+    if (shortA !== shortB) return shortB - shortA;
+
     return (b.total || 0) - (a.total || 0);
   });
 }
