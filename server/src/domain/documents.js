@@ -11,6 +11,7 @@
 // decision a manager is actually weighing.
 
 import { money, rupees } from './format.js';
+import { priorityFor } from './requisition-priority.js';
 
 export const OVERDUE_HOURS = 24;
 
@@ -111,7 +112,11 @@ export function enrichDocument(document, scoresById, materials = [], contracts =
     percentOverContract,
     isOverdue: document.hoursWaiting > OVERDUE_HOURS,
     advice: buildAdvice(document, score),
-    consequence: buildConsequence(document, score, material, contract)
+    consequence: buildConsequence(document, score, material, contract),
+    // Only requisitions carry this. An order is judged on its own terms - price, vendor,
+    // what it commits. A requisition is judged on what the plant is about to run out of,
+    // which is a fact about the yard rather than about the document.
+    priority: document.kind === 'PR' ? priorityFor(document, materials) : null
   };
 }
 

@@ -39,6 +39,17 @@ export function pendingOfKind(documents, plant, kind) {
 }
 
 // Everything of one kind, whatever its status - what each approval list shows.
+// Requisitions, most urgent first. The score is worked out on the server from the stock
+// position - see server/src/domain/requisition-priority.js - and arrives on each document.
+// This only puts them in that order, so the two can never disagree about what is urgent.
+export function byPriority(documents) {
+  return [...documents].sort((a, b) => {
+    const difference = (b.priority?.score || 0) - (a.priority?.score || 0);
+    if (difference !== 0) return difference;
+    return (b.total || 0) - (a.total || 0);
+  });
+}
+
 export function documentsOfKind(documents, plant, kind) {
   return byPlant(documents, plant).filter((d) => d.kind === kind);
 }
