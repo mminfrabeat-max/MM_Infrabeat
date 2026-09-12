@@ -18,8 +18,19 @@ import { recipientFor } from './domain/recipients.js';
 // every time, which is slow and looks like abuse from Google's side.
 let transport = null;
 
+// Whether anything can actually be sent.
+//
+// Two different reasons for no: it was never set up, or it has been switched off. Both
+// stop a message, and every caller already handles that - a decision is saved first and
+// the mail result is recorded afterwards, so nothing is lost either way.
 export function mailConfigured() {
+  if (!config.mail.enabled) return false;
   return Boolean(config.mail.host && config.mail.user && config.mail.password);
+}
+
+// Set up, but deliberately silenced. Worth telling apart at boot.
+export function mailSwitchedOff() {
+  return !config.mail.enabled && Boolean(config.mail.host && config.mail.user && config.mail.password);
 }
 
 function getTransport() {

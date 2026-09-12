@@ -112,7 +112,13 @@ export const config = {
     // Here, the browser never receives an address. It sends a name; this side turns the
     // name into a mailbox. And because it is an environment variable it stays out of git
     // like every other secret, and is set in the Render dashboard for the deployed copy.
-    directory: parseDirectory(process.env.MAIL_DIRECTORY)
+    directory: parseDirectory(process.env.MAIL_DIRECTORY),
+    // A deliberate off switch, separate from whether mail is configured.
+    //
+    // Emptying the password would also stop mail going out, but it loses the credential
+    // and reads at boot as something broken. This says the silence was asked for, which
+    // is what somebody wants to know when they come back to it a week later.
+    enabled: process.env.MAIL_ENABLED !== 'false'
   }
 };
 

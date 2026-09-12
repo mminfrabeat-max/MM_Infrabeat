@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { config, hasSapKey, authConfigured } from './config.js';
 import { requireSignIn } from './auth.js';
-import { verifyMail, mailConfigured } from './mailer.js';
+import { verifyMail, mailConfigured, mailSwitchedOff } from './mailer.js';
 import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { dashboardRouter } from './routes/dashboard.js';
@@ -125,7 +125,11 @@ app.listen(config.port, '0.0.0.0', async () => {
   // Check the mail credentials now, while you are looking at the terminal, rather than
   // discovering they are wrong on the first approval of the day.
   if (!mailConfigured()) {
-    console.log('[api] email: not configured, actions will save but send nothing');
+    console.log(
+      mailSwitchedOff()
+        ? '[api] email: SWITCHED OFF (MAIL_ENABLED=false). Everything still saves; nothing is sent.'
+        : '[api] email: not configured, actions will save but send nothing'
+    );
   } else {
     const result = await verifyMail();
     console.log(
