@@ -119,6 +119,18 @@ export function Tile({ icon, label, value, unit, sub, tone = 'mut', direction, f
 }
 
 // tone: pos | warn | neg | pri | mut
+// A count with a word under it. Deliberately not the Tile above: a Tile is a way into a
+// screen, and these are facts about the list you are already looking at.
+export function Count({ label, value, sub, tone = 'mut' }) {
+  return (
+    <div className="tmet">
+      <div className="l">{label}</div>
+      <div className={`v ${tone}`}>{value}</div>
+      <div className="l">{sub}</div>
+    </div>
+  );
+}
+
 export function Chip({ tone = 'mut', icon, children }) {
   return (
     <span className={`chipx ${tone}`}>

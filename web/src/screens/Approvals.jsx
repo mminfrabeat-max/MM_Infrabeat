@@ -8,8 +8,8 @@
 // in between - and the counts on the tabs then mean something on their own.
 
 import { inr, num } from '../format.js';
-import { documentsOfKind, byPriority } from '../selectors.js';
-import { Card, Banner, Chip, Score } from '../components/ui.jsx';
+import { documentsOfKind, byPriority, sumTotals } from '../selectors.js';
+import { Card, Banner, Chip, Score, Icon, Count } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
 // How urgent a requisition is, as a colour. The bands come from the server, which works
@@ -90,6 +90,90 @@ function holder(d) {
   return 'you';
 }
 
+// The requisitions split by status, counted.
+//
+// The list below answers "what should I do next"; this answers "where does everything
+// stand", which is the question asked before starting rather than during. Reading it off
+// the list means reading every row - nine rows do not tell you that seven are yours and
+// two are stuck elsewhere until you have been through all nine.
+//
+// The four words are exactly the four the Status column uses. A summary that invents its
+// own vocabulary makes the reader map one to the other, which is work the card was
+// supposed to save.
+function RequisitionCounts({ documents }) {
+  const inState = (state) => documents.filter((d) => d.approvalState?.state === state);
+  const pending = inState('waiting');
+  const partial = inState('partial');
+  const approved = inState('approved');
+  const sentBack = inState('rejected');
+
+  // Who is actually sitting on the part-approved ones. This is what makes the card worth
+  // more than the number on the tab: "2 partially approved" is a fact, "both with S. Rao"
+  // is something to act on.
+  const holders = [...new Set(partial.map((d) => d.approvalState?.holder).filter(Boolean))];
+
+  // Only the critical band, because that is the one whose rows say "Approve today". Adding
+  // the urgent ones would make the card contradict the list it sits above.
+  const today = pending.filter((d) => d.priority?.band === 'critical');
+
+  return (
+    <Card
+      span="c12"
+      icon="box"
+      tone="pri"
+      title="Where the requisitions stand"
+      subtitle="by approval status"
+    >
+      <div className="tmets">
+        <Count
+          label="Pending"
+          value={pending.length}
+          sub="waiting on you"
+          tone={pending.length ? 'warn' : 'mut'}
+        />
+        <Count
+          label="Partially approved"
+          value={partial.length}
+          sub="signed once, with the next approver"
+          tone={partial.length ? 'pri' : 'mut'}
+        />
+        <Count
+          label="Approved"
+          value={approved.length}
+          sub="released"
+          tone={approved.length ? 'pos' : 'mut'}
+        />
+        <Count
+          label="Sent back"
+          value={sentBack.length}
+          sub="returned to whoever raised it"
+          tone={sentBack.length ? 'neg' : 'mut'}
+        />
+        <Count
+          label="Value not yet released"
+          value={inr(sumTotals([...pending, ...partial]))}
+          sub="pending and partially approved together"
+          tone="mut"
+        />
+      </div>
+
+      {today.length > 0 && (
+        <div className="flagline">
+          <Icon name="alert" size={14} />
+          {today.length === 1 ? '1 requisition needs' : `${today.length} requisitions need`} approving
+          today: the plant runs dry before a new load can land, even if you approve right now.
+        </div>
+      )}
+      {holders.length > 0 && (
+        <div className="flagline">
+          <Icon name="clock" size={14} />
+          Partly approved and now with {holders.join(', ')}. Open one to send a reminder.
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // `kind` is 'PO' or 'PR'. Everything else on the screen follows from it.
 export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) {
   const documents = documentsOfKind(data.documents, plant, kind);
@@ -114,6 +198,8 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) 
           </>
         )}
       </Banner>
+
+      {!isOrder && <RequisitionCounts documents={documents} />}
 
       <Card
         span="c12"

@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react';
 import { inr } from '../format.js';
 import { byPlant } from '../selectors.js';
-import { Card, Banner, Icon, SimulatedNote } from '../components/ui.jsx';
+import { Card, Banner, Icon, SimulatedNote, Count } from '../components/ui.jsx';
 import { StageJourney, VesselMap, ConsignmentMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
@@ -52,18 +52,6 @@ function stageIndexOf(document) {
 function nextStageOf(document) {
   const index = stageIndexOf(document);
   return index >= STAGES.length - 1 ? null : STAGES[index + 1];
-}
-
-// A count with a word under it. Deliberately not the Tile used on the overview: these are
-// facts about one list, not places to go.
-function Count({ label, value, sub, tone = 'mut' }) {
-  return (
-    <div className="tmet">
-      <div className="l">{label}</div>
-      <div className={`v ${tone}`}>{value}</div>
-      <div className="l">{sub}</div>
-    </div>
-  );
 }
 
 // The carrier feed, as a set of reports arriving over time.
