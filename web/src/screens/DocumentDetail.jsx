@@ -12,7 +12,7 @@ import { inr, rupees, num, signed, initials, bandTone, plural } from '../format.
 import { APPROVER_NAME } from '../brand.js';
 import { Card, Banner, Chip, Icon, Facet, TermRow } from '../components/ui.jsx';
 import { VendorCharts } from '../components/charts.jsx';
-import { SeaJourney, VesselMap, modeIcon } from '../components/journey.jsx';
+import { modeIcon } from '../components/journey.jsx';
 import { StatusChip } from './Approvals.jsx';
 import { materialFor, stillNeedsSigning, recordingForNext } from '../selectors.js';
 
@@ -278,46 +278,13 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
           </div>
         </Card>
 
-        {document.vessel && (
-          <Card span="c12" icon="ship" tone="warn" title="Where the shipment is" subtitle="live position, not a note somebody typed">
-            {/* The shape of the journey first, the numbers under it. Which leg it is on and
-                whether that leg has started are the two things you want at a glance; the
-                bill of lading is what you want once you have them. */}
-            <SeaJourney vessel={document.vessel} plant={document.plant} />
+        {/* Where the shipment is has moved to the tracking screen.
 
-            <VesselMap vessel={document.vessel} />
-
-            <div className="terms" style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              <div>
-                <TermRow label="Vessel" value={`${document.vessel.name}, IMO ${document.vessel.imo}`} />
-                <TermRow label="Bill of lading" value={document.vessel.billOfLading} />
-                <TermRow label="Route" value={`${document.vessel.from} to ${document.vessel.to}`} />
-              </div>
-              <div>
-                <TermRow label="Position now" value={document.vessel.position} />
-                <TermRow label={`ETA ${document.vessel.to}`} value={`${document.vessel.eta}, against ${document.deliveryDate} on the order`} />
-                <TermRow label="After it lands" value={document.vessel.afterPort} />
-              </div>
-            </div>
-
-            {material && (
-              <div className="cq no" style={{ marginTop: 14 }}>
-                <div className="cqh"><Icon name="alert" size={13} />What this means</div>
-                <div className="cqt">
-                  {document.plant} has {Math.floor(material.onHand / material.dailyUsage)} days of cover on {material.name} at
-                  today&rsquo;s use, and the sea leg alone is {material.leadTimeDays} days. The gap is real, so the order
-                  cannot wait for the next approval round.
-                </div>
-              </div>
-            )}
-
-            <div className="feed">
-              <span className="outside">Outside SAP</span>
-              {document.vessel.source}, as of {document.vessel.updated} today. SAP holds the order, not the ship.
-            </div>
-          </Card>
-        )}
-
+            An order being approved and an order being at sea are two different questions
+            asked at two different times. This page is for deciding whether to release the
+            order; once it is released it leaves this list entirely and the tracking screen
+            is where it is watched. Keeping a live map here meant the same thing was drawn
+            in two places and only one of them could be acted on. */}
         <Card
           span="c12"
           icon="box"

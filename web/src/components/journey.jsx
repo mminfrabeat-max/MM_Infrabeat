@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 // The journey a shipment makes, drawn rather than described.
 //
 // The card used to be six rows of text: a route, a position, an ETA, a note about what
@@ -120,6 +121,32 @@ function Leg({ mode, started, sub }) {
         </span>
       </div>
       <div className="jsub">{sub}</div>
+    </div>
+  );
+}
+
+// The stages a released order goes through, drawn as one line.
+//
+// The same shape as the journeys below, and deliberately so: this is the same idea at a
+// different scale. Those show where the goods are in the world; this shows where the order
+// is in the process, and both are read the same way - left to right, coloured behind you,
+// grey ahead.
+//
+// The leg between two stages carries no mode icon, because nothing is moving between
+// "sent to vendor" and "dispatched" - a step is a thing somebody recorded, not a journey.
+export function StageJourney({ stages, atIndex }) {
+  return (
+    <div className="journey">
+      {stages.map((stage, i) => (
+        <Fragment key={stage.key}>
+          {i > 0 && (
+            <div className={`jleg ${i <= atIndex ? 'moving' : ''}`}>
+              <div className="jtrack" />
+            </div>
+          )}
+          <Node icon={stage.icon} name={stage.label} sub={stage.sub} done={i <= atIndex} />
+        </Fragment>
+      ))}
     </div>
   );
 }

@@ -396,6 +396,18 @@ th.rt, td.rt { text-align: right; }
 
 /* The map. A fixed aspect rather than a fixed height, so it keeps its shape on a phone
    without a media query, and the border keeps Google's tiles inside the card's own edges. */
+/* The vessel map beside its facts. On the tracking screen the map answers one small
+   question - which sea, off which coast - so it gets a square and the numbers get the
+   rest of the row. It stacks on a narrow screen, where a square and a column side by
+   side would leave both too thin to read. */
+.vsplit { display: grid; grid-template-columns: 260px 1fr; gap: 18px; margin-top: 14px; align-items: start; }
+.vsq .vmap { margin-top: 0; }
+.vsq .vmap iframe { aspect-ratio: 1 / 1; min-height: 0; }
+.vsq .vmapfoot { font-size: 11.2px; }
+.vfacts .kv { padding: 4px 0; }
+.vfacts .feed { margin-top: 10px; }
+@media (max-width: 900px) { .vsplit { grid-template-columns: 1fr; } .vsq { max-width: 320px; } }
+
 .vmap { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
 .vmap iframe { display: block; width: 100%; aspect-ratio: 21 / 8; min-height: 190px; border: 0; }
 .vmapfoot {

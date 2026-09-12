@@ -1,29 +1,37 @@
 // Where released orders actually are.
 //
 // The other side of the approval list, and the last part of the P2P cycle the dashboard
-// could not show. An order that has finished its approvals disappears from "Waiting for
-// approval" - correctly, nothing is waiting on anybody - and until now went nowhere. But
-// that is the moment it starts to matter most: it has gone to the vendor, and what happens
-// next is somebody else's to do and yours to watch.
+// could not show. An order that has finished its approvals disappears from the approval
+// list - correctly, nothing is waiting on anybody - and until now went nowhere. But that is
+// the moment it starts to matter most: it has gone to the vendor, and what happens next is
+// somebody else's to do and yours to watch.
 //
-// The list is deliberately the same shape as the approval list, because it is the same
-// documents at a later point in their life, and a person should not have to learn a second
-// table to read them.
+// One card per order, and the line across the top of each is the whole point. Six stages
+// read left to right, coloured behind you and grey ahead, so the position is a shape rather
+// than a word you have to look up.
+//
+// The vessel map lives here now rather than on the order page. An order being approved and
+// an order being at sea are two different questions asked at two different times, and the
+// page for deciding whether to approve something is not the page for watching it travel.
 
 import { useState } from 'react';
 import { inr } from '../format.js';
 import { byPlant } from '../selectors.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
+import { StageJourney, VesselMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
 // can draw the line and the button before asking.
+//
+// `sub` is what the stage means in the yard rather than what it is called, because the name
+// alone ("Dispatched") is a word from a system and the sub-line is the thing that happened.
 export const STAGES = [
-  { key: 'released', label: 'Released', action: null },
-  { key: 'sent', label: 'Sent to vendor', action: 'Mark as sent to vendor' },
-  { key: 'dispatched', label: 'Dispatched', action: 'Mark as dispatched' },
-  { key: 'transit', label: 'In transit', action: 'Mark as in transit' },
-  { key: 'delivered', label: 'Delivered', action: 'Mark as delivered' },
-  { key: 'received', label: 'Goods receipt', action: 'Book the goods receipt' }
+  { key: 'released', label: 'Released', sub: 'order approved', icon: 'doc', action: null },
+  { key: 'sent', label: 'Sent to vendor', sub: 'order mailed', icon: 'mail', action: 'Mark as sent to vendor' },
+  { key: 'dispatched', label: 'Dispatched', sub: 'left the vendor', icon: 'box', action: 'Mark as dispatched' },
+  { key: 'transit', label: 'In transit', sub: 'on the way', icon: 'truck', action: 'Mark as in transit' },
+  { key: 'delivered', label: 'Delivered', sub: 'at the gate', icon: 'factory', action: 'Mark as delivered' },
+  { key: 'received', label: 'Goods receipt', sub: 'booked into stock', icon: 'check', action: 'Book the goods receipt' }
 ];
 
 export function isTrackable(document) {
@@ -44,171 +52,165 @@ function nextStageOf(document) {
   return index >= STAGES.length - 1 ? null : STAGES[index + 1];
 }
 
-// How far along, as a tone: nothing moving yet, on its way, arrived.
-function toneFor(document) {
-  const index = stageIndexOf(document);
-  if (index === STAGES.length - 1) return 'pos';
-  if (index === 0) return 'warn';
-  return 'pri';
+// A count with a word under it. Deliberately not the Tile used on the overview: these are
+// four facts about one list, not four places to go.
+function Count({ label, value, sub, tone = 'mut' }) {
+  return (
+    <div className="tmet">
+      <div className="l">{label}</div>
+      <div className={`v ${tone}`}>{value}</div>
+      <div className="l">{sub}</div>
+    </div>
+  );
 }
 
 export default function ShipmentTracking({ data, plant, canDecide, onAdvance, busyId, onOpenDocument }) {
   const orders = trackedOrders(data.documents, plant);
   const [notes, setNotes] = useState({});
 
-  const waiting = orders.filter((d) => stageIndexOf(d) === 0).length;
-  const arrived = orders.filter((d) => stageIndexOf(d) === STAGES.length - 1).length;
+  // Everything approved but not yet released is not on this screen at all, and saying how
+  // many there are is the difference between "nothing is moving" and "nothing has been
+  // released yet", which are different problems.
+  const notReleased = byPlant(data.documents, plant).filter(
+    (d) => d.kind === 'PO' && d.status === 'pending'
+  ).length;
 
-  if (orders.length === 0) {
-    return (
-      <>
-        <Banner kind="info" icon="truck">
-          <b>Nothing is on its way yet.</b> An order appears here once it has finished every
-          approval and been released, because that is when it reaches the vendor and they can
-          start getting the material to you. Approve an order through to the end and it will
-          show up.
-        </Banner>
-        <SimulatedNote>
-          Stages are recorded here by hand. There is no connection to a vendor system or a
-          carrier, so nothing can move on its own - and a line that advanced by itself would
-          look like live tracking while being invented.
-        </SimulatedNote>
-      </>
-    );
-  }
+  const atStart = orders.filter((d) => stageIndexOf(d) === 0).length;
+  const moving = orders.filter((d) => {
+    const i = stageIndexOf(d);
+    return i >= 1 && i <= 3;
+  }).length;
+  const atGate = orders.filter((d) => stageIndexOf(d) === 4).length;
+  const booked = orders.filter((d) => stageIndexOf(d) === STAGES.length - 1).length;
 
   return (
     <>
-      <Banner kind={waiting > 0 ? 'err' : 'ok'} icon="truck">
-        <b>{orders.length === 1 ? '1 released order' : `${orders.length} released orders`}</b>
-        {waiting > 0 ? (
-          <>
-            {' '}— <b>{waiting}</b> {waiting === 1 ? 'has' : 'have'} not been sent to the vendor yet.
-            Nothing moves until they are told.
-          </>
-        ) : (
-          <> — all with the vendor. {arrived > 0 ? `${arrived} already booked into stock.` : ''}</>
-        )}
+      <Banner icon="truck">
+        Every released order, from the vendor to goods receipt. Mark each step as it happens
+        and the buyer sees the same position. Import orders also show where the vessel is.
       </Banner>
 
-      <Card span="c12" flush icon="truck" tone="pri" title="Released orders" subtitle="what is on its way">
-        <table>
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Vendor</th>
-              <th>Plant</th>
-              <th className="rt">Total value</th>
-              <th>Transport</th>
-              <th>Delivery</th>
-              <th>Stage</th>
-              <th>Recorded</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((d) => (
-              <tr key={d.id} className="clickrow" onClick={() => onOpenDocument && onOpenDocument(d.id)}>
-                <td>
-                  <b>{d.kind} {d.id}</b>
-                  <div className="sub">{d.material}, {d.materialCode}</div>
-                </td>
-                <td>
-                  {d.supplierName}
-                  {d.vessel ? <div className="sub">{d.vessel.from} → {d.vessel.to}</div> : null}
-                </td>
-                <td>{d.plant}</td>
-                <td className="rt n"><b>{inr(d.total)}</b></td>
-                <td className="sub">{d.transport}</td>
-                <td className="sub">{d.deliveryDate || 'not set'}</td>
-                <td><Chip tone={toneFor(d)}>{STAGES[stageIndexOf(d)].label}</Chip></td>
-                <td className="sub">{d.shipmentStageAt || '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <Card span="c12" icon="truck" tone="pri" title="Where everything is" subtitle="released orders only">
+        <div className="tmets">
+          <Count label="Released orders" value={orders.length} sub="approved and with the vendor" tone="pri" />
+          <Count label="On the way" value={moving} sub="sent, dispatched or in transit" tone={moving ? 'warn' : 'mut'} />
+          <Count label="At the gate" value={atGate} sub="delivered, receipt not booked" tone={atGate ? 'warn' : 'mut'} />
+          <Count label="Booked into stock" value={booked} sub="complete" tone={booked ? 'pos' : 'mut'} />
+          <Count label="Not released yet" value={notReleased} sub="orders still waiting for approval" tone="mut" />
+        </div>
+        {orders.length > 0 && atStart > 0 && (
+          <div className="flagline">
+            <Icon name="alert" size={14} />
+            {atStart === 1 ? '1 order has' : `${atStart} orders have`} not been sent to the vendor yet. Nothing moves
+            until they are told.
+          </div>
+        )}
       </Card>
 
-      {orders.map((d) => {
-        const index = stageIndexOf(d);
-        const next = nextStageOf(d);
-        const busy = busyId === d.id;
+      {orders.length === 0 ? (
+        <Card span="c12" icon="truck" tone="mut" title="Nothing is on its way" subtitle="yet">
+          <p className="muted">
+            An order appears here once it has finished every approval and been released,
+            because that is when it reaches the vendor and they can start getting the
+            material to you. {notReleased > 0 ? `${notReleased} are still waiting for approval.` : ''}
+          </p>
+        </Card>
+      ) : (
+        orders.map((d) => {
+          const index = stageIndexOf(d);
+          const next = nextStageOf(d);
+          const busy = busyId === d.id;
+          const complete = index === STAGES.length - 1;
 
-        return (
-          <Card
-            key={d.id}
-            span="c12"
-            icon="truck"
-            tone={toneFor(d)}
-            title={`${d.kind} ${d.id} — ${d.material}`}
-            subtitle={`${d.supplierName} to ${d.plant}, ${d.transport || 'transport not set'}`}
-          >
-            <div className="journey">
-              {STAGES.map((stage, i) => (
-                <div key={stage.key} className={`stepline ${i < index ? 'done' : i === index ? 'done' : 'wait'}`}>
-                  <span className={`sd bg-${i <= index ? (i === STAGES.length - 1 ? 'pos' : 'pri') : 'mut'}`}>
-                    <Icon name={i < index ? 'check' : i === index ? 'truck' : 'clock'} size={13} />
-                  </span>
-                  <div>
-                    <div className="s1">
-                      {stage.label}
-                      {i === index ? <span className="mut"> — where it is now</span> : null}
+          return (
+            <Card
+              key={d.id}
+              span="c12"
+              icon={modeIcon(d.transport)}
+              tone={complete ? 'pos' : index === 0 ? 'warn' : 'pri'}
+              title={`${d.kind} ${d.id}, ${d.supplierName}`}
+              subtitle={`${d.material} · ${d.plant} plant · ${String(d.transport || 'transport not set').toLowerCase()} · ${d.deliveryDate || 'no delivery date'}`}
+              action={
+                onOpenDocument ? (
+                  <button className="btn q" type="button" onClick={() => onOpenDocument(d.id)}>
+                    Open order
+                  </button>
+                ) : null
+              }
+            >
+              <StageJourney stages={STAGES} atIndex={index} />
+
+              {(d.shipmentStageAt || d.shipmentNote) && (
+                <div className="footnote">
+                  <b>{STAGES[index].label}</b>
+                  {d.shipmentStageAt ? ` recorded ${d.shipmentStageAt}` : ''}
+                  {d.shipmentNote ? ` — “${d.shipmentNote}”` : ''}
+                </div>
+              )}
+
+              {/* The map only for something actually at sea. A square rather than a banner:
+                  it answers "which sea, off which coast", and that needs no more room. */}
+              {d.vessel && (
+                <div className="vsplit">
+                  <div className="vsq">
+                    <VesselMap vessel={d.vessel} />
+                  </div>
+                  <div className="vfacts">
+                    <div className="kv"><span>Vessel</span><b>{d.vessel.name}</b></div>
+                    <div className="kv"><span>IMO</span><b>{d.vessel.imo}</b></div>
+                    <div className="kv"><span>Bill of lading</span><b>{d.vessel.billOfLading}</b></div>
+                    <div className="kv"><span>Route</span><b>{d.vessel.from} → {d.vessel.to}</b></div>
+                    <div className="kv"><span>ETA {d.vessel.to}</span><b>{d.vessel.eta}</b></div>
+                    <div className="kv"><span>After it lands</span><b>{d.vessel.afterPort}</b></div>
+                    <div className="feed">
+                      <span className="outside">Outside SAP</span>
+                      {d.vessel.source}, as of {d.vessel.updated}. SAP holds the order, not the ship.
                     </div>
-                    {i === index && d.shipmentStageAt ? (
-                      <div className="s2">recorded {d.shipmentStageAt}</div>
-                    ) : null}
-                    {i === index && d.shipmentNote ? (
-                      <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{d.shipmentNote}&rdquo;</div>
-                    ) : null}
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
 
-            {d.vessel ? (
-              <div className="footnote">
-                <b>{d.vessel.name}</b> (IMO {d.vessel.imo}), bill of lading {d.vessel.billOfLading}.
-                {' '}Last seen {d.vessel.position}, ETA {d.vessel.eta}. {d.vessel.afterPort}.
-                <div className="mut">Position from {d.vessel.source}, updated {d.vessel.updated}.</div>
-              </div>
-            ) : null}
+              {next && canDecide ? (
+                <div className="footerbar">
+                  <input
+                    className="noteinput"
+                    placeholder={`Note for “${next.label}”, for example a lorry or rake number`}
+                    value={notes[d.id] || ''}
+                    onChange={(e) => setNotes({ ...notes, [d.id]: e.target.value })}
+                    disabled={busy}
+                  />
+                  <button
+                    className="btn emph"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onAdvance(d, next.key, notes[d.id] || '')}
+                  >
+                    <Icon name="check" size={13} />
+                    {busy ? 'Saving…' : next.action}
+                  </button>
+                </div>
+              ) : complete ? (
+                <div className="flagline">
+                  <Icon name="check" size={14} />
+                  Booked into stock{d.shipmentStageAt ? ` on ${d.shipmentStageAt}` : ''}. This order is complete.
+                </div>
+              ) : null}
 
-            {next && canDecide ? (
-              <div className="footerbar">
-                <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon name="shield" size={13} /> Recording what has already happened
-                </span>
-                <input
-                  className="noteinput"
-                  placeholder="Note — a docket number, a delay, who confirmed it"
-                  value={notes[d.id] || ''}
-                  onChange={(e) => setNotes({ ...notes, [d.id]: e.target.value })}
-                  disabled={busy}
-                />
-                <button
-                  className="btn emph"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onAdvance(d, next.key, notes[d.id] || '')}
-                >
-                  <Icon name="check" size={13} />
-                  {busy ? 'Saving…' : next.action}
-                </button>
+              <div className="footnote mut">
+                {inr(d.total)} · raised by {d.createdBy ? d.createdBy.name : 'not recorded'} · released{' '}
+                {d.decidedAt || 'recently'}
               </div>
-            ) : !next ? (
-              <div className="flagline">
-                <Icon name="check" size={14} />
-                Booked into stock{d.shipmentStageAt ? ` on ${d.shipmentStageAt}` : ''}. This order is complete.
-              </div>
-            ) : null}
-          </Card>
-        );
-      })}
+            </Card>
+          );
+        })
+      )}
 
       <SimulatedNote>
         Every stage here is recorded by the person watching it happen, not reported by the
         vendor or a carrier — there is no connection to either. Stages only move forwards,
-        one step at a time, because they are a record of what happened rather than a guess
-        at where the goods are.
+        one step at a time, because they are a record of what happened rather than a guess at
+        where the goods are. The vessel position is a real AIS feed and is the one thing on
+        this screen that moves on its own.
       </SimulatedNote>
     </>
   );
