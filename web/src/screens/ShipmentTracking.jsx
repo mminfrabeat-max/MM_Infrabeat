@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react';
 import { inr } from '../format.js';
 import { byPlant } from '../selectors.js';
 import { Card, Banner, Icon, SimulatedNote, Count } from '../components/ui.jsx';
-import { StageJourney, VesselMap, ConsignmentMap, modeIcon } from '../components/journey.jsx';
+import { StageJourney, ConsignmentMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
 // can draw the line and the button before asking.
@@ -187,14 +187,15 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
         </div>
       )}
 
-      {/* A vessel at sea has a real position from a real feed. It gives way once the
-          goods are inland and a lorry is carrying them, because two maps of two
-          different legs side by side is a puzzle, not an answer. */}
+      {/* What is known about the vessel, as facts rather than a map.
+
+          There is no map here until a tracking number has been entered, and that is the
+          same rule a domestic order follows: nothing to look at until there is something
+          to follow. An import is not a different screen, it is the same screen with a sea
+          leg in front of it, so the bill of lading and the ETA are printed and the map
+          waits its turn. */}
       {document.vessel && !enRoute && (
         <div className="vsplit">
-          <div className="vsq">
-            <VesselMap vessel={document.vessel} />
-          </div>
           <div className="vfacts">
             <div className="kv"><span>Vessel</span><b>{document.vessel.name}</b></div>
             <div className="kv"><span>IMO</span><b>{document.vessel.imo}</b></div>
