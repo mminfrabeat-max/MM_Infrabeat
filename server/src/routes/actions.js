@@ -18,7 +18,13 @@ import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
 import { getDocuments, getSituations, getStock, getSupplierScores } from '../data-service.js';
 import * as store from '../store.js';
-import { sendDecisionEmail, sendInitiatorEmail, sendPlainEmail, sendVendorOrder } from '../mailer.js';
+import {
+  sendDecisionEmail,
+  sendInitiatorEmail,
+  sendPlainEmail,
+  sendVendorOrder,
+  sendDeliveryReceived
+} from '../mailer.js';
 import { canDecide, outcomeOf, outcomeSentence, whoseTurn } from '../domain/approvals.js';
 import { canAdvanceTo, currentStage, isTrackable, LAST_STAGE, STAGES } from '../domain/shipment.js';
 
@@ -412,7 +418,21 @@ actionsRouter.post(
       return res.status(409).json({ error: `${document.id} is already at ${currentStage(document)}.` });
     }
 
-    res.json({ id: document.id, recorded, stage: currentStage(document) });
+    // The vendor is told their delivery arrived. After the record, never before: a mail
+    // saying we received something we had not written down is the wrong way round, and
+    // this way a mail failure cannot lose the delivery.
+    const vendorMail = await sendDeliveryReceived({
+      document,
+      receivedBy: req.user.name,
+      note
+    });
+
+    res.json({
+      id: document.id,
+      recorded,
+      stage: currentStage(document),
+      vendorEmail: withoutAddress(vendorMail)
+    });
   })
 );
 

@@ -64,39 +64,49 @@ function Count({ label, value, sub, tone = 'mut' }) {
   );
 }
 
-// How long the carrier "takes" to get from the road to the gate, once a tracking number
-// has been entered.
+// The carrier feed, as a set of reports arriving over time.
 //
-// Ten seconds, and it is a demonstration, not a delivery. There is no carrier feed behind
-// any of this: the map moves because a timer said so. What that buys is being able to
-// show somebody the whole cycle in a minute instead of a fortnight, and the screen says
-// as much rather than letting it pass for live tracking.
+// Five seconds from the vendor to the road, five more to the gate. It is a demonstration,
+// not a delivery: there is no feed behind any of it and the screen says so. What it buys
+// is showing somebody the whole cycle in half a minute instead of a fortnight.
 //
-// The important half is what it does NOT do: nothing is recorded when the timer fires.
-// The order still sits at the stage it was at until a person presses the button. A
-// simulation that wrote to the audit trail would be forging it.
-const CARRIER_SECONDS = 10;
+// The important half is what it does NOT do. Nothing is recorded when a timer fires. The
+// order sits at the stage it was at until a person presses the button, and a simulation
+// that wrote to the audit trail would be forging it. So there are two things on screen at
+// once - what the carrier says, and what has been recorded - and they are labelled
+// separately because they are not the same claim.
+const FEED = [
+  { at: 0, progress: 0.12, says: 'Left the vendor', detail: 'Picked up and on the road.' },
+  { at: 5, progress: 0.5, says: 'In transit', detail: 'About halfway.' },
+  { at: 10, progress: 1, says: 'At the gate', detail: 'Arrived at the plant.' }
+];
 
 // The tracking flow for one order: enter the number, watch it, confirm it arrived.
-function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
+function Consignment({ document, busy, onTrack, onArrive }) {
   const [trackingId, setTrackingId] = useState('');
   const [note, setNote] = useState('');
-  const [atGate, setAtGate] = useState(false);
+  const [reportIndex, setReportIndex] = useState(0);
 
   const stage = document.shipmentStage || 'released';
   const tracking = document.trackingId;
   const enRoute = Boolean(tracking) && (stage === 'dispatched' || stage === 'transit');
 
-  // The timer runs only while something is actually on the road. It is cleared on the way
-  // out so a card that is closed or re-rendered does not leave one running behind it.
+  // One timer per report, all cleared together. Restarting whenever the order or its
+  // number changes, so a card that has been re-rendered does not inherit a stale run.
   useEffect(() => {
     if (!enRoute) {
-      setAtGate(false);
+      setReportIndex(0);
       return undefined;
     }
-    const timer = setTimeout(() => setAtGate(true), CARRIER_SECONDS * 1000);
-    return () => clearTimeout(timer);
+    setReportIndex(0);
+    const timers = FEED.map((report, i) =>
+      report.at === 0 ? null : setTimeout(() => setReportIndex(i), report.at * 1000)
+    ).filter(Boolean);
+    return () => timers.forEach(clearTimeout);
   }, [enRoute, document.id, tracking]);
+
+  const report = FEED[reportIndex];
+  const atGate = reportIndex === FEED.length - 1;
 
   // Waiting for the vendor to send a number back.
   if (stage === 'sent' && !tracking) {
@@ -139,17 +149,22 @@ function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
           <ConsignmentMap
             from={document.supplierCity || document.supplierName}
             to={document.plant}
-            arrived={atGate}
+            progress={report.progress}
             trackingId={tracking}
+            label={atGate ? `At the ${document.plant} plant gate` : `${report.says}, towards ${document.plant}`}
           />
         </div>
         <div className="vfacts">
           <div className="kv"><span>Tracking number</span><b>{tracking}</b></div>
-          <div className="kv"><span>Carrier</span><b>{document.supplierName}</b></div>
+          <div className="kv"><span>From</span><b>{document.supplierCity || document.supplierName}</b></div>
           <div className="kv"><span>Going to</span><b>{document.plant} plant</b></div>
           <div className="kv">
-            <span>Reported</span>
-            <b>{atGate ? 'At the gate' : 'On the way'}</b>
+            <span>Carrier reports</span>
+            <b>{report.says}</b>
+          </div>
+          <div className="kv">
+            <span>Recorded so far</span>
+            <b>{STAGES.find((x) => x.key === stage)?.label || stage}</b>
           </div>
 
           {atGate ? (
@@ -157,7 +172,7 @@ function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
               <div className="flagline">
                 <Icon name="check" size={14} />
                 The carrier reports it at the {document.plant} gate. Confirm it is actually
-                there and the delivery is recorded.
+                there and the delivery is recorded — {document.supplierName} is told as well.
               </div>
               <div className="footerbar">
                 <input
@@ -175,7 +190,7 @@ function Consignment({ document, busy, onTrack, onArrive, onAdvance }) {
             </>
           ) : (
             <div className="footnote mut">
-              Following {tracking}. The map updates as the carrier reports in.
+              {report.detail} Following {tracking}; the map moves as the carrier reports in.
             </div>
           )}
         </div>
@@ -304,7 +319,6 @@ export default function ShipmentTracking({ data, plant, canDecide, onAdvance, on
                   busy={busy}
                   onTrack={onTrack}
                   onArrive={onArrive}
-                  onAdvance={onAdvance}
                 />
               ) : next && canDecide ? (
                 <div className="footerbar">

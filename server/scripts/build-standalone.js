@@ -320,7 +320,22 @@ function buildShim(data) {
         });
       }
 
-      return reply({ id: arrId, recorded: walked, stage: arrDoc.shipmentStage });
+      // The live dashboard mails the vendor here. This file cannot send anything, and
+      // saying so is better than letting a demonstration imply a message went out.
+      DATA.actionLog.entries.unshift({
+        at: arrDoc.shipmentStageAt, action: "mail sent", documentId: arrId,
+        documentType: arrDoc.kind, supplierName: arrDoc.supplierName, value: "",
+        decidedBy: DATA.dashboard.user.name,
+        note: "Delivery received, " + arrDoc.supplierName,
+        emailTo: "", emailStatus: OFFLINE_MAIL.status
+      });
+
+      return reply({
+        id: arrId,
+        recorded: walked,
+        stage: arrDoc.shipmentStage,
+        vendorEmail: { sent: false, status: OFFLINE_MAIL.status }
+      });
     }
 
     // Ask needs the rules that live on the server, and there is no server here. Saying so

@@ -518,6 +518,61 @@ export async function sendVendorOrder({ document, releasedBy }) {
   }
 }
 
+// Telling the vendor their delivery arrived.
+//
+// The second and last message that leaves the company on an order, and it closes the
+// loop the release opened: they were asked to send something and told how to say it was
+// on its way, so they are owed the other half. A vendor chasing a delivery they already
+// made is a phone call nobody needed.
+//
+// It is careful about what it claims. Confirming arrival at the gate is not the same as
+// accepting the goods - quantity and quality are checked when it is booked into stock -
+// so this says it arrived and nothing more.
+export async function sendDeliveryReceived({ document, receivedBy, note }) {
+  const target = addressee(document.supplierName);
+  const to = target.box || config.mail.to || config.mail.user;
+
+  if (!mailConfigured()) {
+    return { sent: false, to, status: 'Not sent: email is not configured in .env' };
+  }
+
+  const lines = [
+    ...redirectLineText(document.supplierName, target),
+    `Your delivery against ${document.kind} ${document.id} reached our ${document.plant} plant.`,
+    '',
+    `Material        ${document.material} (${document.materialCode})`,
+    `Quantity        ${Number(document.quantity).toLocaleString('en-IN')} ${document.unit}`,
+    `Tracking        ${document.trackingId || 'not given'}`,
+    `Received        ${receivedBy}`,
+    ...(note ? ['', `Note            ${note}`] : []),
+    '',
+    'This confirms it arrived at the gate. Quantity and quality are checked when it is',
+    'booked into stock, and anything we find there we will raise with you separately.',
+    '',
+    'Thank you.',
+    '',
+    'Sent by the InfraBeat procurement dashboard.'
+  ];
+
+  try {
+    const info = await getTransport().sendMail({
+      from: config.mail.from || config.mail.user,
+      to,
+      subject: `Received: ${document.material} against ${document.kind} ${document.id}`,
+      text: lines.join('\n')
+    });
+    return {
+      sent: true,
+      to,
+      delivered: !target.redirected,
+      status: `Sent ${info.messageId || ''}`.trim(),
+      preview: previewLink(info)
+    };
+  } catch (error) {
+    return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
+  }
+}
+
 export async function sendPlainEmail({ to, subject, body, from }) {
   if (!mailConfigured()) {
     return { sent: false, to, status: 'Not sent: email is not configured in .env' };

@@ -149,26 +149,35 @@ export function placeOf(name) {
   return PLACES[key] || null;
 }
 
-// The consignment on a map, between the vendor and the plant.
+// The consignment on a map, somewhere between the vendor and the plant.
 //
-// Two positions only: somewhere on the way, and at the gate. Not a track - there is no
-// feed behind this and drawing a route would be inventing one. The midpoint is honest
-// about being an approximation; a precise dot in the middle of a field would not be.
-export function ConsignmentMap({ from, to, arrived, trackingId }) {
-  const start = placeOf(from);
-  const end = placeOf(to);
-  if (!end) return null;
+// `progress` is 0 at the vendor and 1 at the plant, and the point is interpolated between
+// them. A straight line between two towns is not the road it will actually take, and the
+// zoom is kept wide enough that it reads as "somewhere around here" rather than claiming a
+// lorry is in a particular field. At the end it zooms in, because then the position IS
+// exact: it is at the gate.
+export function ConsignmentMap({ from, to, progress = 0, trackingId, label }) {
+  const startAt = placeOf(from);
+  const endAt = placeOf(to);
+  if (!endAt) return null;
 
-  const at = arrived || !start ? end : { lat: (start.lat + end.lat) / 2, lng: (start.lng + end.lng) / 2 };
+  const arrived = progress >= 1;
+  const at = startAt
+    ? {
+        lat: startAt.lat + (endAt.lat - startAt.lat) * progress,
+        lng: startAt.lng + (endAt.lng - startAt.lng) * progress
+      }
+    : endAt;
+
   const q = `${at.lat.toFixed(3)},${at.lng.toFixed(3)}`;
-  const zoom = arrived ? 11 : 6;
+  const zoom = arrived ? 11 : 7;
   const embed = `https://maps.google.com/maps?q=${q}&z=${zoom}&output=embed`;
   const full = `https://www.google.com/maps?q=${q}`;
 
   return (
     <div className="vmap">
       <iframe
-        title={arrived ? `Consignment at ${to}` : `Consignment between ${from} and ${to}`}
+        title={label ? `${label} — ${to}` : `Consignment to ${to}`}
         src={embed}
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
@@ -176,7 +185,7 @@ export function ConsignmentMap({ from, to, arrived, trackingId }) {
       <div className="vmapfoot">
         <span>
           <Icon name={arrived ? "factory" : "truck"} size={13} />{" "}
-          {arrived ? `At the ${to} plant gate` : `On the way to ${to}`}
+          {label || (arrived ? `At the ${to} plant gate` : `On the way to ${to}`)}
           {trackingId ? ` · ${trackingId}` : ''}
         </span>
         <a href={full} target="_blank" rel="noreferrer noopener">
