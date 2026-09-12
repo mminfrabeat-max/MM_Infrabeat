@@ -218,10 +218,10 @@ export default function RequisitionDetail({
             {busy === 'approve'
               ? 'Saving…'
               : forNext
-                ? `Record ${document.next.level?.includes('final') ? 'release' : 'approval'} by ${document.next.name}`
+                ? `Record approval by ${document.next.name}`
                 : document.next
                   ? 'Approve and pass on'
-                  : 'Approve and release'}
+                  : 'Approve'}
           </button>
         </div>
       )}

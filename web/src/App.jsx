@@ -152,9 +152,7 @@ export default function App() {
     setDecideError(null);
     // Read before the reload, because after it the document is no longer in the pending
     // list this closure captured.
-    const raised = data?.documents?.find((d) => d.id === id);
-    const buyer = raised?.createdBy?.name || '';
-    const kind = raised?.kind || 'PO';
+    const buyer = data?.documents?.find((d) => d.id === id)?.createdBy?.name || '';
     try {
       const result = action === 'approve' ? await api.approve(id, note) : await api.reject(id, note);
       await load();
@@ -165,14 +163,7 @@ export default function App() {
       // than the status field printed.
       const what = result.movedTo
         ? `${id} approved and passed to ${result.movedTo.name}.`
-        : result.status === 'rejected'
-          ? `${id} sent back.`
-          // The last approval IS the release - there is no separate release step in this
-          // business - so the message says so, and says where the document went, because
-          // "approved" on its own leaves somebody wondering what happens next.
-          : kind === 'PO'
-            ? `${id} approved and released. It is in Shipment tracking now.`
-            : `${id} approved and released to purchasing.`;
+        : `${id} ${result.status === 'rejected' ? 'sent back' : 'approved'}.`;
 
       // Two mails go out and they can fail independently, so saying "mail sent" when only
       // one of them left would be the kind of half-truth that is worse than silence.
