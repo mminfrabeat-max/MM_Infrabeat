@@ -552,6 +552,62 @@ th.rt, td.rt { text-align: right; }
 .tline { font-size: 13.1px; margin-top: 8px; line-height: 1.5; }
 .tline b { font-weight: 650; }
 .tline.fu { color: var(--warn); }
+/* ============ where a list stands ============ */
+
+/* The same counts the rows carry, sized to be read across a desk rather than leaned into.
+
+   The shape is the overview Tile's - tinted icon square, big figure, label beneath -
+   because that is what a number looks like everywhere else here. What it leaves out is the
+   Tile's hover and click: these are facts about the list directly below, not a way into
+   another screen, and a panel that lifts under the cursor promises otherwise. */
+.statgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(156px, 1fr)); gap: 11px; }
+.statbox {
+  border: 1px solid transparent; border-radius: var(--r-md);
+  background: var(--surface-2); padding: 12px 14px 12px;
+}
+
+/* Each state carries its own tint, so which panel is which is answered by colour before
+   the label is read. The tints are the ones the status chips already use, so a row's
+   chip and its panel are recognisably the same thing. */
+.statbox.warn { background: var(--warn-soft); }
+.statbox.pri { background: var(--primary-soft); }
+.statbox.pos { background: var(--pos-soft); }
+.statbox.neg { background: var(--neg-soft); }
+
+/* The icon and the number share a line, pushed to opposite ends. Stacked, they left a
+   panel mostly empty on a wide screen and the figure looked adrift in it. */
+.statrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.statbox .ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--surface); }
+.statnum { font-size: 34px; font-weight: 700; letter-spacing: -1.4px; line-height: 1; }
+.statlab { font-size: 13px; font-weight: 650; color: var(--ink); margin-top: 9px; }
+.statsub { font-size: 11.8px; color: var(--ink-2); margin-top: 2px; line-height: 1.35; }
+
+/* Nothing in this state. Still drawn, because a zero is an answer worth having - "none
+   sent back" is a fact - but drained of colour so it cannot compete with the states that
+   do have something in them. */
+.statbox.mut { background: transparent; border-color: var(--border); }
+.statbox.mut .statnum { color: var(--ink-3); }
+.statbox.mut .ico { background: var(--surface-3); }
+
+/* The whole list as one bar, in the same colours as the panels under it. Proportion is a
+   shape question, and "5, 2, 2, 0" makes the reader do arithmetic the bar has already
+   done: most of this is still yours. */
+.statband {
+  display: flex; gap: 2px; height: 8px; margin-bottom: 13px;
+  border-radius: 999px; overflow: hidden; background: var(--surface-3);
+}
+.statband span { display: block; min-width: 4px; }
+.statband .warn { background: var(--warn); }
+.statband .pri { background: var(--primary); }
+.statband .pos { background: var(--pos); }
+.statband .neg { background: var(--neg); }
+
+/* The money sits in the card header, not among the counts. It measures the same list in a
+   different unit, and a fifth panel in that row would read as a fifth status. */
+.statmoney { margin-left: auto; text-align: right; }
+.statmoney .l { font-size: 11.6px; color: var(--ink-3); }
+.statmoney .v { font-size: 19px; font-weight: 700; letter-spacing: -.6px; margin-top: 1px; }
+
 .tmets { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 12px; }
 .tmet .v { font-size: 15px; font-weight: 700; }
 .tmet .l { font-size: 11.8px; color: var(--ink-3); margin-top: 1px; }

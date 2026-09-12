@@ -90,26 +90,82 @@ function holder(d) {
   return 'you';
 }
 
+// One status, as a number big enough to read from across a desk.
+//
+// Borrowed from the overview Tile on purpose - tinted icon square, big figure, label
+// beneath - because that is what a number looks like everywhere else here, and a summary
+// that invents its own furniture reads as a different product bolted on.
+function StatBox({ icon, label, value, sub, tone }) {
+  return (
+    <div className={`statbox ${tone}`}>
+      <div className="statrow">
+        <span className={`ico ${tone}`}>
+          <Icon name={icon} />
+        </span>
+        <div className={`statnum n ${tone}`}>{value}</div>
+      </div>
+      <div className="statlab">{label}</div>
+      <div className="statsub">{sub}</div>
+    </div>
+  );
+}
+
+// The same four counts as one bar.
+//
+// Four numbers still have to be added up before they mean anything; the bar has done that
+// already, and the answer it gives - how much of this is still mine - is the one the card
+// exists for. Empty states are left out rather than drawn at zero width, so the segments
+// that are there keep their proportions honest.
+function StatBand({ parts }) {
+  const total = parts.reduce((sum, p) => sum + p.list.length, 0);
+  if (!total) return null;
+
+  return (
+    <div
+      className="statband"
+      role="img"
+      aria-label={parts.map((p) => `${p.list.length} ${p.label.toLowerCase()}`).join(', ')}
+    >
+      {parts
+        .filter((p) => p.list.length > 0)
+        .map((p) => (
+          <span
+            key={p.key}
+            className={p.tone}
+            style={{ width: `${(p.list.length / total) * 100}%` }}
+            title={`${p.list.length} ${p.label.toLowerCase()}`}
+          />
+        ))}
+    </div>
+  );
+}
+
 // The requisitions split by status, counted.
 //
 // The list below answers "what should I do next"; this answers "where does everything
-// stand", which is the question asked before starting rather than during. Reading it off
-// the list means reading every row - nine rows do not tell you that seven are yours and
-// two are stuck elsewhere until you have been through all nine.
+// stand", which is asked before starting rather than during. Reading it off the list means
+// reading every row - nine rows do not tell you that five are yours and two are stuck
+// elsewhere until you have been through all nine.
 //
-// The four words are exactly the four the Status column uses. A summary that invents its
-// own vocabulary makes the reader map one to the other, which is work the card was
-// supposed to save.
+// The four words are exactly the four the Status column uses. A summary with its own
+// vocabulary makes the reader map one onto the other, which is the work it was meant to
+// save.
 function RequisitionCounts({ documents }) {
   const inState = (state) => documents.filter((d) => d.approvalState?.state === state);
-  const pending = inState('waiting');
-  const partial = inState('partial');
-  const approved = inState('approved');
-  const sentBack = inState('rejected');
+
+  const parts = [
+    { key: 'waiting', label: 'Pending', icon: 'clock', tone: 'warn', sub: 'waiting on you', list: inState('waiting') },
+    { key: 'partial', label: 'Partially approved', icon: 'people', tone: 'pri', sub: 'signed once, now with the next approver', list: inState('partial') },
+    { key: 'approved', label: 'Approved', icon: 'check', tone: 'pos', sub: 'released', list: inState('approved') },
+    { key: 'rejected', label: 'Sent back', icon: 'back', tone: 'neg', sub: 'returned to whoever raised it', list: inState('rejected') }
+  ];
+
+  const pending = parts[0].list;
+  const partial = parts[1].list;
 
   // Who is actually sitting on the part-approved ones. This is what makes the card worth
-  // more than the number on the tab: "2 partially approved" is a fact, "both with S. Rao"
-  // is something to act on.
+  // more than the number on the tab: "2 partially approved" is a fact, "both with Mr.
+  // Deshmukh" is something to act on.
   const holders = [...new Set(partial.map((d) => d.approvalState?.holder).filter(Boolean))];
 
   // Only the critical band, because that is the one whose rows say "Approve today". Adding
@@ -123,38 +179,26 @@ function RequisitionCounts({ documents }) {
       tone="pri"
       title="Where the requisitions stand"
       subtitle="by approval status"
+      action={
+        <div className="statmoney">
+          <div className="l">Value not yet released</div>
+          <div className="v n">{inr(sumTotals([...pending, ...partial]))}</div>
+        </div>
+      }
     >
-      <div className="tmets">
-        <Count
-          label="Pending"
-          value={pending.length}
-          sub="waiting on you"
-          tone={pending.length ? 'warn' : 'mut'}
-        />
-        <Count
-          label="Partially approved"
-          value={partial.length}
-          sub="signed once, with the next approver"
-          tone={partial.length ? 'pri' : 'mut'}
-        />
-        <Count
-          label="Approved"
-          value={approved.length}
-          sub="released"
-          tone={approved.length ? 'pos' : 'mut'}
-        />
-        <Count
-          label="Sent back"
-          value={sentBack.length}
-          sub="returned to whoever raised it"
-          tone={sentBack.length ? 'neg' : 'mut'}
-        />
-        <Count
-          label="Value not yet released"
-          value={inr(sumTotals([...pending, ...partial]))}
-          sub="pending and partially approved together"
-          tone="mut"
-        />
+      <StatBand parts={parts} />
+
+      <div className="statgrid">
+        {parts.map((p) => (
+          <StatBox
+            key={p.key}
+            icon={p.icon}
+            label={p.label}
+            value={p.list.length}
+            sub={p.sub}
+            tone={p.list.length ? p.tone : 'mut'}
+          />
+        ))}
       </div>
 
       {today.length > 0 && (
