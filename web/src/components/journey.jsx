@@ -99,10 +99,10 @@ export function VesselMap({ vessel }) {
   );
 }
 
-function Node({ icon, name, sub, done }) {
+function Node({ icon, name, sub, done, reported }) {
   return (
     <div className="jnode">
-      <span className={`jdot ${done ? 'done' : ''}`}>
+      <span className={`jdot ${done ? 'done' : reported ? 'reported' : ''}`}>
         <Icon name={icon} size={15} />
       </span>
       <div className="jname">{name}</div>
@@ -205,7 +205,10 @@ export function ConsignmentMap({ from, to, progress = 0, trackingId, label }) {
 //
 // The leg between two stages carries no mode icon, because nothing is moving between
 // "sent to vendor" and "dispatched" - a step is a thing somebody recorded, not a journey.
-export function StageJourney({ stages, atIndex }) {
+// `reportedIndex` is a stage the carrier has reported but nobody has recorded. It pulses
+// one step ahead of the solid ones, which is exactly what it means: something has
+// happened out there and the dashboard is waiting to be told it is true.
+export function StageJourney({ stages, atIndex, reportedIndex = -1 }) {
   return (
     <div className="journey">
       {stages.map((stage, i) => (
@@ -215,7 +218,13 @@ export function StageJourney({ stages, atIndex }) {
               <div className="jtrack" />
             </div>
           )}
-          <Node icon={stage.icon} name={stage.label} sub={stage.sub} done={i <= atIndex} />
+          <Node
+            icon={stage.icon}
+            name={stage.label}
+            sub={stage.sub}
+            done={i <= atIndex}
+            reported={i === reportedIndex && i > atIndex}
+          />
         </Fragment>
       ))}
     </div>

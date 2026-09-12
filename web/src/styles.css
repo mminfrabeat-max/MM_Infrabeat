@@ -375,6 +375,16 @@ th.rt, td.rt { text-align: right; }
   border: 2px solid var(--border);
 }
 .jdot.done { background: var(--pos-soft); color: var(--pos); border-color: var(--pos); }
+/* The carrier says the goods are here; nobody has confirmed it yet.
+
+   Green and alive, because something has happened and it is worth looking at. Hollow
+   rather than filled, because it is not done: the filled dots behind it are things that
+   were recorded, and this one is a claim waiting on a person. The difference has to be
+   visible at a glance or the pulse just reads as "finished, but flashing". */
+.jdot.reported {
+  background: var(--surface-3); color: var(--pos); border-color: var(--pos);
+  animation: pulse 2.2s infinite;
+}
 .jname { font-size: 12.6px; font-weight: 650; color: var(--ink); line-height: 1.3; }
 .jnode .jsub { font-size: 11.4px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
 
@@ -644,6 +654,7 @@ th.rt, td.rt { text-align: right; }
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
   .pulse { animation: none; }
+  .jdot.reported { animation: none; }
   .tile:hover { transform: none; }
 }
 
