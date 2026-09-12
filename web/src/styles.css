@@ -224,6 +224,18 @@ svg { display: block; }
 .row .t2 { display: block; font-size: 12.4px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; }
 .row .t3 { display: block; font-size: 12.1px; color: var(--ink-3); margin-top: 5px; line-height: 1.45; }
 .row .rt { margin-left: auto; text-align: right; flex: none; padding-left: 12px; }
+
+/* A row that picks something, and the mark on the one currently being shown.
+
+   A bar down the left edge rather than a filled background: these rows carry tinted
+   score chips and coloured meters already, and a filled row turns the whole list into
+   competing blocks of colour with no winner. */
+.pickrow { cursor: pointer; position: relative; }
+.pickrow.on { background: var(--surface-2); }
+.pickrow.on::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--primary);
+}
 .rowpad { padding: 24px 17px; }
 
 .chipx { display: inline-flex; align-items: center; gap: 5px; font-size: 11.6px; font-weight: 650; padding: 3px 9px; border-radius: 999px; }

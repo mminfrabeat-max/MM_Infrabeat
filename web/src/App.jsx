@@ -550,7 +550,9 @@ export default function App() {
           <Stock data={data} plant={plant} canDecide={data.canDecide} onRaiseRequest={raiseRequest} busyCode={busy} />
         )}
         {tab === 'open' && <Commitments data={data} plant={plant} />}
-        {tab === 'suppliers' && <Vendors data={data} plant={plant} />}
+        {tab === 'suppliers' && (
+          <Vendors data={data} plant={plant} onOpenDocument={openDocument} />
+        )}
         {tab === 'team' && (
           <Teams
             data={data}

@@ -2,25 +2,63 @@
 //
 // The screen explains its own score rather than presenting a number from nowhere. A buyer
 // who cannot see how a score was reached will not trust it, and rightly so. So the
-// arithmetic is on the card: SAP's own figure, minus what we took off and why.
+// arithmetic is on the page: SAP's own figure, minus what we took off and why.
+//
+// One vendor at a time, rather than all nine at once. Nine vendors each carrying four
+// figures and three charts is nine screens of scrolling, and the question this screen
+// exists to answer - which of these is the problem - is a comparison, which nobody can
+// make while scrolling. So the list is a single column to run an eye down, scored and
+// ordered, and whichever one is picked opens beside it in full.
+//
+// The last card is what makes the score worth having. A vendor who is slipping is a fact.
+// A vendor who is slipping while holding a crore of yours awaiting approval is a decision,
+// and those documents are one click from here.
 
-import { rupees, signed, plural, bandTone } from '../format.js';
-import { Card, Banner, Score, Metric, SimulatedNote } from '../components/ui.jsx';
-import { VendorCharts } from '../components/charts.jsx';
+import { useState } from 'react';
+import { inr, rupees, signed, plural, bandTone } from '../format.js';
+import { Card, Banner, Score, Metric, Chip, Icon, TermRow, SimulatedNote } from '../components/ui.jsx';
+import { VendorCharts, Meter, toneColour } from '../components/charts.jsx';
+import { StatusChip } from './Approvals.jsx';
 
-export default function Vendors({ data, plant }) {
-  // Vendors are not tied to a plant, so the plant selector does not filter this screen.
-  // Instead we count how many documents at the chosen plant are waiting with each of them,
-  // which is the number that makes the score worth acting on.
-  const openWith = (supplierId) =>
-    data.documents.filter(
-      (d) =>
-        d.supplierId === supplierId &&
-        d.status === 'pending' &&
-        (plant === 'all' || d.plant === plant)
-    ).length;
+// The soft background matching a tone, for the panel that explains the score. The chip
+// colours are already spoken for; this is the same hue at a weight a paragraph can sit on.
+function softFor(tone) {
+  if (tone === 'neg') return 'var(--neg-soft)';
+  if (tone === 'warn') return 'var(--warn-soft)';
+  if (tone === 'pos') return 'var(--pos-soft)';
+  return 'var(--primary-soft)';
+}
 
-  const vendors = [...data.suppliers].sort((a, b) => a.total - b.total);
+export default function Vendors({ data, plant, onOpenDocument }) {
+  // Unscored vendors sort last rather than first. They are not good and not bad; they have
+  // no record yet, and the top of a worst-first list would say otherwise.
+  const vendors = [...data.suppliers].sort(
+    (a, b) => (a.scored ? a.total : 101) - (b.scored ? b.total : 101)
+  );
+
+  const [picked, setPicked] = useState(vendors.length ? vendors[0].supplierId : null);
+  const vendor = vendors.find((v) => v.supplierId === picked) || vendors[0];
+
+  if (!vendor) {
+    return <Banner icon="truck">No vendors are set up yet.</Banner>;
+  }
+
+  // A vendor is not tied to a plant, so the list is never filtered. What IS about a place
+  // is the work open with them, so the plant selector narrows that, and the card says so.
+  const atPlant = (row) => plant === 'all' || row.plant === plant;
+  const documents = data.documents.filter((d) => d.supplierId === vendor.supplierId && atPlant(d));
+  const contracts = data.contracts.filter((c) => c.supplierName === vendor.name && atPlant(c));
+  const waiting = documents.filter((d) => d.status === 'pending');
+
+  const tone = vendor.scored ? bandTone(vendor.band) : 'pri';
+  const where = plant === 'all' ? 'across all plants' : `at ${plant}`;
+
+  // How much is sitting with each vendor, for the list itself. The count belongs beside the
+  // score because the two together are the point: a poor score with nothing open is a note
+  // for later, a poor score with three orders open is today.
+  const openCount = (supplierId) =>
+    data.documents.filter((d) => d.supplierId === supplierId && d.status === 'pending' && atPlant(d))
+      .length;
 
   return (
     <>
@@ -35,67 +73,212 @@ export default function Vendors({ data, plant }) {
       </SimulatedNote>
 
       <div className="grid">
-        {vendors.map((v) => (
+        <Card span="c4" icon="truck" title="Vendors" subtitle="worst standing first" flush>
+          {vendors.map((v) => {
+            const open = openCount(v.supplierId);
+            return (
+              <button
+                key={v.supplierId}
+                type="button"
+                className={`row pickrow${v.supplierId === vendor.supplierId ? ' on' : ''}`}
+                onClick={() => setPicked(v.supplierId)}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="t1">{v.name}</span>
+                  <span className="t2">
+                    {v.category}, {v.city}
+                  </span>
+                  {v.scored && <Meter percent={v.total} colour={toneColour(bandTone(v.band))} />}
+                  {open > 0 && <span className="t3">{plural(open, 'document')} waiting with them</span>}
+                </span>
+                <span className="rt">
+                  {v.scored ? (
+                    <>
+                      <Score value={v.total} tone={bandTone(v.band)} />
+                      <div className="t3" style={{ marginTop: 3 }}>
+                        {v.bandLabel}
+                      </div>
+                    </>
+                  ) : (
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      not scored
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </Card>
+
+        <div className="c8" style={{ display: 'flex', flexDirection: 'column', gap: 13, minWidth: 0 }}>
           <Card
-            key={v.supplierId}
-            span="c6"
             icon="truck"
-            tone={bandTone(v.band)}
-            title={v.name}
-            subtitle={`${v.supplierId}, ${v.category}, ${v.city}`}
+            tone={tone}
+            title={vendor.name}
+            subtitle={`${vendor.supplierId} · ${vendor.category} · ${vendor.city}`}
             action={
-              <span className="rt" style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                {v.scored ? (
-                  <>
-                    <Score value={v.total} tone={bandTone(v.band)} />
-                    <div className="cs">{v.bandLabel}</div>
-                  </>
+              <span style={{ marginLeft: 'auto' }}>
+                {vendor.scored ? (
+                  <Score value={vendor.total} tone={tone} />
                 ) : (
-                  <span className="muted">Not scored</span>
+                  <Chip tone="mut">Not scored</Chip>
                 )}
               </span>
             }
           >
-            {v.scored ? (
+            {vendor.scored ? (
               <>
-                <div className="metrics" style={{ marginBottom: 13 }}>
+                <div className="metrics">
                   <Metric
                     label="On time"
-                    value={`${v.onTimePercent}%`}
-                    note={`${v.averageDaysLate} days late on average`}
-                    tone={v.onTimePercent >= 80 ? 'pos' : v.onTimePercent >= 50 ? 'warn' : 'neg'}
+                    value={`${vendor.onTimePercent}%`}
+                    note={`of ${plural(vendor.orderCount, 'order')}`}
+                    tone={vendor.onTimePercent >= 80 ? 'pos' : vendor.onTimePercent >= 50 ? 'warn' : 'neg'}
                   />
                   <Metric
-                    label="Quality"
-                    value={`${v.averageQuality}%`}
-                    note="accepted when it arrives"
-                    tone={v.averageQuality >= 98 ? 'pos' : 'warn'}
+                    label="Days late, average"
+                    value={vendor.averageDaysLate}
+                    note={`${vendor.earlierDaysLate} before, ${vendor.recentDaysLate} now`}
+                    tone={vendor.trend === 'getting worse' ? 'neg' : 'pos'}
                   />
                   <Metric
-                    label="Rate"
-                    value={signed(v.percentOverContract)}
-                    note={`against ${rupees(v.contractRate)} per ${v.unit}`}
-                    tone={v.percentOverContract > 2 ? 'neg' : v.percentOverContract > 0 ? 'warn' : 'pos'}
+                    label="Quality accepted"
+                    value={`${vendor.averageQuality}%`}
+                    note="average across loads"
+                    tone={vendor.averageQuality >= 98 ? 'pos' : 'warn'}
+                  />
+                  <Metric
+                    label="Rate against contract"
+                    value={signed(vendor.percentOverContract)}
+                    note={`${rupees(vendor.latestRate)} per ${vendor.unit}`}
+                    tone={
+                      vendor.percentOverContract > 2
+                        ? 'neg'
+                        : vendor.percentOverContract > 0
+                          ? 'warn'
+                          : 'pos'
+                    }
                   />
                 </div>
 
-                <VendorCharts vendor={v} />
-
-                <div style={{ marginTop: 12, fontSize: '12.6px', color: 'var(--ink-3)' }}>
-                  SAP score {v.sapScore}
-                  {v.penalty > 0
-                    ? `, less ${v.penalty} for ${v.trend === 'getting worse' ? 'slipping deliveries' : 'rate above contract'}, giving ${v.total}.`
-                    : `, nothing taken off.`}{' '}
-                  GST {v.gst}{v.iec ? `, ${v.iec}` : ''}. Trend is {v.trend}.{' '}
-                  {plural(openWith(v.supplierId), 'document')} waiting with them
-                  {plant === 'all' ? '' : ` at ${plant}`}.
+                {/* The arithmetic, in a sentence. Without it the number is an opinion with a
+                    decimal point, and nobody argues with it or acts on it. */}
+                <div className="reco" style={{ background: softFor(tone) }}>
+                  <span style={{ flex: 'none', display: 'grid', marginTop: 2 }}>
+                    <Icon name="spark" size={15} />
+                  </span>
+                  <div>
+                    SAP&rsquo;s own score is <b>{vendor.sapScore}</b>.{' '}
+                    {vendor.penalty > 0 ? (
+                      <>
+                        {vendor.penalty} points come off for the delivery trend ({vendor.trend}) and
+                        the rate against contract, which leaves <b>{vendor.total} out of 100</b>.
+                      </>
+                    ) : (
+                      <>
+                        Nothing comes off, because deliveries are {vendor.trend} and the rate is at
+                        or below contract, so they stay at <b>{vendor.total} out of 100</b>.
+                      </>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (
-              <p className="muted">{v.reasonNotScored}. Nothing to judge them on yet.</p>
+              <Banner kind="warn" icon="clock">
+                <b>Not scored yet.</b> {vendor.reasonNotScored}. SAP&rsquo;s own score is{' '}
+                {vendor.sapScore}, but there is nothing of ours to judge them on.
+              </Banner>
+            )}
+
+            <div className="terms" style={{ marginTop: 14 }}>
+              <div>
+                <TermRow label="GST number" value={vendor.gst} />
+                {vendor.iec && <TermRow label="Import code" value={vendor.iec} />}
+                <TermRow label="City" value={vendor.city} />
+              </div>
+              <div>
+                <TermRow
+                  label="Contract rate"
+                  value={`${rupees(vendor.contractRate)} per ${vendor.unit}`}
+                />
+                <TermRow label="Trend" value={vendor.scored ? vendor.trend : 'not known yet'} />
+                <TermRow label="Standing" value={vendor.scored ? vendor.bandLabel : 'not scored'} />
+              </div>
+            </div>
+          </Card>
+
+          {vendor.scored && (
+            <Card
+              icon="chart"
+              tone={tone}
+              title="Their last ten orders"
+              subtitle="delivery, quality and rate, oldest on the left"
+            >
+              <VendorCharts vendor={vendor} />
+            </Card>
+          )}
+
+          {/* What the score is actually about. Everything above is history; this is the money
+              in front of you now, and every order row opens. */}
+          <Card
+            icon="doc"
+            tone={waiting.length ? 'warn' : 'pri'}
+            title="What is open with them"
+            subtitle={`${plural(documents.length, 'document')}, ${plural(
+              contracts.length,
+              'contract'
+            )} ${where}`}
+            flush
+          >
+            {documents.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className="row pickrow"
+                onClick={() => onOpenDocument(d.id)}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="t1">
+                    {d.kind} {d.id}, {d.material}
+                  </span>
+                  <span className="t2">
+                    {d.plant} plant, due {d.deliveryDate}, rate {signed(d.percentOverContract)} against
+                    contract
+                  </span>
+                </span>
+                <span className="rt">
+                  <b className="n">{inr(d.total)}</b>
+                  <div style={{ marginTop: 4 }}>
+                    <StatusChip status={d.status} document={d} />
+                  </div>
+                </span>
+              </button>
+            ))}
+
+            {contracts.map((c) => (
+              <div key={c.id} className="row">
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="t1">
+                    Contract {c.id}, {c.covers}
+                  </span>
+                  <span className="t2">
+                    {c.plant}, {c.percentUsed}% of {inr(c.target)} used, valid to {c.validTo}
+                  </span>
+                  <Meter percent={c.percentUsed} colour={toneColour(bandTone(c.band))} />
+                </span>
+                <span className="rt">
+                  <Chip tone={bandTone(c.band)}>{c.flag}</Chip>
+                </span>
+              </div>
+            ))}
+
+            {documents.length + contracts.length === 0 && (
+              <p className="muted rowpad">
+                Nothing open with {vendor.name} {where}.
+              </p>
             )}
           </Card>
-        ))}
+        </div>
       </div>
     </>
   );
