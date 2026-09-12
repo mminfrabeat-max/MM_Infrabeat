@@ -32,6 +32,17 @@ export function pendingDocuments(documents, plant) {
   return byPlant(documents, plant).filter((d) => d.status === 'pending');
 }
 
+// Orders and requisitions are approved in different places now, so the counts on the two
+// tabs have to be counted separately. `kind` is 'PO' or 'PR'.
+export function pendingOfKind(documents, plant, kind) {
+  return pendingDocuments(documents, plant).filter((d) => d.kind === kind);
+}
+
+// Everything of one kind, whatever its status - what each approval list shows.
+export function documentsOfKind(documents, plant, kind) {
+  return byPlant(documents, plant).filter((d) => d.kind === kind);
+}
+
 export function overdueDocuments(documents, plant, hours = 24) {
   return pendingDocuments(documents, plant)
     .filter((d) => d.hoursWaiting > hours)

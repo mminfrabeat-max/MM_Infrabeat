@@ -9,7 +9,7 @@ import { APPROVER_NAME } from '../brand.js';
 import { Card, Tile, Chip, Score, Icon } from '../components/ui.jsx';
 import { SparkArea, Donut, Meter, toneColour } from '../components/charts.jsx';
 import {
-  byPlant, pendingDocuments, overdueDocuments, sumTotals, sumValues,
+  byPlant, pendingDocuments, pendingOfKind, overdueDocuments, sumTotals, sumValues,
   shortMaterials, contractsToWatch, openSituations
 } from '../selectors.js';
 
@@ -26,6 +26,10 @@ const SHAPES = {
 
 export default function Overview({ data, plant, onNavigate, onOpenDocument, onOpenLog, savedMinutes, actionCount }) {
   const pending = pendingDocuments(data.documents, plant);
+  // Split, because approving happens on two tabs now and this tile lands on one of them.
+  // A tile reading 10 that opens a list of 7 is the sort of thing people stop trusting.
+  const pendingOrders = pendingOfKind(data.documents, plant, 'PO');
+  const pendingRequisitions = pendingOfKind(data.documents, plant, 'PR');
   const overdue = overdueDocuments(data.documents, plant);
   const short = shortMaterials(data.materials, plant);
   const openOrders = byPlant(data.openOrders, plant);
@@ -120,11 +124,17 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
       <div className="tiles">
         <Tile
           icon="doc"
-          label="Waiting for approval"
-          value={pending.length}
+          label="Waiting for PO approval"
+          value={pendingOrders.length}
           sub={inr(waitingValue)}
           tone={overdue.length ? 'neg' : 'pos'}
-          footer={`${overdue.length} over a day old`}
+          footer={
+            pendingRequisitions.length
+              ? `${overdue.length} over a day old \u00b7 ${pendingRequisitions.length} requisition${
+                  pendingRequisitions.length === 1 ? '' : 's'
+                } waiting too`
+              : `${overdue.length} over a day old`
+          }
           spark={<SparkArea values={SHAPES.approvals} colour={toneColour(overdue.length ? 'neg' : 'pos')} />}
           onClick={() => onNavigate('approvals')}
         />

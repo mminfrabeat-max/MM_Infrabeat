@@ -45,6 +45,15 @@ export const TOOLS = [
 
 // --- Small helpers -------------------------------------------------------------
 
+// Does the question name a kind of document?
+//
+// Plurals written out rather than left to a word stem. A trailing \b after a stem matches
+// nothing - \brequisition\b never matches "requisitions" - and that mistake has been made
+// in this file four separate times, each one silently turning a branch off. One pattern
+// each, used everywhere, is the fix.
+const MENTIONS_PR = /\b(requisitions?|prs?)\b/i;
+const MENTIONS_PO = /\b(purchase orders?|pos?)\b/i;
+
 function plantIn(text) {
   if (/mumbai/i.test(text)) return 'Mumbai';
   if (/nagpur/i.test(text)) return 'Nagpur';
@@ -338,17 +347,30 @@ function parseIntent(question, context) {
 
   // Stems, so "waiting" and "approval" match. No trailing \b - that is what broke it.
   if (/\b(wait|approv|need me|today|morning|to do)/i.test(lower)) {
-    const waiting = documents.filter((d) => canDecide(d));
-    if (waiting.length === 0) return answer('Nothing is waiting for you.', { goTo: 'approvals' });
+    // Asking about one kind should answer about that kind and land on its tab. Asking in
+    // general still answers about everything, because "what is waiting for me" is a
+    // question about the whole morning, not about orders.
+    const onlyRequisitions = MENTIONS_PR.test(lower);
+    const onlyOrders = !onlyRequisitions && MENTIONS_PO.test(lower);
+    const wantedKind = onlyRequisitions ? 'PR' : onlyOrders ? 'PO' : null;
+    const tab = onlyRequisitions ? 'requisitions' : 'approvals';
+
+    const waiting = documents.filter((d) => canDecide(d) && (!wantedKind || d.kind === wantedKind));
+    const what = wantedKind === 'PR' ? 'requisition' : wantedKind === 'PO' ? 'order' : 'document';
+
+    if (waiting.length === 0) {
+      return answer(`Nothing is waiting for you${wantedKind ? ` in ${what}s` : ''}.`, { goTo: tab });
+    }
+
     return answer(
-      `**${plural(waiting.length, 'document')} waiting:**\n` +
+      `**${plural(waiting.length, what)} waiting:**\n` +
         waiting
           .slice()
           .sort((a, b) => b.hoursWaiting - a.hoursWaiting)
           .map((d) => `• ${d.kind} ${d.id}, ${d.supplierName}, ${inr(d.total)}, ${d.hoursWaiting} hours`)
           .join('\n') +
         '\n\nSay "approve" and a number and I will set it up for you to confirm.',
-      { goTo: 'approvals' }
+      { goTo: tab }
     );
   }
 
@@ -432,7 +454,13 @@ function parseIntent(question, context) {
   // "vendor" matches the singular only, which is the form nobody uses for a screen name.
   const SCREENS = [
     { keys: /\b(overview|home|dashboard|summary)/i, tab: 'overview', name: 'Overview' },
-    { keys: /\b(approval|waiting|inbox)/i, tab: 'approvals', name: 'Waiting for approval' },
+    // Requisitions first: "waiting for PR approval" matches both patterns, and the more
+    // specific one has to win.
+    { keys: MENTIONS_PR, tab: 'requisitions', name: 'Waiting for PR approval' },
+    // Bare "order" is deliberately not here: "open orders and contracts" is a different
+    // screen, and it is listed below this one.
+    { keys: /\b(approvals?|waiting|inbox)\b/i, tab: 'approvals', name: 'Waiting for PO approval' },
+    { keys: MENTIONS_PO, tab: 'approvals', name: 'Waiting for PO approval' },
     { keys: /\b(shipment|tracking|delivery|on its way)/i, tab: 'shipments', name: 'Shipment tracking' },
     { keys: /\b(stock|material|inventory|short)/i, tab: 'stock', name: 'Stock risk' },
     { keys: /\b(contract|commitment|open order)/i, tab: 'open', name: 'Open orders and contracts' },

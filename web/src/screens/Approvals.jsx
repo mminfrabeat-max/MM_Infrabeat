@@ -1,8 +1,14 @@
 // The approval list. One row per document, with enough header detail to decide whether to
 // open it at all.
+//
+// One screen, two tabs. Orders and requisitions are the same shape and are read the same
+// way, but they are different decisions: a requisition asks whether something is needed
+// at all, an order commits money to a named vendor. Splitting the list is what lets
+// somebody clear all the small requisitions without the crore-value orders scrolling past
+// in between - and the counts on the tabs then mean something on their own.
 
 import { inr } from '../format.js';
-import { byPlant } from '../selectors.js';
+import { documentsOfKind } from '../selectors.js';
 import { Card, Banner, Chip, Score } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
@@ -15,25 +21,45 @@ function holder(d) {
   return 'you';
 }
 
-export default function Approvals({ data, plant, onOpenDocument }) {
-  const documents = byPlant(data.documents, plant);
+// `kind` is 'PO' or 'PR'. Everything else on the screen follows from it.
+export default function Approvals({ data, plant, kind = 'PO', onOpenDocument }) {
+  const documents = documentsOfKind(data.documents, plant, kind);
+  const isOrder = kind === 'PO';
+  const noun = isOrder ? 'order' : 'requisition';
 
   return (
     <>
       <Banner icon="eye">
-        Open any order to see the full header: value, vendor and GST, payment terms, freight
-        and loading, transport, discounts and rebate, incoterms, who approved it before you,
-        and who it goes to after you.
+        {isOrder ? (
+          <>
+            Open any order to see the full header: value, vendor and GST, payment terms, freight
+            and loading, transport, discounts and rebate, incoterms, who approved it before you,
+            and who it goes to after you.
+          </>
+        ) : (
+          <>
+            A requisition asks for something; it does not commit to buying it. Open any of them
+            to see what is wanted, who raised it, what it is expected to cost, and who has to
+            approve it. The vendor shown is the one usually used, not one that has been agreed.
+          </>
+        )}
       </Banner>
 
-      <Card span="c12" flush icon="doc" tone="warn" title="Purchasing documents" subtitle="longest wait first">
+      <Card
+        span="c12"
+        flush
+        icon={isOrder ? 'doc' : 'file'}
+        tone="warn"
+        title={isOrder ? 'Purchase orders' : 'Purchase requisitions'}
+        subtitle="longest wait first"
+      >
         {documents.length === 0 ? (
-          <p className="muted rowpad">Nothing here for {plant}.</p>
+          <p className="muted rowpad">No {noun}s here for {plant === 'all' ? 'any plant' : plant}.</p>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Order</th>
+                <th>{isOrder ? 'Order' : 'Requisition'}</th>
                 <th>Document type</th>
                 <th>Domestic or import</th>
                 <th>Vendor</th>

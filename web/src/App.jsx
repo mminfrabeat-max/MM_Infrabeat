@@ -14,7 +14,7 @@ import { COMPANY, PRODUCT, APPROVER_NAME, USER_PROFILE, PLANTS } from './brand.j
 import { initials, clock } from './format.js';
 import { Icon, Loading, ErrorPanel } from './components/ui.jsx';
 import { Wordmark, WordmarkFallback, Modal, Toasts } from './components/shell-bits.jsx';
-import { findDocument, pendingDocuments, shortMaterials, contractsToWatch, openSituations, teamsNeedingNudge } from './selectors.js';
+import { findDocument, pendingOfKind, shortMaterials, contractsToWatch, openSituations, teamsNeedingNudge } from './selectors.js';
 // SUGGESTIONS are the chips under the Ask box. `answer` used to live here too; the
 // answering moved to the server when Ask learned to act - see server/src/domain/ask.js.
 import { SUGGESTIONS } from './assistant.js';
@@ -135,7 +135,10 @@ export default function App() {
   }
 
   function openDocument(id) {
-    setTab('approvals');
+    // Orders and requisitions are on separate tabs now, so opening one has to land on the
+    // right list - otherwise going back from a requisition drops you among the orders.
+    const document = data?.documents.find((d) => d.id === id);
+    setTab(document?.kind === 'PR' ? 'requisitions' : 'approvals');
     setOpenDocumentId(id);
     setDecideError(null);
     window.scrollTo(0, 0);
@@ -360,7 +363,8 @@ export default function App() {
 
   const TABS = [
     { key: 'overview', label: 'Overview', icon: 'chart' },
-    { key: 'approvals', label: 'Waiting for approval', icon: 'doc', count: pendingDocuments(data.documents, plant).length },
+    { key: 'approvals', label: 'Waiting for PO approval', icon: 'doc', count: pendingOfKind(data.documents, plant, 'PO').length },
+    { key: 'requisitions', label: 'Waiting for PR approval', icon: 'file', count: pendingOfKind(data.documents, plant, 'PR').length },
     { key: 'shipments', label: 'Shipment tracking', icon: 'truck', count: trackedOrders(data.documents, plant).length },
     { key: 'stock', label: 'Stock risk', icon: 'box', count: shortMaterials(data.materials, plant).length },
     { key: 'open', label: 'Open orders and contracts', icon: 'file', count: contractsToWatch(data.contracts, plant).length },
@@ -465,9 +469,12 @@ export default function App() {
         )}
 
         {tab === 'approvals' && !openDoc && (
-          <Approvals data={data} plant={plant} onOpenDocument={openDocument} />
+          <Approvals data={data} plant={plant} kind="PO" onOpenDocument={openDocument} />
         )}
-        {tab === 'approvals' && openDoc && (
+        {tab === 'requisitions' && !openDoc && (
+          <Approvals data={data} plant={plant} kind="PR" onOpenDocument={openDocument} />
+        )}
+        {(tab === 'approvals' || tab === 'requisitions') && openDoc && (
           <DocumentDetail
             data={data}
             document={openDoc}
