@@ -74,13 +74,19 @@
       "vessel": null,
       "deliveryDate": "5 Sep 2026",
       "reason": "Waiting at the final step",
-      "status": "pending",
+      "status": "approved",
       "createdBy": {
         "name": "Hrutik Patil",
         "title": "Buyer, Procurement",
         "when": "28 Aug, 11:20"
       },
-      "next": null
+      "next": null,
+      "decidedBy": "Arjun P",
+      "decidedAt": "28 Aug 2026, 11:40 am",
+      "decisionNote": "Approved for the October kiln campaign. Rate to be fixed on the next order.",
+      "shipmentStage": "sent",
+      "shipmentStageAt": "29 Aug 2026, 09:15 am",
+      "shipmentNote": "Order mailed to Aditya Refractories."
     },
     {
       "id": "4500178342",

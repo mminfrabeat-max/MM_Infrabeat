@@ -207,9 +207,21 @@ export function orderAction(document) {
       : { state: 'with-someone', holder: document.approvalState?.holder || document.next?.name || '' };
   }
 
-  // Released. The only question left is whether the vendor is keeping to the date.
-  if (document.priority?.overdue) {
-    return { state: 'overdue', daysLate: Math.abs(document.priority.daysUntilDue) };
+  // Released. What is left depends on who the delay belongs to.
+  const late = Math.abs(document.priority?.daysUntilDue || 0);
+
+  // The vendor has the order and the date has gone by. Theirs to answer for.
+  if (document.priority?.lateOnVendor) {
+    return { state: 'overdue', daysLate: late };
+  }
+
+  // Released, but nobody has told the vendor. Chasing them here would be chasing somebody
+  // for an order they have never seen; the thing that is actually missing is the sending.
+  if (!document.priority?.vendorHasIt && document.shipmentStage !== 'received') {
+    return {
+      state: 'to-send',
+      daysLate: document.priority?.lateOnUs ? late : 0
+    };
   }
 
   return { state: 'released' };

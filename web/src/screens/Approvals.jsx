@@ -306,8 +306,16 @@ function OrderAction({ document, onOpenDocument, onChase }) {
           Approve PO
         </button>
         {/* Says where the click goes. Nothing is approved from a list without the order
-            in front of you, and a button that hid that would be worse than no button. */}
-        <div className="sub">opens the order</div>
+            in front of you, and a button that hid that would be worse than no button.
+
+            Where the date has already gone, that is the more useful thing to say. The
+            delay is ours, not the vendor’s - they have not been told yet - so the answer
+            is to approve it, not to chase anybody. */}
+        <div className="sub">
+          {document.priority?.lateOnUs
+            ? `date passed ${plural(Math.abs(document.priority.daysUntilDue), 'day')} ago`
+            : 'opens the order'}
+        </div>
       </>
     );
   }
@@ -346,6 +354,29 @@ function OrderAction({ document, onOpenDocument, onChase }) {
           Chase vendor
         </button>
         <div className="sub">{plural(next.daysLate, 'day')} late</div>
+      </>
+    );
+  }
+
+  if (next.state === 'to-send') {
+    return (
+      <>
+        <button
+          type="button"
+          className={`btn sm ${next.daysLate ? 'rej' : ''}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDocument(document.id);
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Send to vendor
+        </button>
+        {/* The order is approved and the vendor still does not know. Nothing can be late
+            on them until it has gone out, so this is the step in the way. */}
+        <div className="sub">
+          {next.daysLate ? `${plural(next.daysLate, 'day')} past the date already` : 'not told yet'}
+        </div>
       </>
     );
   }

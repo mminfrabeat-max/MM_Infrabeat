@@ -28,6 +28,15 @@ export function orderPriorityFor(document, today = new Date()) {
   const moving = !NOT_MOVING.has(stage);
   const released = document.status === 'approved';
 
+  // Whether the vendor is actually holding this order yet.
+  //
+  // A date can pass for two completely different reasons and only one of them is the
+  // vendor's fault. If the order has been sent, they have had it and the date has gone by:
+  // that is theirs to answer for. If it is still going through approval, or released and
+  // nobody has told them, the delay is ours - and chasing somebody for being late with an
+  // order they have never seen is how you lose a vendor, not how you get a delivery.
+  const vendorHasIt = released && stage !== '' && stage !== 'released' && !complete;
+
   const vendor = document.supplierScore;
   const vendorAtRisk = Boolean(vendor && vendor.scored && vendor.band === 'risk');
 
@@ -36,7 +45,13 @@ export function orderPriorityFor(document, today = new Date()) {
 
   if (daysUntilDue !== null && daysUntilDue < 0 && !complete) {
     score += Math.min(-daysUntilDue, 40) * 5;
-    reasons.push(`Due ${Math.abs(daysUntilDue)} days ago and not yet received.`);
+    reasons.push(
+      vendorHasIt
+        ? `Due ${Math.abs(daysUntilDue)} days ago. The vendor has had the order and nothing has arrived.`
+        : released
+          ? `Due ${Math.abs(daysUntilDue)} days ago and the vendor has still not been told.`
+          : `Due ${Math.abs(daysUntilDue)} days ago and it is still going through approval.`
+    );
   } else if (daysUntilDue !== null && daysUntilDue <= 7 && !complete) {
     score += (8 - daysUntilDue) * 3;
     reasons.push(
@@ -84,6 +99,11 @@ export function orderPriorityFor(document, today = new Date()) {
     moving,
     released,
     complete,
+    vendorHasIt,
+    // Late, and late on the vendor - the only case where chasing them is the right move.
+    lateOnVendor: overdue(daysUntilDue, complete) && vendorHasIt,
+    // Late because of us: past the date and the vendor has not even been told.
+    lateOnUs: overdue(daysUntilDue, complete) && !vendorHasIt,
     vendorAtRisk,
     reasons
   };
