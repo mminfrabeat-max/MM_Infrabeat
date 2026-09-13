@@ -30,7 +30,6 @@ import Commitments from './screens/Commitments.jsx';
 import Vendors from './screens/Vendors.jsx';
 import Teams from './screens/Teams.jsx';
 import Problems from './screens/Problems.jsx';
-import EmailPreview from './screens/EmailPreview.jsx';
 
 // Minutes credited per action. These are assumptions about effort avoided, not measured
 // savings, which is why the log shows them per action rather than as one headline number.
@@ -487,8 +486,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
     { key: 'open', label: 'Open orders and contracts', icon: 'file', count: contractsToWatch(data.contracts, plant).length },
     { key: 'suppliers', label: 'Vendors', icon: 'truck' },
     { key: 'team', label: 'Team performance', icon: 'people', count: teamsNeedingNudge(data.teams, plant).length },
-    { key: 'situations', label: 'Problems found', icon: 'alert', count: openSituations(data.situations, plant).length },
-    { key: 'email', label: 'Approval by email', icon: 'mail' }
+    { key: 'situations', label: 'Problems found', icon: 'alert', count: openSituations(data.situations, plant).length }
   ];
 
   return (
@@ -684,15 +682,6 @@ ${USER_PROFILE.role}, ${COMPANY}`
             onFix={fixProblem}
             onWriteMail={writeMail}
             busyId={busy}
-          />
-        )}
-        {tab === 'email' && (
-          <EmailPreview
-            data={data}
-            plant={plant}
-            canDecide={data.canDecide}
-            busy={busy}
-            onDecide={(id, action) => decide(id, action)}
           />
         )}
       </main>
