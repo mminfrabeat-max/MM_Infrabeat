@@ -110,6 +110,37 @@ function buildShim(data) {
 
   // Changes are made to the snapshot in memory, exactly as the backend edits the workbook.
   // The screen updates because the app re-reads the dashboard after every action.
+  // Where a document stands, mirroring server/src/domain/approvals.js.
+  //
+  // The offline copy has to work this out for itself, because the screens read it on every
+  // row - the status chip, the counts card, and what the action column offers all come from
+  // here. Leaving it as it was seeded meant the page kept describing a document by the state
+  // it started in, whatever you did to it.
+  function approvalStateOf(doc) {
+    if (doc.status === "approved") {
+      return { state: "approved", label: "Approved", holder: null, holderTitle: null,
+               signedBy: doc.decidedBy || "", signedAt: doc.decidedAt || "" };
+    }
+    if (doc.status === "rejected") {
+      return { state: "rejected", label: "Sent back", holder: null, holderTitle: null,
+               signedBy: doc.decidedBy || "", signedAt: doc.decidedAt || "" };
+    }
+    if (doc.decidedAt && doc.next && doc.next.name) {
+      return { state: "partial", label: "Partially approved", holder: doc.next.name,
+               holderTitle: (doc.next.title || ""), signedBy: doc.decidedBy || "",
+               signedAt: doc.decidedAt || "" };
+    }
+    return { state: "waiting", label: "Pending", holder: null, holderTitle: null,
+             signedBy: "", signedAt: "" };
+  }
+
+  // Approving or sending back, with the rule that matters: on a document with somebody after
+  // you, your signature does not release it.
+  //
+  // This copy used to mark everything approved on the first click, so a two step order went
+  // straight from waiting to released and the step in between - the one that is the whole
+  // point of an approval chain - could not be seen at all. Somebody reviewing this file would
+  // have concluded the dashboard does not have approval levels.
   function decide(id, status, note) {
     var doc = DATA.dashboard.documents.find(function (d) { return d.id === id; });
     if (!doc) return reply({ error: "No document found with the number " + id + "." }, 404);
@@ -117,20 +148,39 @@ function buildShim(data) {
       return reply({ error: id + " was already " + doc.status + ". Refresh to see the current position." }, 409);
     }
 
-    doc.status = status;
-    doc.decidedBy = DATA.dashboard.user.name;
+    // Have you already signed? Then this click records the decision of the person after you.
+    var alreadySigned = !!doc.decidedAt;
+    if (alreadySigned && !(doc.next && doc.next.name)) {
+      return reply({ error: id + " is not at a step you can act on." }, 409);
+    }
+
+    var who = alreadySigned ? doc.next.name : DATA.dashboard.user.name;
+    var action = status;
+    var passedTo = "";
+
+    if (!alreadySigned && status === "approved" && doc.next && doc.next.name) {
+      // Signed at your step. It stays open, with the next approver.
+      action = "approved, passed to " + doc.next.name;
+      passedTo = doc.next.name;
+    } else {
+      doc.status = status;
+    }
+
+    doc.decidedBy = who;
     doc.decidedAt = now();
     doc.decisionNote = note || "";
+    doc.approvalState = approvalStateOf(doc);
 
     DATA.actionLog.entries.unshift({
-      at: doc.decidedAt, action: status, documentId: id, documentType: doc.kind,
+      at: doc.decidedAt, action: action, documentId: id, documentType: doc.kind,
       supplierName: doc.supplierName, value: doc.total,
-      decidedBy: doc.decidedBy, note: note || "",
+      decidedBy: who, note: note || "",
       emailTo: "", emailStatus: OFFLINE_MAIL.status
     });
 
     return reply({
-      status: status, documentId: id, decidedBy: doc.decidedBy, decidedAt: doc.decidedAt,
+      status: doc.status, action: action, documentId: id, decidedBy: who,
+      decidedAt: doc.decidedAt, passedTo: passedTo, movedTo: passedTo ? { name: passedTo } : null,
       saved: true, email: OFFLINE_MAIL
     });
   }
