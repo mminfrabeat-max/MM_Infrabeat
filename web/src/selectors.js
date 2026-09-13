@@ -182,3 +182,69 @@ export function requisitionAction(documents, requisition) {
 
   return { state: 'to-order', label: 'Raise PO' };
 }
+
+// What an order needs next.
+//
+// Four states, and only two of them are things the row can do that clicking it cannot.
+// That is the point of the column: a button that merely repeats the row's own click has
+// earned nothing, so the ones that matter here are the two that write a mail - chasing the
+// approver who is holding it, and chasing the vendor who is late with it.
+export function orderAction(document) {
+  if (document.status === 'rejected') {
+    return { state: 'closed' };
+  }
+
+  if (document.status === 'pending') {
+    // Yours to sign, or somebody else’s to be chased for.
+    //
+    // Read from the approval state rather than from stillNeedsSigning, which stays true
+    // after you have signed - it also covers recording the next approver’s decision on
+    // their behalf. An order you have already passed on would otherwise have offered you
+    // its Approve button a second time.
+    const waitingOnYou = (document.approvalState?.state || 'waiting') === 'waiting' && !recordingForNext(document);
+    return waitingOnYou
+      ? { state: 'to-approve' }
+      : { state: 'with-someone', holder: document.approvalState?.holder || document.next?.name || '' };
+  }
+
+  // Released. The only question left is whether the vendor is keeping to the date.
+  if (document.priority?.overdue) {
+    return { state: 'overdue', daysLate: Math.abs(document.priority.daysUntilDue) };
+  }
+
+  return { state: 'released' };
+}
+
+// Orders in the order somebody works through them. Mirrors
+// server/src/domain/order-priority.js, which decides the bands themselves.
+//
+// Critical first, then High, Medium, Low; within a band the one due soonest, and where two
+// fall on the same day the larger one first, because that is the one worth a phone call.
+// Orders still needing a signature lead, then those released and still in flight, then the
+// ones that are finished - the same "what needs me" shape the requisition list has.
+const ORDER_BANDS = ['critical', 'high', 'medium', 'low'];
+
+function orderGroup(document) {
+  if (document.status === 'pending') return 0;
+  if (document.status === 'approved' && document.shipmentStage !== 'received') return 1;
+  return 2;
+}
+
+export function byOrderPriority(documents) {
+  return [...documents].sort((a, b) => {
+    const group = orderGroup(a) - orderGroup(b);
+    if (group !== 0) return group;
+
+    const band =
+      ORDER_BANDS.indexOf(a.priority?.band) - ORDER_BANDS.indexOf(b.priority?.band);
+    if (band !== 0) return band;
+
+    const whenA = a.priority?.daysUntilDue;
+    const whenB = b.priority?.daysUntilDue;
+    const dueA = whenA === null || whenA === undefined ? Infinity : whenA;
+    const dueB = whenB === null || whenB === undefined ? Infinity : whenB;
+    if (dueA !== dueB) return dueA - dueB;
+
+    return (b.total || 0) - (a.total || 0);
+  });
+}

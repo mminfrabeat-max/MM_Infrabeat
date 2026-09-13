@@ -48,7 +48,7 @@ export function parseWhen(text, today = new Date()) {
   return Number.isNaN(when.getTime()) ? null : when;
 }
 
-function daysBetween(from, to) {
+export function daysBetween(from, to) {
   return Math.round((to - from) / (24 * 60 * 60 * 1000));
 }
 

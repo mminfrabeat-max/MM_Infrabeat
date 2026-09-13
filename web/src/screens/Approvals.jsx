@@ -7,8 +7,15 @@
 // somebody clear all the small requisitions without the crore-value orders scrolling past
 // in between - and the counts on the tabs then mean something on their own.
 
-import { inr, num, plural } from '../format.js';
-import { documentsOfKind, byPriority, sumTotals, requisitionAction } from '../selectors.js';
+import { inr, num, plural, firstName } from '../format.js';
+import {
+  documentsOfKind,
+  byPriority,
+  byOrderPriority,
+  sumTotals,
+  requisitionAction,
+  orderAction
+} from '../selectors.js';
 import { Card, Banner, Chip, Score, Icon, Count } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
@@ -275,7 +282,97 @@ function RequisitionCounts({ documents }) {
 }
 
 // `kind` is 'PO' or 'PR'. Everything else on the screen follows from it.
-export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, onRaisePO }) {
+// What to do with an order next, as a cell.
+//
+// Two of these four do something the row cannot: they write a mail. The other two open
+// the order, which clicking the row also does - they are here because a column of
+// next steps that goes blank on half its rows stops being read at all, and because the
+// row being clickable is not something anybody discovers.
+function OrderAction({ document, onOpenDocument, onChase }) {
+  const next = orderAction(document);
+
+  if (next.state === 'to-approve') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm emph"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDocument(document.id);
+          }}
+        >
+          <Icon name="check" size={12} />
+          Approve PO
+        </button>
+        {/* Says where the click goes. Nothing is approved from a list without the order
+            in front of you, and a button that hid that would be worse than no button. */}
+        <div className="sub">opens the order</div>
+      </>
+    );
+  }
+
+  if (next.state === 'with-someone') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            onChase(document, 'approver');
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Remind {firstName(next.holder) || 'them'}
+        </button>
+        <div className="sub">signed at your step</div>
+      </>
+    );
+  }
+
+  if (next.state === 'overdue') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm rej"
+          onClick={(event) => {
+            event.stopPropagation();
+            onChase(document, 'vendor');
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Chase vendor
+        </button>
+        <div className="sub">{plural(next.daysLate, 'day')} late</div>
+      </>
+    );
+  }
+
+  if (next.state === 'closed') {
+    return <span className="sub">back with the buyer</span>;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn sm"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenDocument(document.id);
+        }}
+      >
+        <Icon name="doc" size={12} />
+        View PO
+      </button>
+      <div className="sub">released</div>
+    </>
+  );
+}
+
+export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, onRaisePO, onChase }) {
   const documents = documentsOfKind(data.documents, plant, kind);
   const isOrder = kind === 'PO';
   const noun = isOrder ? 'order' : 'requisition';
@@ -317,17 +414,17 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
             <thead>
               {isOrder ? (
                 <tr>
+                  <th>Priority</th>
                   <th>Order</th>
-                  <th>Document type</th>
-                  <th>Domestic or import</th>
+                  <th>From requisition</th>
                   <th>Vendor</th>
                   <th>Plant</th>
-                  <th className="rt">Total value</th>
-                  <th>Transport</th>
-                  <th>Waiting</th>
-                  <th>Raised by</th>
-                  <th>With now</th>
+                  <th className="rt">Quantity</th>
+                  <th className="rt">Order value</th>
+                  <th>Delivery date</th>
+                  <th>Approval stage</th>
                   <th>Status</th>
+                  <th>Action</th>
                 </tr>
               ) : (
                 <tr>
@@ -430,19 +527,41 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                       </td>
                     </tr>
                   ))
-                : documents
-                    .slice()
-                    .sort((a, b) => b.hoursWaiting - a.hoursWaiting)
-                    .map((d) => (
+                : byOrderPriority(documents).map((d) => (
                   <tr key={d.id} className="clickrow" onClick={() => onOpenDocument(d.id)}>
+                    <td>
+                      <Chip
+                        tone={bandToneFor(d.priority)}
+                        icon={d.priority?.band === 'critical' ? 'alert' : undefined}
+                      >
+                        {d.priority?.label || 'Low'}
+                      </Chip>
+                      <div className="sub">{d.priority?.advice}</div>
+                    </td>
                     <td>
                       <b>{d.kind} {d.id}</b>
                       <div className="sub">{d.material}, {d.materialCode}</div>
+                      {d.items?.length > 1 && (
+                        <div className="sub">and {plural(d.items.length - 1, 'more line')}</div>
+                      )}
                     </td>
-                    <td className="sub">{d.docType}</td>
-                    <td>
-                      <Chip tone={d.trade === 'Import' ? 'pri' : 'mut'}>{d.trade}</Chip>
-                      <div className="sub">{d.incoterm.split(',')[0]}</div>
+                    {/* The requisition this order answers. Blank is a real answer: not every
+                        order comes from one - a contract release or a service order does not. */}
+                    <td className="sub n">
+                      {d.sourceDocument ? (
+                        <button
+                          type="button"
+                          className="btn sm q"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onOpenDocument(d.sourceDocument);
+                          }}
+                        >
+                          {d.sourceDocument}
+                        </button>
+                      ) : (
+                        <span className="mut">raised directly</span>
+                      )}
                     </td>
                     <td>
                       {d.supplierName}
@@ -453,16 +572,30 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                       )}
                     </td>
                     <td>{d.plant}</td>
+                    <td className="rt n">{num(d.quantity)} {d.unit}</td>
                     <td className="rt n"><b>{inr(d.total)}</b></td>
-                    <td className="sub">{d.transport}</td>
                     <td>
-                      <Chip tone={d.hoursWaiting > 48 ? 'neg' : d.hoursWaiting > 24 ? 'warn' : 'mut'}>
-                        {d.hoursWaiting} h
-                      </Chip>
+                      {d.deliveryDate}
+                      {d.priority?.overdue && (
+                        <div className="sub">
+                          <Chip tone="neg">{Math.abs(d.priority.daysUntilDue)} days late</Chip>
+                        </div>
+                      )}
                     </td>
-                    <td className="sub">{d.createdBy ? d.createdBy.name : 'not recorded'}</td>
-                    <td className="sub">{holder(d)}</td>
+                    {/* Which step it is at, and who is standing on it. Two halves of one
+                        answer: a step with no name is a queue nobody owns. */}
+                    <td className="sub">
+                      {d.step}
+                      <div className="sub">with {holder(d)}</div>
+                    </td>
                     <td><StatusChip status={d.status} document={d} /></td>
+                    <td>
+                      <OrderAction
+                        document={d}
+                        onOpenDocument={onOpenDocument}
+                        onChase={onChase}
+                      />
+                    </td>
                   </tr>
                     ))}
             </tbody>

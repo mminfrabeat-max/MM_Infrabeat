@@ -12,6 +12,7 @@
 
 import { money, rupees } from './format.js';
 import { priorityFor } from './requisition-priority.js';
+import { orderPriorityFor } from './order-priority.js';
 import { approvalStateOf } from './approvals.js';
 
 export const OVERDUE_HOURS = 24;
@@ -117,10 +118,16 @@ export function enrichDocument(document, scoresById, materials = [], contracts =
     isOverdue: document.hoursWaiting > OVERDUE_HOURS,
     advice: buildAdvice(document, score),
     consequence: buildConsequence(document, score, material, contract),
-    // Only requisitions carry this. An order is judged on its own terms - price, vendor,
-    // what it commits. A requisition is judged on what the plant is about to run out of,
-    // which is a fact about the yard rather than about the document.
-    priority: document.kind === 'PR' ? priorityFor(document, materials) : null,
+    // Both kinds carry one, and they are not the same measure.
+    //
+    // A requisition is judged on what the plant is about to run out of, which is a fact
+    // about the yard. An order has already settled the material question and committed to
+    // a vendor, a price and a date, so it is judged on whether that commitment is being
+    // kept: how late, how much is riding on it, and who is carrying it.
+    priority:
+      document.kind === 'PR'
+        ? priorityFor(document, materials)
+        : orderPriorityFor({ ...document, supplierScore: score, total: totalValue(document) }),
     // Where it stands and whose desk it is on. On both kinds, because "pending" hides two
     // different situations and a list that cannot tell them apart is not worth reading.
     approvalState: approvalStateOf(document)

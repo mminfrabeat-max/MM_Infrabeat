@@ -113,6 +113,13 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
           <div className="terms">
             <div>
               <TermRow label="Order number" value={`${document.kind} ${document.id}`} />
+              {/* The requisition this order answers, now that the list no longer carries
+                  every field. Not every order has one - a contract release or a service
+                  order is raised directly - and saying so beats an empty row. */}
+              <TermRow
+                label="From requisition"
+                value={document.sourceDocument || 'Raised directly, no requisition'}
+              />
               <TermRow label="Document type" value={document.docType} />
               <TermRow label="Domestic or import" value={document.trade} />
               <TermRow label="Incoterm" value={document.incoterm} />

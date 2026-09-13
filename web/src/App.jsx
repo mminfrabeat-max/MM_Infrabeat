@@ -11,7 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api, setSignedOutHandler } from './api.js';
 import { COMPANY, PRODUCT, APPROVER_NAME, USER_PROFILE, PLANTS } from './brand.js';
-import { initials, clock, num, inr, firstName } from './format.js';
+import { initials, clock, num, inr, firstName, plural } from './format.js';
 import { Icon, Loading, ErrorPanel } from './components/ui.jsx';
 import { Wordmark, WordmarkFallback, Modal, Toasts } from './components/shell-bits.jsx';
 import { findDocument, pendingOfKind, shortMaterials, contractsToWatch, openSituations, teamsNeedingNudge } from './selectors.js';
@@ -255,6 +255,51 @@ export default function App() {
         `  Value       ${inr(requisition.total)}`,
         '',
         'Could you raise the purchase order and send me the number once it is in?',
+        '',
+        'Thanks,',
+        `${APPROVER_NAME}
+${USER_PROFILE.role}, ${COMPANY}`
+      ].join('\n')
+    });
+  }
+
+  // Chasing an order: either the approver sitting on it, or the vendor who is late with it.
+  //
+  // One handler for both because it is the same act - a written nudge with the facts in it -
+  // and the only difference is who it goes to and what the facts are. Opened rather than
+  // sent, like every other mail here, because a chase that goes out without being read is
+  // how somebody gets chased about an order that arrived yesterday.
+  function chaseOrder(order, who) {
+    const chasingVendor = who === 'vendor';
+    const late = Math.abs(order.priority?.daysUntilDue || 0);
+    const toName = chasingVendor ? order.supplierName : order.approvalState?.holder || order.next?.name || '';
+
+    const facts = [
+      `  Order       ${order.kind} ${order.id}`,
+      `  Material    ${order.material} (${order.materialCode})`,
+      `  Quantity    ${num(order.quantity)} ${order.unit}`,
+      `  Plant       ${order.plant}`,
+      `  Due         ${order.deliveryDate}`,
+      `  Value       ${inr(order.total)}`
+    ];
+
+    writeMail({
+      toName,
+      subject: chasingVendor
+        ? `${order.kind} ${order.id} is ${plural(late, 'day')} past its delivery date`
+        : `Waiting on your approval: ${order.kind} ${order.id}, ${inr(order.total)}`,
+      body: [
+        `Hi ${firstName(toName) || 'there'},`,
+        '',
+        chasingVendor
+          ? `${order.kind} ${order.id} was due on ${order.deliveryDate} and nothing has been received against it.`
+          : `${order.kind} ${order.id} has been waiting ${order.hoursWaiting} hours at your step.`,
+        '',
+        ...facts,
+        '',
+        chasingVendor
+          ? 'Could you confirm a firm date in writing today? We are planning against it.'
+          : 'Could you take a look when you get a moment? The buyer is held up until it moves.',
         '',
         'Thanks,',
         `${APPROVER_NAME}
@@ -541,7 +586,13 @@ ${USER_PROFILE.role}, ${COMPANY}`
         )}
 
         {tab === 'approvals' && !openDoc && (
-          <Approvals data={data} plant={plant} kind="PO" onOpenDocument={openDocument} />
+          <Approvals
+            data={data}
+            plant={plant}
+            kind="PO"
+            onOpenDocument={openDocument}
+            onChase={chaseOrder}
+          />
         )}
         {tab === 'requisitions' && !openDoc && (
           <Approvals
