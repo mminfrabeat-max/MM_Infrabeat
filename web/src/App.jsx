@@ -626,6 +626,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
             error={decideError}
             onBack={() => setOpenDocumentId(null)}
             onDecide={(action, note) => decide(openDoc.id, action, note)}
+            onRemind={(order) => chaseOrder(order, 'approver')}
           />
         )}
 

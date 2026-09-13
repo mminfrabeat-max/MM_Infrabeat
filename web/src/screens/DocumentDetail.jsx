@@ -8,7 +8,7 @@
 //   5. The lines, then the vendor's record
 
 import { useState } from 'react';
-import { inr, rupees, num, signed, initials, bandTone, plural } from '../format.js';
+import { inr, rupees, num, signed, initials, bandTone, plural, firstName } from '../format.js';
 import { APPROVER_NAME } from '../brand.js';
 import { Card, Banner, Chip, Icon, Facet, TermRow } from '../components/ui.jsx';
 import { VendorCharts } from '../components/charts.jsx';
@@ -16,7 +16,16 @@ import { modeIcon } from '../components/journey.jsx';
 import { StatusChip } from './Approvals.jsx';
 import { materialFor, stillNeedsSigning, recordingForNext } from '../selectors.js';
 
-export default function DocumentDetail({ data, document, canDecide, onBack, onDecide, busy, error }) {
+export default function DocumentDetail({
+  data,
+  document,
+  canDecide,
+  onBack,
+  onDecide,
+  onRemind,
+  busy,
+  error
+}) {
   const [note, setNote] = useState('');
   const vendor = document.supplierScore;
   const material = materialFor(data.materials, document);
@@ -364,6 +373,21 @@ export default function DocumentDetail({ data, document, canDecide, onBack, onDe
             onChange={(e) => setNote(e.target.value)}
             disabled={busy !== null || !canDecide}
           />
+          {/* Recording somebody else’s decision should not be the only thing you can do
+              about it. Signing on their behalf is for when you have their answer already;
+              when you have not, the thing you actually want is to ask them - and until now
+              the row in the list could do that and the order page could not. */}
+          {forNext && (
+            <button
+              className="btn"
+              type="button"
+              disabled={busy !== null}
+              onClick={() => onRemind(document)}
+            >
+              <Icon name="mail" size={13} />
+              Remind {firstName(document.next.name)}
+            </button>
+          )}
           <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null || !canDecide} type="button">
             {busy === 'reject'
               ? 'Saving…'
