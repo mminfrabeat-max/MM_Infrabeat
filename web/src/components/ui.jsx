@@ -209,3 +209,124 @@ export function SimulatedNote({ children }) {
     </p>
   );
 }
+
+// One status, as a number big enough to read from across a desk.
+//
+// Borrowed from the overview Tile on purpose - tinted icon square, big figure, label
+// beneath - because that is what a number looks like everywhere else here, and a summary
+// that invents its own furniture reads as a different product bolted on.
+export function StatBox({ icon, label, value, sub, tone }) {
+  return (
+    <div className={`statbox ${tone}`}>
+      <div className="statrow">
+        <span className={`ico ${tone}`}>
+          <Icon name={icon} />
+        </span>
+        <div className={`statnum n ${tone}`}>{value}</div>
+      </div>
+      <div className="statlab">{label}</div>
+      <div className="statsub">{sub}</div>
+    </div>
+  );
+}
+
+// The same four counts as one bar.
+//
+// Four numbers still have to be added up before they mean anything; the bar has done that
+// already, and the answer it gives - how much of this is still mine - is the one the card
+// exists for. Empty states are left out rather than drawn at zero width, so the segments
+// that are there keep their proportions honest.
+export function StatBand({ parts }) {
+  // Callers hold their parts differently: an approval list has the documents themselves,
+  // a shipment screen has already counted them. Both are the same question - how many -
+  // and insisting on one shape would push a pointless map onto one of them.
+  const countOf = (p) => (Array.isArray(p.list) ? p.list.length : Number(p.list) || 0);
+  const total = parts.reduce((sum, p) => sum + countOf(p), 0);
+  if (!total) return null;
+
+  return (
+    <div
+      className="statband"
+      role="img"
+      aria-label={parts.map((p) => `${countOf(p)} ${p.label.toLowerCase()}`).join(', ')}
+    >
+      {parts
+        .filter((p) => countOf(p) > 0)
+        .map((p) => (
+          <span
+            key={p.key}
+            className={p.tone}
+            style={{ width: `${(countOf(p) / total) * 100}%` }}
+            title={`${countOf(p)} ${p.label.toLowerCase()}`}
+          />
+        ))}
+    </div>
+  );
+}
+
+// What to do with a requisition next, as a cell.
+//
+// The button has to say what pressing it does, and the two here do very different things.
+// "View PO" moves you to a document. "Raise PO" asks a person to make one, and asking a
+// person is not the same as it being done - so the row still reads "no order yet"
+// afterwards, because that is still true until the buyer acts.
+function RequisitionAction({ documents, document, onOpenDocument, onRaisePO }) {
+  const next = requisitionAction(documents, document);
+
+  if (next.state === 'ordered') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDocument(next.order.id);
+          }}
+        >
+          <Icon name="doc" size={12} />
+          View PO
+        </button>
+        <div className="sub n">{next.order.id}</div>
+      </>
+    );
+  }
+
+  if (next.state === 'to-order') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm emph"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRaisePO(document);
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Raise PO
+        </button>
+        <div className="sub">no order yet</div>
+      </>
+    );
+  }
+
+  if (next.state === 'closed') {
+    return <span className="sub">back with {document.createdBy ? document.createdBy.name : 'the raiser'}</span>;
+  }
+
+  // Still being approved. The row itself opens it, so a button here would be a second way
+  // to do the same thing, and two ways to do one thing is how people end up doing neither.
+  return <span className="sub">waiting for approval</span>;
+}
+
+// The requisitions split by status, counted.
+//
+// The list below answers "what should I do next"; this answers "where does everything
+// stand", which is asked before starting rather than during. Reading it off the list means
+// reading every row - nine rows do not tell you that five are yours and two are stuck
+// elsewhere until you have been through all nine.
+//
+// The four words are exactly the four the Status column uses. A summary with its own
+// vocabulary makes the reader map one onto the other, which is the work it was meant to
+// save.

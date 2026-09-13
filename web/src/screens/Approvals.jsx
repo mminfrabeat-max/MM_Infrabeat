@@ -21,7 +21,7 @@ import {
   requisitionAction,
   orderAction
 } from '../selectors.js';
-import { Card, Banner, Chip, Score, Icon, Count } from '../components/ui.jsx';
+import { Card, Banner, Chip, Score, Icon, Count, StatBox, StatBand } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
 
 // How urgent a requisition is, as a colour. The bands come from the server, which works
@@ -106,122 +106,6 @@ function holder(d) {
   return 'you';
 }
 
-// One status, as a number big enough to read from across a desk.
-//
-// Borrowed from the overview Tile on purpose - tinted icon square, big figure, label
-// beneath - because that is what a number looks like everywhere else here, and a summary
-// that invents its own furniture reads as a different product bolted on.
-function StatBox({ icon, label, value, sub, tone }) {
-  return (
-    <div className={`statbox ${tone}`}>
-      <div className="statrow">
-        <span className={`ico ${tone}`}>
-          <Icon name={icon} />
-        </span>
-        <div className={`statnum n ${tone}`}>{value}</div>
-      </div>
-      <div className="statlab">{label}</div>
-      <div className="statsub">{sub}</div>
-    </div>
-  );
-}
-
-// The same four counts as one bar.
-//
-// Four numbers still have to be added up before they mean anything; the bar has done that
-// already, and the answer it gives - how much of this is still mine - is the one the card
-// exists for. Empty states are left out rather than drawn at zero width, so the segments
-// that are there keep their proportions honest.
-function StatBand({ parts }) {
-  const total = parts.reduce((sum, p) => sum + p.list.length, 0);
-  if (!total) return null;
-
-  return (
-    <div
-      className="statband"
-      role="img"
-      aria-label={parts.map((p) => `${p.list.length} ${p.label.toLowerCase()}`).join(', ')}
-    >
-      {parts
-        .filter((p) => p.list.length > 0)
-        .map((p) => (
-          <span
-            key={p.key}
-            className={p.tone}
-            style={{ width: `${(p.list.length / total) * 100}%` }}
-            title={`${p.list.length} ${p.label.toLowerCase()}`}
-          />
-        ))}
-    </div>
-  );
-}
-
-// What to do with a requisition next, as a cell.
-//
-// The button has to say what pressing it does, and the two here do very different things.
-// "View PO" moves you to a document. "Raise PO" asks a person to make one, and asking a
-// person is not the same as it being done - so the row still reads "no order yet"
-// afterwards, because that is still true until the buyer acts.
-function RequisitionAction({ documents, document, onOpenDocument, onRaisePO }) {
-  const next = requisitionAction(documents, document);
-
-  if (next.state === 'ordered') {
-    return (
-      <>
-        <button
-          type="button"
-          className="btn sm"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenDocument(next.order.id);
-          }}
-        >
-          <Icon name="doc" size={12} />
-          View PO
-        </button>
-        <div className="sub n">{next.order.id}</div>
-      </>
-    );
-  }
-
-  if (next.state === 'to-order') {
-    return (
-      <>
-        <button
-          type="button"
-          className="btn sm emph"
-          onClick={(event) => {
-            event.stopPropagation();
-            onRaisePO(document);
-          }}
-        >
-          <Icon name="mail" size={12} />
-          Raise PO
-        </button>
-        <div className="sub">no order yet</div>
-      </>
-    );
-  }
-
-  if (next.state === 'closed') {
-    return <span className="sub">back with {document.createdBy ? document.createdBy.name : 'the raiser'}</span>;
-  }
-
-  // Still being approved. The row itself opens it, so a button here would be a second way
-  // to do the same thing, and two ways to do one thing is how people end up doing neither.
-  return <span className="sub">waiting for approval</span>;
-}
-
-// The requisitions split by status, counted.
-//
-// The list below answers "what should I do next"; this answers "where does everything
-// stand", which is asked before starting rather than during. Reading it off the list means
-// reading every row - nine rows do not tell you that five are yours and two are stuck
-// elsewhere until you have been through all nine.
-//
-// The four words are exactly the four the Status column uses. A summary with its own
-// vocabulary makes the reader map one onto the other, which is the work it was meant to
-// save.
 // Where a list stands, counted by status.
 //
 // The list below answers "what should I do next"; this answers "where does everything

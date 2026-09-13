@@ -15,9 +15,9 @@
 // page for deciding whether to approve something is not the page for watching it travel.
 
 import { useEffect, useState } from 'react';
-import { inr } from '../format.js';
+import { inr, plural } from '../format.js';
 import { byPlant } from '../selectors.js';
-import { Card, Icon, SimulatedNote, Count } from '../components/ui.jsx';
+import { Card, Icon, SimulatedNote, StatBox, StatBand } from '../components/ui.jsx';
 import { StageJourney, ConsignmentMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
@@ -33,7 +33,7 @@ export const STAGES = [
   // Delivered is the end of what this screen follows. The goods receipt is booked in SAP
   // against the delivery note, by whoever is on the gate, and a stage nobody completes here
   // is a node on the line that never lights.
-  { key: 'delivered', label: 'Delivered', sub: 'at the gate', icon: 'factory', action: 'Mark as delivered' }
+  { key: 'delivered', label: 'Delivered', sub: 'arrived at the plant', icon: 'factory', action: 'Mark as delivered' }
 ];
 
 const DELIVERED_AT = STAGES.findIndex((s) => s.key === 'delivered');
@@ -362,14 +362,50 @@ export default function ShipmentTracking({
   // this screen no longer follows.
   const delivered = orders.filter((d) => stageIndexOf(d) === DELIVERED_AT).length;
 
+  // The three states a released order can be in, and between them all of them. StatBand
+  // reads `list` as a length, so these carry counts rather than the arrays the approval
+  // lists pass it.
+  const parts = [
+    { key: 'waiting', label: 'Vendor not told', icon: 'mail', tone: 'warn', sub: 'released, order not sent yet', list: atStart },
+    { key: 'moving', label: 'On the way', icon: 'truck', tone: 'pri', sub: 'sent, dispatched or in transit', list: moving },
+    { key: 'delivered', label: 'Delivered', icon: 'factory', tone: 'pos', sub: 'arrived at the plant', list: delivered }
+  ];
+
   return (
     <>
-      <Card span="c12" icon="truck" tone="pri" title="Where everything is" subtitle="released orders only">
-        <div className="tmets">
-          <Count label="Released orders" value={orders.length} sub="approved and with the vendor" tone="pri" />
-          <Count label="On the way" value={moving} sub="sent, dispatched or in transit" tone={moving ? 'warn' : 'mut'} />
-          <Count label="Delivered" value={delivered} sub="at the plant" tone={delivered ? 'pos' : 'mut'} />
-          <Count label="Not released yet" value={notReleased} sub="orders still waiting for approval" tone="mut" />
+      {/* Three panels that add up to the released orders, and nothing that does not.
+
+          The strip this replaces put a total beside its own parts and then a fourth figure
+          from a different population entirely - orders not released at all - so four
+          numbers sat in a row where only three of them could be added together. The total
+          is the subtitle now, the odd one out is in the corner where it reads as context,
+          and the bar across the top is honest because every segment belongs to one whole. */}
+      <Card
+        span="c12"
+        icon="truck"
+        tone="pri"
+        title="Where everything is"
+        subtitle={`${plural(orders.length, 'released order')}, from the vendor to the plant`}
+        action={
+          <div className="statmoney">
+            <div className="l">Not released yet</div>
+            <div className="v n">{notReleased}</div>
+          </div>
+        }
+      >
+        <StatBand parts={parts} />
+
+        <div className="statgrid">
+          {parts.map((p) => (
+            <StatBox
+              key={p.key}
+              icon={p.icon}
+              label={p.label}
+              value={p.list}
+              sub={p.sub}
+              tone={p.list ? p.tone : 'mut'}
+            />
+          ))}
         </div>
         {orders.length > 0 && atStart > 0 && (
           <div className="flagline">
