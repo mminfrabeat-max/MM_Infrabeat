@@ -77,18 +77,22 @@ export function RequisitionStatus({ document }) {
   if (state.state === 'rejected') {
     return <Chip tone="neg">Rejected</Chip>;
   }
+  // Either open state can be sitting on your desk or on somebody else’s, so the chip says
+  // how far it has got and the line under it says who has it. Two facts, not one.
+  const withWhom = state.withYou ? 'with you' : `with ${state.holder || 'the next approver'}`;
+
   if (state.state === 'partial') {
     return (
       <>
         <Chip tone="pri" icon="clock">Partially approved</Chip>
-        <div className="sub">with {state.holder}</div>
+        <div className="sub">{withWhom}</div>
       </>
     );
   }
   return (
     <>
       <Chip tone="warn" icon="clock">Pending</Chip>
-      <div className="sub">with you</div>
+      <div className="sub">{withWhom}</div>
     </>
   );
 }
@@ -222,8 +226,8 @@ function RequisitionCounts({ documents }) {
   const inState = (state) => documents.filter((d) => d.approvalState?.state === state);
 
   const parts = [
-    { key: 'waiting', label: 'Pending', icon: 'clock', tone: 'warn', sub: 'waiting on you', list: inState('waiting') },
-    { key: 'partial', label: 'Partially approved', icon: 'people', tone: 'pri', sub: 'signed once, now with the next approver', list: inState('partial') },
+    { key: 'waiting', label: 'Pending', icon: 'clock', tone: 'warn', sub: 'nobody has signed it yet', list: inState('waiting') },
+    { key: 'partial', label: 'Partially approved', icon: 'people', tone: 'pri', sub: 'signed once, still short of a release', list: inState('partial') },
     { key: 'approved', label: 'Approved', icon: 'check', tone: 'pos', sub: 'released', list: inState('approved') },
     { key: 'rejected', label: 'Rejected', icon: 'back', tone: 'neg', sub: 'returned to whoever raised it', list: inState('rejected') }
   ];
@@ -238,7 +242,13 @@ function RequisitionCounts({ documents }) {
 
   // Only the critical band, because that is the one whose rows say "Approve today". Adding
   // the urgent ones would make the card contradict the list it sits above.
-  const today = pending.filter((d) => d.priority?.band === 'critical');
+  //
+  // And only the ones on your desk. A critical requisition already signed and sitting with
+  // somebody else is not yours to approve today, however critical it is - the line below
+  // about who is holding it is the one that applies to those.
+  const today = documents.filter(
+    (d) => d.status === 'pending' && d.approvalState?.withYou && d.priority?.band === 'critical'
+  );
 
   return (
     <Card
@@ -533,7 +543,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                         </Chip>
                         {/* The queue position, and only where there is a queue. A rank on a
                             released requisition would read as a place in a line it left. */}
-                        {d.approvalState?.state === 'waiting' && (
+                        {d.approvalState?.withYou && d.status === 'pending' && (
                           <div className="sub n">#{index + 1} to approve</div>
                         )}
                       </td>
@@ -685,12 +695,23 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
   );
 }
 
-// `document` is optional. Given it, the chip can tell apart the two states that both store
-// themselves as "pending": waiting for you, and waiting for the person after you. They look
-// identical in the database and mean opposite things to whoever is reading the screen.
+// Where a document has got to, as one chip.
+//
+// It reads the approval state rather than working it out again from the status field. It
+// used to do the latter, and got it wrong in exactly the way the requisition chip beside
+// it got right: an order signed at step one and passed to you showed "Pending", while the
+// page below it listed the person who signed under "Who has approved so far". Two answers
+// to one question, on one screen.
 export function StatusChip({ status, document }) {
+  const state = document?.approvalState;
+
   if (status === 'approved') return <Chip tone="pos" icon="check">Approved</Chip>;
   if (status === 'rejected') return <Chip tone="neg">Rejected</Chip>;
-  if (document?.decidedAt) return <Chip tone="pri" icon="clock">Passed on</Chip>;
+
+  if (state?.state === 'partial') {
+    return <Chip tone="pri" icon="clock">Partially approved</Chip>;
+  }
+
   return <Chip tone="warn" icon="clock">Pending</Chip>;
 }
+

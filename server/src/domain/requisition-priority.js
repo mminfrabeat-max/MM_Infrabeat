@@ -235,9 +235,12 @@ export function priorityFor(document, materials, today = new Date()) {
 // Three groups, in the order somebody works through them: waiting on you, then waiting on
 // somebody else (chase those), then finished. Urgency orders within each group.
 function actionGroup(document) {
-  const state = document.approvalState?.state;
-  if (state === 'waiting') return 0;
-  if (state === 'partial') return 1;
+  // Yours to sign, then somebody else’s to be chased for, then finished. Read from
+  // whose turn it is rather than from the status, because a partly approved document
+  // can be sitting on either desk and the two belong in different groups.
+  const open = document.status === 'pending';
+  if (open && document.approvalState?.withYou) return 0;
+  if (open) return 1;
   return 2;
 }
 

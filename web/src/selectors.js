@@ -48,9 +48,12 @@ export function pendingOfKind(documents, plant, kind) {
 // Three groups, in the order somebody works through them: waiting on you, then waiting on
 // somebody else (chase those), then finished. Urgency orders within each group.
 function actionGroup(document) {
-  const state = document.approvalState?.state;
-  if (state === 'waiting') return 0;
-  if (state === 'partial') return 1;
+  // Yours to sign, then somebody else’s to be chased for, then finished. Read from
+  // whose turn it is rather than from the status, because a partly approved document
+  // can be sitting on either desk and the two belong in different groups.
+  const open = document.status === 'pending';
+  if (open && document.approvalState?.withYou) return 0;
+  if (open) return 1;
   return 2;
 }
 
@@ -201,7 +204,7 @@ export function orderAction(document) {
     // after you have signed - it also covers recording the next approver’s decision on
     // their behalf. An order you have already passed on would otherwise have offered you
     // its Approve button a second time.
-    const waitingOnYou = (document.approvalState?.state || 'waiting') === 'waiting' && !recordingForNext(document);
+    const waitingOnYou = document.approvalState?.withYou !== false && !recordingForNext(document);
     return waitingOnYou
       ? { state: 'to-approve' }
       : { state: 'with-someone', holder: document.approvalState?.holder || document.next?.name || '' };

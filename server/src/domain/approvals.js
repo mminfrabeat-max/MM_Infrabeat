@@ -95,6 +95,18 @@ export function outcomeOf(document, action) {
 //
 // `holder` is null when it is the signed-in manager: the screen says "you", and the name
 // of whoever is signed in is not this rule's business.
+// Where a document stands, and separately, whose turn it is.
+//
+// These were one thing and should never have been. "Partially approved" is a fact about
+// the document - somebody has signed it and it is not finished - and it is true whichever
+// side of the signature you are standing on. An order signed at step one and passed to you
+// is exactly as partly approved as one you signed and passed to somebody else; reporting
+// the first as "Pending" told the reader the opposite of what the page below it showed,
+// which lists the person who signed under "Who has approved so far".
+//
+// Whose turn it is, is a different question with a different answer, and it now has its
+// own field. Anything that wants to know "is this mine" reads `withYou`; anything that
+// wants to describe the document reads `state`.
 export function approvalStateOf(document) {
   if (document.status === 'approved') {
     return {
@@ -102,6 +114,7 @@ export function approvalStateOf(document) {
       label: 'Approved',
       holder: null,
       holderTitle: null,
+      withYou: false,
       signedBy: document.decidedBy || '',
       signedAt: document.decidedAt || ''
     };
@@ -113,35 +126,35 @@ export function approvalStateOf(document) {
       label: 'Rejected',
       holder: null,
       holderTitle: null,
+      withYou: false,
       signedBy: document.decidedBy || '',
       signedAt: document.decidedAt || ''
     };
   }
 
-  if (alreadyDecided(document) && document.next && document.next.name) {
-    return {
-      state: 'partial',
-      label: 'Partially approved',
-      holder: document.next.name,
-      holderTitle: document.next.title || '',
-      signedBy: document.decidedBy || '',
-      signedAt: document.decidedAt || ''
-    };
-  }
+  // Still open. Whose desk is it on? Yours until you have signed, then the next approver’s.
+  const passedOn = alreadyDecided(document) && Boolean(document.next && document.next.name);
+  const holder = passedOn ? document.next.name : null;
+  const holderTitle = passedOn ? document.next.title || '' : '';
+
+  // One signature is enough to make it partly approved, from either side: one you gave, or
+  // one already on it when it reached you. `prev` is that earlier signature - it is what the
+  // order page lists under "Who has approved so far".
+  const signedAlready = alreadyDecided(document) || Boolean(document.prev && document.prev.name);
 
   return {
-    state: 'waiting',
-    label: 'Pending',
-    holder: null,
-    holderTitle: null,
-    signedBy: '',
-    signedAt: ''
+    state: signedAlready ? 'partial' : 'waiting',
+    label: signedAlready ? 'Partially approved' : 'Pending',
+    holder,
+    holderTitle,
+    // Yours to sign, or somebody else’s. Note that a partly approved document can still be
+    // yours: that is the whole point of the change.
+    withYou: !passedOn,
+    signedBy: document.decidedBy || (document.prev && document.prev.name) || '',
+    signedAt: document.decidedAt || (document.prev && document.prev.when) || ''
   };
 }
 
-// One sentence saying where the document stands, written for the person who raised it
-// rather than for a procurement team. Used as the opening line of their mail and as the
-// caption under the chain on screen, so the two can never drift apart.
 export function outcomeSentence(document, outcome, decidedBy) {
   const what = `${document.kind} ${document.id}`;
 

@@ -36,8 +36,8 @@ export default function Overview({ data, plant, onNavigate, onOpenDocument, onOp
   // signed by you and sitting with somebody else. The tile counts the first - that is what
   // there is to do - and names the second underneath, because those need chasing, not
   // approving.
-  const requisitionsForYou = pendingRequisitions.filter((d) => d.approvalState?.state === 'waiting');
-  const requisitionsElsewhere = pendingRequisitions.filter((d) => d.approvalState?.state === 'partial');
+  const requisitionsForYou = pendingRequisitions.filter((d) => d.approvalState?.withYou);
+  const requisitionsElsewhere = pendingRequisitions.filter((d) => !d.approvalState?.withYou);
   const requisitionsToday = requisitionsForYou.filter((d) => d.priority?.band === 'critical');
   const overdue = overdueDocuments(data.documents, plant);
   const short = shortMaterials(data.materials, plant);
