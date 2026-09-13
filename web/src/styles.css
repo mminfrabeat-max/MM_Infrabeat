@@ -514,6 +514,13 @@ th.rt, td.rt { text-align: right; }
 .noteinput:focus { outline: none; border-color: var(--primary); background: var(--surface); }
 .noteinput:disabled { opacity: .6; }
 
+/* The search at the top of a list card. It borrows the note input rather than inventing a
+   second kind of box, and sits on its own strip with a rule under it so it reads as part of
+   the card furniture and not as the first row of the list. */
+.vsearch { display: flex; padding: 10px 13px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.vsearch .noteinput { min-width: 0; background: var(--surface); }
+.vsearch .noteinput::-webkit-search-cancel-button { cursor: pointer; }
+
 /* ============ consequence and outside feeds ============ */
 .conseq { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 860px) { .conseq { grid-template-columns: 1fr; } }

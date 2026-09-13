@@ -37,9 +37,36 @@ export default function Vendors({ data, plant, onOpenDocument }) {
   );
 
   const [picked, setPicked] = useState(vendors.length ? vendors[0].supplierId : null);
-  const vendor = vendors.find((v) => v.supplierId === picked) || vendors[0];
+  const [query, setQuery] = useState('');
 
-  if (!vendor) {
+  // Finding a vendor by whichever of the two things you happen to have.
+  //
+  // A name if somebody said it out loud, a number if it came off a document - and the
+  // number is written "V-10024" while nobody says the V or the dash, so the hyphen and
+  // the case are thrown away on both sides rather than made the reader’s problem. The
+  // city and the category match too, because "the Rajkot one" is how people ask when the
+  // name has gone.
+  const loosely = (text) => String(text || '').toLowerCase().replace(/[\s-]/g, '');
+  const needle = loosely(query);
+  const found = needle
+    ? vendors.filter((v) =>
+        [v.name, v.supplierId, v.city, v.category].some((field) => loosely(field).includes(needle))
+      )
+    : vendors;
+
+  // The detail follows the search. Narrow the list past whoever is open and the first
+  // match takes their place, rather than leaving a panel describing somebody no longer
+  // on the list beside it.
+  // Never null: a search that matches nothing narrows the list and leaves whoever was
+  // open still open, rather than blanking two thirds of the screen and taking the answer
+  // away along with the list.
+  const vendor =
+    found.find((v) => v.supplierId === picked) ||
+    found[0] ||
+    vendors.find((v) => v.supplierId === picked) ||
+    vendors[0];
+
+  if (!vendors.length) {
     return <Banner icon="truck">No vendors are set up yet.</Banner>;
   }
 
@@ -73,8 +100,31 @@ export default function Vendors({ data, plant, onOpenDocument }) {
       </SimulatedNote>
 
       <div className="grid">
-        <Card span="c4" icon="truck" title="Vendors" subtitle="worst standing first" flush>
-          {vendors.map((v) => {
+        <Card
+          span="c4"
+          icon="truck"
+          title="Vendors"
+          subtitle={needle ? `${plural(found.length, 'match', 'matches')} of ${vendors.length}` : 'worst standing first'}
+          flush
+        >
+          <div className="vsearch">
+            <input
+              className="noteinput"
+              type="search"
+              placeholder="Search by name or number, e.g. Aditya or V-10024"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search vendors by name or number"
+            />
+          </div>
+
+          {found.length === 0 && (
+            <p className="muted rowpad">
+              Nothing matches &ldquo;{query}&rdquo;. Names, vendor numbers, cities and categories are all searched.
+            </p>
+          )}
+
+          {found.map((v) => {
             const open = openCount(v.supplierId);
             return (
               <button
