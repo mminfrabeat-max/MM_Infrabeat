@@ -7,8 +7,13 @@
 // somebody clear all the small requisitions without the crore-value orders scrolling past
 // in between - and the counts on the tabs then mean something on their own.
 
+import { useState } from 'react';
 import { inr, num, plural, firstName } from '../format.js';
 import {
+  PERIODS,
+  APPROVAL_STATES,
+  withinPeriod,
+  matchesApprovalState,
   documentsOfKind,
   byPriority,
   byOrderPriority,
@@ -404,8 +409,17 @@ function OrderAction({ document, onOpenDocument, onChase }) {
 }
 
 export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, onRaisePO, onChase }) {
-  const documents = documentsOfKind(data.documents, plant, kind);
   const isOrder = kind === 'PO';
+
+  // Two narrowings, kept apart: a window of time, and a place in the approval chain.
+  const [period, setPeriod] = useState('all');
+  const [state, setState] = useState('all');
+
+  const all = documentsOfKind(data.documents, plant, kind);
+  const documents = isOrder
+    ? all.filter((d) => withinPeriod(d, period) && matchesApprovalState(d, state))
+    : all;
+  const hidden = all.length - documents.length;
   const noun = isOrder ? 'order' : 'requisition';
 
   return (
@@ -436,10 +450,44 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
         icon={isOrder ? 'doc' : 'box'}
         tone={isOrder ? 'warn' : 'neg'}
         title={isOrder ? 'Purchase orders' : 'Purchase requisitions'}
-        subtitle={isOrder ? 'longest wait first' : 'most urgent first'}
+        subtitle={
+          isOrder
+            ? `${plural(documents.length, 'order')}${hidden ? `, ${hidden} hidden by the filters` : ''}`
+            : 'most urgent first'
+        }
+        action={
+          isOrder ? (
+            <div className="filters">
+              <select
+                className="sel"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                aria-label="Show orders raised within"
+              >
+                {PERIODS.map((p) => (
+                  <option key={p.key} value={p.key}>{p.label}</option>
+                ))}
+              </select>
+              <select
+                className="sel"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                aria-label="Show orders at status"
+              >
+                {APPROVAL_STATES.map((a) => (
+                  <option key={a.key} value={a.key}>{a.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : undefined
+        }
       >
         {documents.length === 0 ? (
-          <p className="muted rowpad">No {noun}s here for {plant === 'all' ? 'any plant' : plant}.</p>
+          <p className="muted rowpad">
+            {isOrder && all.length > 0
+              ? 'No orders match these filters. Widen the period or the status to see the rest.'
+              : `No ${noun}s here for ${plant === 'all' ? 'any plant' : plant}.`}
+          </p>
         ) : (
           <table>
             <thead>
@@ -644,5 +692,5 @@ export function StatusChip({ status, document }) {
   if (status === 'approved') return <Chip tone="pos" icon="check">Approved</Chip>;
   if (status === 'rejected') return <Chip tone="neg">Sent back</Chip>;
   if (document?.decidedAt) return <Chip tone="pri" icon="clock">Passed on</Chip>;
-  return <Chip tone="warn" icon="clock">Waiting</Chip>;
+  return <Chip tone="warn" icon="clock">Pending</Chip>;
 }

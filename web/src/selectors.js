@@ -260,3 +260,44 @@ export function byOrderPriority(documents) {
     return (b.total || 0) - (a.total || 0);
   });
 }
+
+// Narrowing a list by when a document was raised, and by where it has got to.
+//
+// Two separate questions, kept separate. "Show me the last three months" is about what to
+// look at; "show me what is still pending" is about what to do. Somebody asking one is
+// rarely asking the other, and a single combined control would force them to.
+export const PERIODS = [
+  { key: 'all', label: 'Any time', months: null },
+  { key: '1m', label: 'Raised in the last month', months: 1 },
+  { key: '3m', label: 'Raised in the last 3 months', months: 3 },
+  { key: '6m', label: 'Raised in the last 6 months', months: 6 },
+  { key: '1y', label: 'Raised in the last year', months: 12 }
+];
+
+// The four states a document can be in, in the words the Status column uses.
+export const APPROVAL_STATES = [
+  { key: 'all', label: 'Any status', state: null },
+  { key: 'waiting', label: 'Pending', state: 'waiting' },
+  { key: 'partial', label: 'Partially approved', state: 'partial' },
+  { key: 'approved', label: 'Approved', state: 'approved' },
+  { key: 'rejected', label: 'Sent back', state: 'rejected' }
+];
+
+export function withinPeriod(document, periodKey, today = new Date()) {
+  const period = PERIODS.find((p) => p.key === periodKey);
+  if (!period || period.months === null) return true;
+
+  // A document with no raised date on it cannot be shown to be inside a window, and
+  // quietly keeping it would make the count wrong in the direction nobody checks.
+  if (!document.raisedAt) return false;
+
+  const cutoff = new Date(today);
+  cutoff.setMonth(cutoff.getMonth() - period.months);
+  return new Date(document.raisedAt) >= cutoff;
+}
+
+export function matchesApprovalState(document, stateKey) {
+  const wanted = APPROVAL_STATES.find((s) => s.key === stateKey);
+  if (!wanted || wanted.state === null) return true;
+  return (document.approvalState?.state || 'waiting') === wanted.state;
+}

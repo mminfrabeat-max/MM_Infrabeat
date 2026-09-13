@@ -211,6 +211,12 @@ svg { display: block; }
 .chd h2 { font-size: 14.6px; font-weight: 650; margin: 0; letter-spacing: -.1px; }
 .chd .cs { font-size: 12.1px; color: var(--ink-3); margin-top: 1px; }
 .chd .act { margin-left: auto; font-size: 12.6px; color: var(--primary); font-weight: 600; padding: 4px 9px; border-radius: 7px; }
+
+/* Controls that narrow the list below, sitting in its header rather than above the card,
+   because a filter that floats free of the thing it filters leaves the reader guessing
+   which list it applies to. Wraps on a narrow screen instead of squeezing the title. */
+.filters { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.filters .sel { font-size: 12.6px; padding: 5px 9px; }
 .chd .act:hover { background: var(--primary-soft); }
 .cbd { padding: 14px 17px 16px; flex: 1; }
 .cbd.flush { padding: 0; }

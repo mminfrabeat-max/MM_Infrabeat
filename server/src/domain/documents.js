@@ -11,7 +11,7 @@
 // decision a manager is actually weighing.
 
 import { money, rupees } from './format.js';
-import { priorityFor } from './requisition-priority.js';
+import { priorityFor, parseWhen } from './requisition-priority.js';
 import { orderPriorityFor } from './order-priority.js';
 import { approvalStateOf } from './approvals.js';
 
@@ -22,6 +22,19 @@ function round1(n) {
 }
 
 // What the company actually pays: the goods plus getting them here.
+// The date a document was raised, or null when it does not say.
+//
+// Seeded rows write it as “28 Aug, 11:20” and history rows as “3 Dec 2025, 09:10”, so the
+// year is sometimes absent and has to be assumed. Anything raised is in the past, which
+// is the one thing that makes the assumption safe.
+function raisedDate(document) {
+  const when = parseWhen(document.createdBy?.when);
+  if (!when) return null;
+  const now = new Date();
+  if (when > now) when.setFullYear(when.getFullYear() - 1);
+  return when.toISOString();
+}
+
 export function totalValue(document) {
   return document.basic + (document.freight || 0) + (document.loading || 0);
 }
@@ -109,6 +122,12 @@ export function enrichDocument(document, scoresById, materials = [], contracts =
     ...document,
     items: itemsOf(document),
     total: totalValue(document),
+    // When it was raised, as a date rather than the line of prose it is written as.
+    //
+    // Worked out here rather than on the screen, because the screen would have to parse
+    // “28 Aug, 11:20” on every row on every keystroke, and two places parsing the same
+    // string differently is how a filter starts disagreeing with the list it filters.
+    raisedAt: raisedDate(document),
     supplierName: score ? score.name : 'Unknown vendor',
     // Where the vendor ships from. Only used to place a consignment between there and the
     // plant; the dashboard has no other use for a vendor's address.
