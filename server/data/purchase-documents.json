@@ -244,10 +244,10 @@
       "cashDiscount": "None",
       "rebate": "2 percent above 4 crore per year",
       "hoursWaiting": 19,
-      "step": "Step 1 of 1",
+      "step": "Step 2 of 2, final",
       "prev": {
         "name": "A. Deshmukh",
-        "level": "Logistics head",
+        "level": "Step 1 of 2, Logistics head",
         "when": "3 Sep, 16:05",
         "note": "Rail rake availability confirmed"
       },
@@ -297,10 +297,10 @@
       "cashDiscount": "1 percent if paid within 7 days",
       "rebate": "None",
       "hoursWaiting": 8,
-      "step": "Step 1 of 1",
+      "step": "Step 2 of 2, final",
       "prev": {
         "name": "S. Bose",
-        "level": "Maintenance head",
+        "level": "Step 1 of 2, Maintenance head",
         "when": "4 Sep, 07:50",
         "note": "Replacement due at the next shutdown"
       },
