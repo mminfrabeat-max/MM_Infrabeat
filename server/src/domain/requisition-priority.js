@@ -64,13 +64,16 @@ export function materialFor(document, materials) {
   );
 }
 
-// How urgent this requisition is, and why.
+// How urgent one line of a requisition is, and why.
 //
 // `score` exists only to sort by; it is never shown. What is shown is the band and the
 // reasons, because "approve this one first" is worth nothing to the person reading it
 // unless they can see what it is they are being told.
-export function priorityFor(document, materials, today = new Date()) {
-  const material = materialFor(document, materials);
+function assessLine(line, document, materials, today) {
+  const material =
+    materials.find((m) => m.code === line.materialCode && m.plant === document.plant) ||
+    materials.find((m) => m.code === line.materialCode) ||
+    null;
 
   const cover = Number(material?.daysOfCover);
   const lead = Number(material?.leadTimeDays);
@@ -109,7 +112,9 @@ export function priorityFor(document, materials, today = new Date()) {
 
   if (shortBy > 0) {
     score += 10;
-    reasons.push(`The plant is ${shortBy.toLocaleString('en-IN')} ${material.unit} short of what has been asked for.`);
+    reasons.push(
+      `The plant is ${shortBy.toLocaleString('en-IN')} ${material.unit} short of what has been asked for.`
+    );
   }
 
   if (kiln) {
@@ -150,19 +155,22 @@ export function priorityFor(document, materials, today = new Date()) {
     low: 'No date pressure'
   }[band];
 
-  // Shortage the way the business states it: what this requisition asks for against
-  // what is on hand and already on order. Zero or less means the stock covers it.
+  // Shortage the way the business states it: what this line asks for against what is on
+  // hand and already on order. Zero or less means the stock covers it.
   //
   // Deliberately not the same number as `shortBy`, which is the whole plant measured
   // against every department that has asked. Both are true and they answer different
   // questions, so they are named apart rather than one quietly standing for the other.
-  const askedFor = Number(document.quantity) || 0;
+  const askedFor = Number(line.quantity) || 0;
   const stockAvailable = Number(material?.available);
   const shortageAgainstStock = Number.isFinite(stockAvailable)
     ? Math.max(0, Math.round((askedFor - stockAvailable) * 100) / 100)
     : null;
 
   return {
+    pos: line.pos ?? null,
+    material: line.material || document.material || '',
+    materialCode: line.materialCode || '',
     band,
     label,
     advice,
@@ -175,9 +183,48 @@ export function priorityFor(document, materials, today = new Date()) {
     daysOfCover: Number.isFinite(cover) ? cover : null,
     leadTimeDays: Number.isFinite(lead) ? lead : null,
     shortBy,
-    unit: material?.unit || document.unit || '',
+    unit: material?.unit || line.unit || document.unit || '',
     kiln,
     reasons
+  };
+}
+
+const BAND_ORDER = ['critical', 'high', 'medium', 'low'];
+
+// How urgent a requisition is: the worst line it contains.
+//
+// A requisition is one decision covering several materials, and it can only be as
+// comfortable as its least comfortable line. Judging it on the header material alone -
+// which is what this did until real requisitions turned out to carry several - buried the
+// line that mattered: a bundle whose first line is iron ore with weeks of cover reads as
+// relaxed even when its second line is grinding media the mill runs out of on Tuesday.
+//
+// So every line is assessed and the worst one sets the band. The rest are kept, because
+// the answer to "why is this Critical" is a particular line and a person is entitled to
+// see which.
+export function priorityFor(document, materials, today = new Date()) {
+  // A document with no item list is its own single line. Older rows and anything typed
+  // straight into the workbook arrive that way.
+  const lines =
+    Array.isArray(document.items) && document.items.length
+      ? document.items
+      : [{ pos: 10, materialCode: document.materialCode, material: document.material, quantity: document.quantity, unit: document.unit }];
+
+  const assessed = lines.map((line) => assessLine(line, document, materials, today));
+
+  const worst = [...assessed].sort((a, b) => {
+    const band = BAND_ORDER.indexOf(a.band) - BAND_ORDER.indexOf(b.band);
+    if (band !== 0) return band;
+    return b.score - a.score;
+  })[0];
+
+  return {
+    ...worst,
+    lineCount: assessed.length,
+    lines: assessed,
+    // Named only when there is a choice to explain, and only when the line that decided it
+    // is not the one already on the row.
+    drivenBy: assessed.length > 1 ? worst.material : null
   };
 }
 

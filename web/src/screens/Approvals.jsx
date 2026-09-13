@@ -7,7 +7,7 @@
 // somebody clear all the small requisitions without the crore-value orders scrolling past
 // in between - and the counts on the tabs then mean something on their own.
 
-import { inr, num } from '../format.js';
+import { inr, num, plural } from '../format.js';
 import { documentsOfKind, byPriority, sumTotals, requisitionAction } from '../selectors.js';
 import { Card, Banner, Chip, Score, Icon, Count } from '../components/ui.jsx';
 import { bandTone } from '../format.js';
@@ -363,7 +363,21 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                       </td>
                       <td>
                         <b>{d.id}</b>
-                        <div className="sub">{d.material}</div>
+                        <div className="sub">
+                          {d.material}
+                          {d.priority?.lineCount > 1 &&
+                            `, and ${plural(d.priority.lineCount - 1, 'more line')}`}
+                        </div>
+                        {/* Which line the figures across this row belong to. A bundle is
+                            ranked on its worst line, so on a two-line requisition the
+                            cover and shortage columns can be describing a material the
+                            row has not named - and a column that quietly changes what it
+                            is measuring is worse than one that is missing. */}
+                        {d.priority?.drivenBy && d.priority.drivenBy !== d.material && (
+                          <div className="sub">
+                            worst line: <b>{d.priority.drivenBy}</b>
+                          </div>
+                        )}
                         <div className="sub">
                           <b>{d.priority?.advice}</b>
                         </div>

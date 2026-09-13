@@ -557,7 +557,7 @@
       "quantity": 40,
       "unit": "MT",
       "rate": 52000,
-      "basic": 2080000,
+      "basic": 7336000,
       "freight": 34000,
       "loading": 11000,
       "transport": "Road",
@@ -573,6 +573,18 @@
           "quantity": 40,
           "unit": "MT",
           "rate": 52000
+        },
+        {
+          "pos": 20,
+          "materialCode": "SP-2210",
+          "material": "Refractory bricks, kiln inlet",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "REF-01",
+          "groupText": "Refractories",
+          "quantity": 120,
+          "unit": "NOS",
+          "rate": 43800
         }
       ],
       "payTerms": "30 days from invoice date",
@@ -664,7 +676,7 @@
       "quantity": 400,
       "unit": "MTR",
       "rate": 1985,
-      "basic": 794000,
+      "basic": 2762000,
       "freight": 21000,
       "loading": 6500,
       "transport": "Road",
@@ -680,6 +692,18 @@
           "quantity": 400,
           "unit": "MTR",
           "rate": 1985
+        },
+        {
+          "pos": 20,
+          "materialCode": "SP-1177",
+          "material": "Grinding media, 30mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-14",
+          "groupText": "Grinding media",
+          "quantity": 12,
+          "unit": "MT",
+          "rate": 164000
         }
       ],
       "payTerms": "30 days from invoice date",
@@ -784,7 +808,7 @@
       "quantity": 900,
       "unit": "MT",
       "rate": 10250,
-      "basic": 9225000,
+      "basic": 10865000,
       "freight": 118000,
       "loading": 24000,
       "transport": "Rail",
@@ -800,6 +824,18 @@
           "quantity": 900,
           "unit": "MT",
           "rate": 10250
+        },
+        {
+          "pos": 20,
+          "materialCode": "SP-1177",
+          "material": "Grinding media, 30mm",
+          "type": "ERSA",
+          "typeText": "Spare part",
+          "group": "SP-14",
+          "groupText": "Grinding media",
+          "quantity": 10,
+          "unit": "MT",
+          "rate": 164000
         }
       ],
       "payTerms": "30 days from invoice date",

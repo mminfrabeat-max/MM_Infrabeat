@@ -10,7 +10,7 @@
 // page, and the right way round for this decision.
 
 import { useState } from 'react';
-import { inr, num } from '../format.js';
+import { inr, num, plural } from '../format.js';
 import { APPROVER_NAME, USER_PROFILE, COMPANY } from '../brand.js';
 import { Card, Banner, Chip, Icon, Metric, SimulatedNote } from '../components/ui.jsx';
 import { stillNeedsSigning, recordingForNext } from '../selectors.js';
@@ -46,6 +46,27 @@ export default function RequisitionDetail({
   const mayDecide = canDecide && stillNeedsSigning(document);
   const forNext = recordingForNext(document);
   const tone = bandTone(priority?.band);
+
+  // Every line, or the header standing in as one. A requisition typed straight into the
+  // workbook has no item list, and it is still a requisition for one material.
+  const lines = priority?.lines?.length
+    ? priority.lines
+    : [
+        {
+          pos: 10,
+          material: document.material,
+          materialCode: document.materialCode,
+          askedFor: document.quantity,
+          unit: document.unit,
+          stockAvailable: priority?.stockAvailable ?? null,
+          shortageAgainstStock: priority?.shortageAgainstStock ?? 0,
+          shortfallDays: priority?.shortfallDays ?? null,
+          daysOfCover: priority?.daysOfCover ?? null,
+          leadTimeDays: priority?.leadTimeDays ?? null,
+          band: priority?.band || 'low',
+          label: priority?.label || 'Low'
+        }
+      ];
 
   // Whoever the reminder would go to. Only somebody other than this manager can be chased:
   // there is no point mailing yourself about a document on your own screen.
@@ -181,6 +202,81 @@ export default function RequisitionDetail({
             </button>
           </div>
         )}
+      </Card>
+
+      {/* Every material this requisition asks for, and where each one stands.
+          
+          A requisition is one decision covering several lines, and it can only be as
+          comfortable as its least comfortable line. The band at the top of this page comes
+          from the worst of these, so the worst of these has to be visible - otherwise the
+          page asserts "Critical" and the reader has nowhere to check it. */}
+      <Card
+        span="c12"
+        icon="box"
+        tone="pri"
+        title="What it asks for"
+        subtitle={`${plural(lines.length, 'line')}, each against the stock at ${document.plant}`}
+        flush
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Material</th>
+              <th className="rt">Asked</th>
+              <th className="rt">In stock</th>
+              <th className="rt">Shortage</th>
+              <th>Cover against lead time</th>
+              <th>Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => (
+              <tr key={line.pos}>
+                <td className="n">{line.pos}</td>
+                <td>
+                  <b>{line.material}</b>
+                  <div className="sub n">{line.materialCode}</div>
+                </td>
+                <td className="rt n">{num(line.askedFor)} {line.unit}</td>
+                <td className="rt n">
+                  {line.stockAvailable === null ? <span className="mut">not known</span> : num(line.stockAvailable)}
+                </td>
+                <td className="rt n">
+                  {line.shortageAgainstStock > 0 ? (
+                    <Chip tone="neg">short {num(line.shortageAgainstStock)}</Chip>
+                  ) : (
+                    <Chip tone="pos">covered</Chip>
+                  )}
+                </td>
+                <td>
+                  {line.shortfallDays === null ? (
+                    <span className="mut">not known</span>
+                  ) : (
+                    <>
+                      <Chip tone={line.shortfallDays < 0 ? 'neg' : 'pos'}>
+                        {line.shortfallDays < 0
+                          ? `${Math.abs(line.shortfallDays)} days short`
+                          : `${line.shortfallDays} days spare`}
+                      </Chip>
+                      <div className="sub">
+                        {line.daysOfCover} days cover, {line.leadTimeDays} day lead time
+                      </div>
+                    </>
+                  )}
+                </td>
+                <td>
+                  <Chip tone={bandTone(line.band)} icon={line.band === 'critical' ? 'alert' : undefined}>
+                    {line.label}
+                  </Chip>
+                  {line.pos === priority?.pos && lines.length > 1 && (
+                    <div className="sub">sets the priority</div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </Card>
 
       <Card span="c5" icon="file" tone="mut" title="What it would cost" subtitle="an estimate, not a quotation">
