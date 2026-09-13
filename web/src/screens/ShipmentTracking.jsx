@@ -17,7 +17,7 @@
 import { useEffect, useState } from 'react';
 import { inr } from '../format.js';
 import { byPlant } from '../selectors.js';
-import { Card, Banner, Icon, SimulatedNote, Count } from '../components/ui.jsx';
+import { Card, Icon, SimulatedNote, Count } from '../components/ui.jsx';
 import { StageJourney, ConsignmentMap, modeIcon } from '../components/journey.jsx';
 
 // Mirrors server/src/domain/shipment.js. The server decides for real; this is so the screen
@@ -360,11 +360,6 @@ export default function ShipmentTracking({
 
   return (
     <>
-      <Banner icon="truck">
-        Every released order, from the vendor to goods receipt. Mark each step as it happens
-        and the buyer sees the same position. Import orders also show where the vessel is.
-      </Banner>
-
       <Card span="c12" icon="truck" tone="pri" title="Where everything is" subtitle="released orders only">
         <div className="tmets">
           <Count label="Released orders" value={orders.length} sub="approved and with the vendor" tone="pri" />
@@ -409,8 +404,9 @@ export default function ShipmentTracking({
         Every stage here is recorded by the person watching it happen, not reported by the
         vendor or a carrier — there is no connection to either. Stages only move forwards, one
         step at a time, because they are a record of what happened rather than a guess at
-        where the goods are. The vessel position is a real AIS feed and is the one thing on
-        this screen that moves on its own.
+        where the goods are. A vessel’s route and ETA come from a feed outside SAP; the map
+        that moves once a tracking number is entered is a demonstration, with nothing behind
+        it.
       </SimulatedNote>
     </>
   );
