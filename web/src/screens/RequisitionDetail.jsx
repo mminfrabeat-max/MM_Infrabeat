@@ -10,7 +10,7 @@
 // page, and the right way round for this decision.
 
 import { useState } from 'react';
-import { inr, num, plural } from '../format.js';
+import { inr, num, plural, firstName } from '../format.js';
 import { APPROVER_NAME, USER_PROFILE, COMPANY } from '../brand.js';
 import { Card, Banner, Chip, Icon, Metric, SimulatedNote } from '../components/ui.jsx';
 import { stillNeedsSigning, recordingForNext } from '../selectors.js';
@@ -295,30 +295,46 @@ export default function RequisitionDetail({
 
       {mayDecide && (
         <div className="footerbar">
-          <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon name="shield" size={13} />{' '}
-            {forNext ? `Recording the decision of ${document.next.name}` : `Approving as ${APPROVER_NAME}`}
-          </span>
-          <input
-            className="noteinput"
-            placeholder="Approval note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            disabled={busy !== null}
-          />
-          <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null} type="button">
-            {busy === 'reject' ? 'Saving…' : 'Reject'}
-          </button>
-          <button className="btn emph" onClick={() => onDecide('approve', note)} disabled={busy !== null} type="button">
-            <Icon name="check" size={13} />
-            {busy === 'approve'
-              ? 'Saving…'
-              : forNext
-                ? `Record approval by ${document.next.name}`
-                : document.next
-                  ? 'Approve and pass on'
-                  : 'Approve'}
-          </button>
+          {forNext ? (
+            // Not yours to sign. The requisition page already offers a reminder higher up,
+            // beside the person holding it; this is the same nudge where the decision would
+            // otherwise have been, so the bar is never a place to sign somebody else's name.
+            <>
+              <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="shield" size={13} /> {document.next.name} has it now. Yours is signed.
+              </span>
+              <button
+                className="btn emph"
+                type="button"
+                style={{ marginLeft: 'auto' }}
+                disabled={busy !== null}
+                onClick={() => onRemind(document)}
+              >
+                <Icon name="mail" size={13} />
+                Remind {firstName(document.next.name)}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="shield" size={13} /> Approving as {APPROVER_NAME}
+              </span>
+              <input
+                className="noteinput"
+                placeholder="Approval note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                disabled={busy !== null}
+              />
+              <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null} type="button">
+                {busy === 'reject' ? 'Saving…' : 'Reject'}
+              </button>
+              <button className="btn emph" onClick={() => onDecide('approve', note)} disabled={busy !== null} type="button">
+                <Icon name="check" size={13} />
+                {busy === 'approve' ? 'Saving…' : document.next ? 'Approve and pass on' : 'Approve'}
+              </button>
+            </>
+          )}
         </div>
       )}
     </>

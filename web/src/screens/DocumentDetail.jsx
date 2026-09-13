@@ -362,54 +362,63 @@ export default function DocumentDetail({
 
       {mayDecide && (
         <div className="footerbar">
-          <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon name="shield" size={13} />{" "}
-            {forNext ? `Recording the decision of ${document.next.name}` : `Approving as ${APPROVER_NAME}`}
-          </span>
-          <input
-            className="noteinput"
-            placeholder="Approval note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            disabled={busy !== null || !canDecide}
-          />
-          {/* Recording somebody else’s decision should not be the only thing you can do
-              about it. Signing on their behalf is for when you have their answer already;
-              when you have not, the thing you actually want is to ask them - and until now
-              the row in the list could do that and the order page could not. */}
-          {forNext && (
-            <button
-              className="btn"
-              type="button"
-              disabled={busy !== null}
-              onClick={() => onRemind(document)}
-            >
-              <Icon name="mail" size={13} />
-              Remind {firstName(document.next.name)}
-            </button>
+          {forNext ? (
+            // It is not yours to sign. The only honest thing to offer is a nudge.
+            //
+            // There used to be two more buttons here recording this person's approval or
+            // rejection on their behalf, which is signing somebody else's name. It also made
+            // the bar say "Recording the decision of Mr. Kiran Raghavan" above a note box he
+            // would never see.
+            <>
+              <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="shield" size={13} />{' '}
+                {document.next.name} has it now. Yours is signed.
+              </span>
+              <button
+                className="btn emph"
+                type="button"
+                style={{ marginLeft: 'auto' }}
+                disabled={busy !== null}
+                onClick={() => onRemind(document)}
+              >
+                <Icon name="mail" size={13} />
+                Remind {firstName(document.next.name)}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="muted" style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="shield" size={13} /> Approving as {APPROVER_NAME}
+              </span>
+              <input
+                className="noteinput"
+                placeholder="Approval note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                disabled={busy !== null || !canDecide}
+              />
+              <button
+                className="btn rej"
+                onClick={() => onDecide('reject', note)}
+                disabled={busy !== null || !canDecide}
+                type="button"
+              >
+                {busy === 'reject' ? 'Saving…' : 'Reject'}
+              </button>
+              {/* The label says what pressing it does. "Approve" on a two step order would
+                  read as "release this order", which is not what happens. It says there is a
+                  next step without saying who is on it. */}
+              <button
+                className="btn emph"
+                onClick={() => onDecide('approve', note)}
+                disabled={busy !== null || !canDecide}
+                type="button"
+              >
+                <Icon name="check" size={13} />
+                {busy === 'approve' ? 'Saving…' : document.next ? 'Approve and pass on' : 'Approve'}
+              </button>
+            </>
           )}
-          <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null || !canDecide} type="button">
-            {busy === 'reject'
-              ? 'Saving…'
-              : forNext
-                ? `Record ${document.next.name} rejecting it`
-                : 'Reject'}
-          </button>
-          {/* The label says what the button does. On a two step order "Approve" would read
-              as "release this order", which is not what pressing it does. */}
-          <button className="btn emph" onClick={() => onDecide('approve', note)} disabled={busy !== null || !canDecide} type="button">
-            <Icon name="check" size={13} />
-            {/* The label says what pressing it does. "Approve" on a two step order would
-                read as "release this order", which is not what happens. It says there is a
-                next step without saying who is on it. */}
-            {busy === 'approve'
-              ? 'Saving…'
-              : forNext
-                ? `Record approval by ${document.next.name}`
-                : document.next
-                  ? 'Approve and pass on'
-                  : 'Approve'}
-          </button>
         </div>
       )}
     </>
