@@ -263,8 +263,7 @@ function buildShim(data) {
       { key: "sent", label: "Sent to vendor" },
       { key: "dispatched", label: "Dispatched" },
       { key: "transit", label: "In transit" },
-      { key: "delivered", label: "Delivered" },
-      { key: "received", label: "Goods receipt" }
+      { key: "delivered", label: "Delivered" }
     ];
 
     // Doubled backslashes on purpose: this shim is a template literal, and a single \/ is
@@ -306,7 +305,7 @@ function buildShim(data) {
         id: shipId, stage: next.key, label: next.label,
         describe: "Recorded in the offline copy. Nothing is saved.",
         at: order.shipmentStageAt,
-        complete: next.key === "received"
+        complete: next.key === "delivered"
       });
     }
 
@@ -348,7 +347,7 @@ function buildShim(data) {
         return reply({ error: arrId + " has no tracking number, so there is nothing to confirm." }, 409);
       }
 
-      var order = ["released", "sent", "dispatched", "transit", "delivered", "received"];
+      var order = ["released", "sent", "dispatched", "transit", "delivered"];
       var where = order.indexOf(arrDoc.shipmentStage || "released");
       var stop = order.indexOf("delivered");
       if (where >= stop) return reply({ error: arrId + " is already at " + arrDoc.shipmentStage + "." }, 409);

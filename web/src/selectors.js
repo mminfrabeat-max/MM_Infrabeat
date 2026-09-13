@@ -220,7 +220,7 @@ export function orderAction(document) {
 
   // Released, but nobody has told the vendor. Chasing them here would be chasing somebody
   // for an order they have never seen; the thing that is actually missing is the sending.
-  if (!document.priority?.vendorHasIt && document.shipmentStage !== 'received') {
+  if (!document.priority?.vendorHasIt && document.shipmentStage !== 'delivered') {
     return {
       state: 'to-send',
       daysLate: document.priority?.lateOnUs ? late : 0
@@ -242,7 +242,7 @@ const ORDER_BANDS = ['critical', 'high', 'medium', 'low'];
 // Priority leads; only being finished overrides it. Mirrors
 // server/src/domain/order-priority.js, and the reasoning is written out there.
 function orderGroup(document) {
-  const finished = document.status === 'rejected' || document.shipmentStage === 'received';
+  const finished = document.status === 'rejected' || document.shipmentStage === 'delivered';
   return finished ? 1 : 0;
 }
 

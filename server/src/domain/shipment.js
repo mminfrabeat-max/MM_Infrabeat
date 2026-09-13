@@ -40,17 +40,16 @@ export const STAGES = [
     describe: 'On its way to the plant.',
     action: 'Mark as in transit'
   },
+  // The last stage this dashboard follows.
+  //
+  // Booking the goods into stock is a real step and it happens in SAP, against the
+  // delivery note, by whoever is on the gate. Following it here would have meant showing
+  // a stage nobody completes on this screen, and a line whose final node never lights.
   {
     key: 'delivered',
     label: 'Delivered',
-    describe: 'Arrived at the plant.',
+    describe: 'Arrived at the plant. The goods receipt is booked in SAP.',
     action: 'Mark as delivered'
-  },
-  {
-    key: 'received',
-    label: 'Goods receipt',
-    describe: 'Booked into stock. The order is complete.',
-    action: 'Book the goods receipt'
   }
 ];
 
@@ -104,7 +103,7 @@ export function canAdvanceTo(document, target) {
 
   const next = nextStage(document);
   if (!next) {
-    return { ok: false, why: `${document.id} has already been booked into stock. It is complete.` };
+    return { ok: false, why: `${document.id} has already been delivered. It is complete.` };
   }
 
   if (!target) return { ok: true, stage: next };

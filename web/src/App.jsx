@@ -336,7 +336,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
       toast(
         'pos',
         'check',
-        `${document.id} recorded as delivered. Book the goods receipt when it is in stock.`
+        `${document.id} recorded as delivered. The goods receipt is booked in SAP.`
       );
     } catch (error) {
       toast('neg', 'alert', error.message);
@@ -354,7 +354,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
         moved.complete ? 'pos' : 'pri',
         moved.complete ? 'check' : 'truck',
         moved.complete
-          ? `${document.id} booked into stock. ${document.material} is complete.`
+          ? `${document.id} delivered. ${document.material} is at the plant — book the goods receipt in SAP.`
           : `${document.id} is now "${moved.label}". ${moved.describe}`
       );
     } catch (error) {

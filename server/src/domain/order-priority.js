@@ -24,7 +24,7 @@ export function orderPriorityFor(document, today = new Date()) {
   const daysUntilDue = due ? daysBetween(today, due) : null;
 
   const stage = String(document.shipmentStage || '');
-  const complete = stage === 'received';
+  const complete = stage === 'delivered';
   const moving = !NOT_MOVING.has(stage);
   const released = document.status === 'approved';
 
@@ -134,7 +134,7 @@ function bandRank(document) {
 // this it would compete hard, since the tie-break inside a band is the earliest date and
 // theirs are the oldest of all.
 function actionGroup(document) {
-  const finished = document.status === 'rejected' || document.shipmentStage === 'received';
+  const finished = document.status === 'rejected' || document.shipmentStage === 'delivered';
   return finished ? 1 : 0;
 }
 

@@ -267,7 +267,7 @@ function parseIntent(question, context) {
     if (!isTrackable(document)) return answer(`${id} has not been released yet, so nothing is on its way.`);
 
     const next = nextStage(document);
-    if (!next) return answer(`${id} has already been booked into stock.`);
+    if (!next) return answer(`${id} has already been delivered.`);
 
     return proposal({
       summary: `Record ${id} as "${next.label}"`,

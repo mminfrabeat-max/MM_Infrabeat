@@ -30,8 +30,10 @@ export const STAGES = [
   { key: 'sent', label: 'Sent to vendor', sub: 'order mailed', icon: 'mail', action: 'Mark as sent to vendor' },
   { key: 'dispatched', label: 'Dispatched', sub: 'left the vendor', icon: 'box', action: 'Mark as dispatched' },
   { key: 'transit', label: 'In transit', sub: 'on the way', icon: 'truck', action: 'Mark as in transit' },
-  { key: 'delivered', label: 'Delivered', sub: 'at the gate', icon: 'factory', action: 'Mark as delivered' },
-  { key: 'received', label: 'Goods receipt', sub: 'booked into stock', icon: 'check', action: 'Book the goods receipt' }
+  // Delivered is the end of what this screen follows. The goods receipt is booked in SAP
+  // against the delivery note, by whoever is on the gate, and a stage nobody completes here
+  // is a node on the line that never lights.
+  { key: 'delivered', label: 'Delivered', sub: 'at the gate', icon: 'factory', action: 'Mark as delivered' }
 ];
 
 const DELIVERED_AT = STAGES.findIndex((s) => s.key === 'delivered');
@@ -321,7 +323,7 @@ function OrderCard({ document, canDecide, busy, onAdvance, onTrack, onArrive, on
       ) : complete ? (
         <div className="flagline">
           <Icon name="check" size={14} />
-          Booked into stock{document.shipmentStageAt ? ` on ${document.shipmentStageAt}` : ''}. This order is complete.
+          Delivered{document.shipmentStageAt ? ` on ${document.shipmentStageAt}` : ''}. The goods receipt is booked in SAP.
         </div>
       ) : null}
 
@@ -355,8 +357,10 @@ export default function ShipmentTracking({
     const i = stageIndexOf(d);
     return i >= 1 && i <= 3;
   }).length;
-  const atGate = orders.filter((d) => stageIndexOf(d) === DELIVERED_AT).length;
-  const booked = orders.filter((d) => stageIndexOf(d) === STAGES.length - 1).length;
+  // Delivered is the last stage now, so "at the gate" and "booked in" would be the same
+  // number under two names. One of them has to go, and it is the one that described a step
+  // this screen no longer follows.
+  const delivered = orders.filter((d) => stageIndexOf(d) === DELIVERED_AT).length;
 
   return (
     <>
@@ -364,8 +368,7 @@ export default function ShipmentTracking({
         <div className="tmets">
           <Count label="Released orders" value={orders.length} sub="approved and with the vendor" tone="pri" />
           <Count label="On the way" value={moving} sub="sent, dispatched or in transit" tone={moving ? 'warn' : 'mut'} />
-          <Count label="At the gate" value={atGate} sub="delivered, receipt not booked" tone={atGate ? 'warn' : 'mut'} />
-          <Count label="Booked into stock" value={booked} sub="complete" tone={booked ? 'pos' : 'mut'} />
+          <Count label="Delivered" value={delivered} sub="at the plant" tone={delivered ? 'pos' : 'mut'} />
           <Count label="Not released yet" value={notReleased} sub="orders still waiting for approval" tone="mut" />
         </div>
         {orders.length > 0 && atStart > 0 && (
