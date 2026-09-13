@@ -248,7 +248,7 @@ export default function DocumentDetail({
                   <div className="s1">{APPROVER_NAME} (you)</div>
                   <div className="s2">
                     {handedOn ? document.prev?.level || 'your step' : document.step},{' '}
-                    {document.status === 'rejected' ? 'sent back' : 'approved'}
+                    {document.status === 'rejected' ? 'rejected' : 'approved'}
                     {document.decidedAt ? ` at ${document.decidedAt}` : ''}
                   </div>
                   {document.decisionNote && <div className="s2" style={{ fontStyle: 'italic' }}>&ldquo;{document.decisionNote}&rdquo;</div>}
@@ -392,8 +392,8 @@ export default function DocumentDetail({
             {busy === 'reject'
               ? 'Saving…'
               : forNext
-                ? `Record ${document.next.name} sending it back`
-                : 'Send back'}
+                ? `Record ${document.next.name} rejecting it`
+                : 'Reject'}
           </button>
           {/* The label says what the button does. On a two step order "Approve" would read
               as "release this order", which is not what pressing it does. */}

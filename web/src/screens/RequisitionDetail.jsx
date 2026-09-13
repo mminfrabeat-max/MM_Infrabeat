@@ -307,7 +307,7 @@ export default function RequisitionDetail({
             disabled={busy !== null}
           />
           <button className="btn rej" onClick={() => onDecide('reject', note)} disabled={busy !== null} type="button">
-            {busy === 'reject' ? 'Saving…' : 'Send back'}
+            {busy === 'reject' ? 'Saving…' : 'Reject'}
           </button>
           <button className="btn emph" onClick={() => onDecide('approve', note)} disabled={busy !== null} type="button">
             <Icon name="check" size={13} />

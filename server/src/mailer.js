@@ -127,7 +127,7 @@ function subjectFor(document, decision, movedTo) {
   if (movedTo) {
     return `For your approval: ${document.kind} ${document.id}, ${document.supplierName}, ${money(totalValue(document))}`;
   }
-  const word = decision === 'approved' ? 'Approved' : 'Sent back';
+  const word = decision === 'approved' ? 'Approved' : 'Rejected';
   return `${word}: ${document.kind} ${document.id}, ${document.supplierName}, ${money(totalValue(document))}`;
 }
 
@@ -137,7 +137,7 @@ function textBody(document, decision, decidedBy, note, movedTo, target) {
   const s = document.supplierScore;
   const opening = movedTo
     ? `${document.kind} ${document.id} has been approved at the previous step and is now with you for ${movedTo.level || 'approval'}.`
-    : `${document.kind} ${document.id} has been ${decision === 'approved' ? 'approved' : 'sent back'}.`;
+    : `${document.kind} ${document.id} has been ${decision === 'approved' ? 'approved' : 'rejected'}.`;
 
   const lines = [
     ...redirectLineText(movedTo ? movedTo.name : 'the procurement mailbox', target),
@@ -203,7 +203,7 @@ function htmlBody(document, decision, decidedBy, note, movedTo, target) {
   <div style="max-width:580px;margin:0 auto;background:#fff;border:1px solid #E1E7EE;border-radius:12px;overflow:hidden">
     <div style="background:${accent};color:#fff;padding:16px 22px">
       <div style="font-size:12px;opacity:.85;letter-spacing:.4px;text-transform:uppercase">${
-        movedTo ? 'Waiting for your approval' : approved ? 'Approved' : 'Sent back'
+        movedTo ? 'Waiting for your approval' : approved ? 'Approved' : 'Rejected'
       }</div>
       <div style="font-size:19px;font-weight:600;margin-top:2px">${document.kind} ${document.id}</div>
     </div>
@@ -358,7 +358,7 @@ export async function sendInitiatorEmail({ document, outcome, decidedBy, note, s
 }
 
 function initiatorSubject(document, outcome) {
-  if (outcome.status === 'rejected') return `Sent back: your ${document.kind} ${document.id}`;
+  if (outcome.status === 'rejected') return `Rejected: your ${document.kind} ${document.id}`;
   if (outcome.final) return `Approved: your ${document.kind} ${document.id}`;
   return `Approved and passed on: your ${document.kind} ${document.id}`;
 }

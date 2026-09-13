@@ -155,14 +155,14 @@ export default function App() {
     try {
       const result = action === 'approve' ? await api.approve(id, note) : await api.reject(id, note);
       await load();
-      credit(`${action === 'approve' ? 'Approved' : 'Sent back'} ${id}`, MINUTES.decision);
+      credit(`${action === 'approve' ? 'Approved' : 'Rejected'} ${id}`, MINUTES.decision);
 
       // What was saved, then what was sent. An approval that moves a document on is not
       // "approved" as far as the reader is concerned, so the outcome is described rather
       // than the status field printed.
       const what = result.movedTo
         ? `${id} approved and passed to ${result.movedTo.name}.`
-        : `${id} ${result.status === 'rejected' ? 'sent back' : 'approved'}.`;
+        : `${id} ${result.status === 'rejected' ? 'rejected' : 'approved'}.`;
 
       // Two mails go out and they can fail independently, so saying "mail sent" when only
       // one of them left would be the kind of half-truth that is worse than silence.

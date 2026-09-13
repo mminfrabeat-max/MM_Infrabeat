@@ -166,7 +166,7 @@ export function orderRaisedFrom(documents, requisition) {
 export function requisitionAction(documents, requisition) {
   if (requisition.status === 'rejected') {
     // Nothing to do here. It went back to whoever raised it, and the next move is theirs.
-    return { state: 'closed', label: 'Sent back' };
+    return { state: 'closed', label: 'Rejected' };
   }
 
   if (requisition.status !== 'approved') {
@@ -268,7 +268,13 @@ export function byOrderPriority(documents) {
 // rarely asking the other, and a single combined control would force them to.
 export const PERIODS = [
   { key: 'all', label: 'Any time', months: null },
-  { key: '1m', label: 'Raised in the last month', months: 1 },
+  // Calendar, from the first of the month. Kept apart from the rolling windows below
+  // because it answers a different question - what have we raised this month, which is
+  // how budgets and monthly reports are counted.
+  { key: 'thismonth', label: 'Raised this month', months: null, calendarMonth: true },
+  // Rolling, and said in days rather than months on purpose: "the last month" reads as
+  // August to most people, which is neither what this counts nor what "this month" means.
+  { key: '30d', label: 'Raised in the last 30 days', days: 30 },
   { key: '3m', label: 'Raised in the last 3 months', months: 3 },
   { key: '6m', label: 'Raised in the last 6 months', months: 6 },
   { key: '1y', label: 'Raised in the last year', months: 12 }
@@ -280,20 +286,29 @@ export const APPROVAL_STATES = [
   { key: 'waiting', label: 'Pending', state: 'waiting' },
   { key: 'partial', label: 'Partially approved', state: 'partial' },
   { key: 'approved', label: 'Approved', state: 'approved' },
-  { key: 'rejected', label: 'Sent back', state: 'rejected' }
+  { key: 'rejected', label: 'Rejected', state: 'rejected' }
 ];
 
 export function withinPeriod(document, periodKey, today = new Date()) {
   const period = PERIODS.find((p) => p.key === periodKey);
-  if (!period || period.months === null) return true;
+  if (!period) return true;
+  if (!period.calendarMonth && !period.days && period.months === null) return true;
 
   // A document with no raised date on it cannot be shown to be inside a window, and
   // quietly keeping it would make the count wrong in the direction nobody checks.
   if (!document.raisedAt) return false;
+  const raised = new Date(document.raisedAt);
+
+  if (period.calendarMonth) {
+    return (
+      raised.getFullYear() === today.getFullYear() && raised.getMonth() === today.getMonth()
+    );
+  }
 
   const cutoff = new Date(today);
-  cutoff.setMonth(cutoff.getMonth() - period.months);
-  return new Date(document.raisedAt) >= cutoff;
+  if (period.days) cutoff.setDate(cutoff.getDate() - period.days);
+  else cutoff.setMonth(cutoff.getMonth() - period.months);
+  return raised >= cutoff;
 }
 
 export function matchesApprovalState(document, stateKey) {

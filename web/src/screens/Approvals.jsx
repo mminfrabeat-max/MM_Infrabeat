@@ -75,7 +75,7 @@ export function RequisitionStatus({ document }) {
     return <Chip tone="pos" icon="check">Approved</Chip>;
   }
   if (state.state === 'rejected') {
-    return <Chip tone="neg">Sent back</Chip>;
+    return <Chip tone="neg">Rejected</Chip>;
   }
   if (state.state === 'partial') {
     return (
@@ -97,7 +97,7 @@ export function RequisitionStatus({ document }) {
 // this manager has already signed is with the next approver, not with them.
 function holder(d) {
   if (d.status === 'approved') return 'nobody, released';
-  if (d.status === 'rejected') return 'nobody, sent back';
+  if (d.status === 'rejected') return 'nobody, rejected';
   if (d.decidedAt && d.next) return d.next.name;
   return 'you';
 }
@@ -225,7 +225,7 @@ function RequisitionCounts({ documents }) {
     { key: 'waiting', label: 'Pending', icon: 'clock', tone: 'warn', sub: 'waiting on you', list: inState('waiting') },
     { key: 'partial', label: 'Partially approved', icon: 'people', tone: 'pri', sub: 'signed once, now with the next approver', list: inState('partial') },
     { key: 'approved', label: 'Approved', icon: 'check', tone: 'pos', sub: 'released', list: inState('approved') },
-    { key: 'rejected', label: 'Sent back', icon: 'back', tone: 'neg', sub: 'returned to whoever raised it', list: inState('rejected') }
+    { key: 'rejected', label: 'Rejected', icon: 'back', tone: 'neg', sub: 'returned to whoever raised it', list: inState('rejected') }
   ];
 
   const pending = parts[0].list;
@@ -690,7 +690,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
 // identical in the database and mean opposite things to whoever is reading the screen.
 export function StatusChip({ status, document }) {
   if (status === 'approved') return <Chip tone="pos" icon="check">Approved</Chip>;
-  if (status === 'rejected') return <Chip tone="neg">Sent back</Chip>;
+  if (status === 'rejected') return <Chip tone="neg">Rejected</Chip>;
   if (document?.decidedAt) return <Chip tone="pri" icon="clock">Passed on</Chip>;
   return <Chip tone="warn" icon="clock">Pending</Chip>;
 }

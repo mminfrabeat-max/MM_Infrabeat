@@ -110,7 +110,7 @@ export function approvalStateOf(document) {
   if (document.status === 'rejected') {
     return {
       state: 'rejected',
-      label: 'Sent back',
+      label: 'Rejected',
       holder: null,
       holderTitle: null,
       signedBy: document.decidedBy || '',
@@ -146,7 +146,7 @@ export function outcomeSentence(document, outcome, decidedBy) {
   const what = `${document.kind} ${document.id}`;
 
   if (outcome.status === 'rejected') {
-    return `${what} has been sent back by ${decidedBy}. It has not gone any further.`;
+    return `${what} has been rejected by ${decidedBy}. It has not gone any further.`;
   }
 
   if (outcome.final) {
