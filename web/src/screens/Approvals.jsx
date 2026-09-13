@@ -222,40 +222,65 @@ function RequisitionAction({ documents, document, onOpenDocument, onRaisePO }) {
 // The four words are exactly the four the Status column uses. A summary with its own
 // vocabulary makes the reader map one onto the other, which is the work it was meant to
 // save.
-function RequisitionCounts({ documents }) {
+// Where a list stands, counted by status.
+//
+// The list below answers "what should I do next"; this answers "where does everything
+// stand", which is asked before starting rather than during. Reading it off the list means
+// reading every row.
+//
+// One component for both kinds, because the four states are the same four and a second
+// copy would drift from this one the first time a word changed. What differs is what the
+// lines underneath are worth saying: a requisition is chased because a plant runs dry, an
+// order because a date has gone by. Those are the only two things passed in.
+function StatusCounts({ documents, kind }) {
+  const isOrder = kind === 'PO';
+  const noun = isOrder ? 'order' : 'requisition';
   const inState = (state) => documents.filter((d) => d.approvalState?.state === state);
 
   const parts = [
     { key: 'waiting', label: 'Pending', icon: 'clock', tone: 'warn', sub: 'nobody has signed it yet', list: inState('waiting') },
     { key: 'partial', label: 'Partially approved', icon: 'people', tone: 'pri', sub: 'signed once, still short of a release', list: inState('partial') },
-    { key: 'approved', label: 'Approved', icon: 'check', tone: 'pos', sub: 'released', list: inState('approved') },
+    {
+      key: 'approved',
+      label: 'Approved',
+      icon: 'check',
+      tone: 'pos',
+      sub: isOrder ? 'released to the vendor' : 'released to purchasing',
+      list: inState('approved')
+    },
     { key: 'rejected', label: 'Rejected', icon: 'back', tone: 'neg', sub: 'returned to whoever raised it', list: inState('rejected') }
   ];
 
   const pending = parts[0].list;
   const partial = parts[1].list;
 
-  // Who is actually sitting on the part-approved ones. This is what makes the card worth
-  // more than the number on the tab: "2 partially approved" is a fact, "both with Mr.
-  // Deshmukh" is something to act on.
-  const holders = [...new Set(partial.map((d) => d.approvalState?.holder).filter(Boolean))];
+  // Who is actually sitting on the part-approved ones that are not yours. This is what makes
+  // the card worth more than the number on the tab: "2 partially approved" is a fact, "both
+  // with Mr. Deshmukh" is something to act on.
+  const holders = [
+    ...new Set(partial.filter((d) => !d.approvalState?.withYou).map((d) => d.approvalState?.holder).filter(Boolean))
+  ];
 
-  // Only the critical band, because that is the one whose rows say "Approve today". Adding
-  // the urgent ones would make the card contradict the list it sits above.
+  // What is on your desk and cannot wait.
   //
-  // And only the ones on your desk. A critical requisition already signed and sitting with
-  // somebody else is not yours to approve today, however critical it is - the line below
-  // about who is holding it is the one that applies to those.
-  const today = documents.filter(
-    (d) => d.status === 'pending' && d.approvalState?.withYou && d.priority?.band === 'critical'
-  );
+  // For a requisition that is the critical band, the one whose rows say "Approve today".
+  // For an order it is a date that has already gone by, which is a different kind of late
+  // and belongs to the vendor rather than to the plant - so orders count those separately
+  // and say so in their own words.
+  const yours = documents.filter((d) => d.status === 'pending' && d.approvalState?.withYou);
+  const urgent = isOrder
+    ? yours.filter((d) => d.priority?.overdue)
+    : yours.filter((d) => d.priority?.band === 'critical');
+
+  // Released orders the vendor is late on. Nothing to approve here - somebody has to be rung.
+  const lateOnVendor = isOrder ? documents.filter((d) => d.priority?.lateOnVendor) : [];
 
   return (
     <Card
       span="c12"
-      icon="box"
+      icon={isOrder ? 'doc' : 'box'}
       tone="pri"
-      title="Where the requisitions stand"
+      title={isOrder ? 'Where the orders stand' : 'Where the requisitions stand'}
       subtitle="by approval status"
       action={
         <div className="statmoney">
@@ -279,18 +304,42 @@ function RequisitionCounts({ documents }) {
         ))}
       </div>
 
-      {today.length > 0 && (
+      {urgent.length > 0 && (
         <div className="flagline">
           <Icon name="alert" size={14} />
-          {today.length === 1 ? '1 requisition needs' : `${today.length} requisitions need`} approving
-          today: the plant runs dry before a new load can land, even if you approve right now.
+          {isOrder ? (
+            <>
+              {plural(urgent.length, 'order')} on your desk {urgent.length === 1 ? 'is' : 'are'} already
+              past the delivery date, and the vendor has not been told to start.
+            </>
+          ) : (
+            <>
+              {urgent.length === 1 ? '1 requisition needs' : `${urgent.length} requisitions need`} approving
+              today: the plant runs dry before a new load can land, even if you approve right now.
+            </>
+          )}
         </div>
       )}
+
+      {lateOnVendor.length > 0 && (
+        <div className="flagline">
+          <Icon name="truck" size={14} />
+          {plural(lateOnVendor.length, 'released order')} past the date with the vendor. Nothing to
+          approve — they need chasing.
+        </div>
+      )}
+
       {holders.length > 0 && (
         <div className="flagline">
           <Icon name="clock" size={14} />
           Partly approved and now with {holders.join(', ')}. Open one to send a reminder.
         </div>
+      )}
+
+      {documents.length === 0 && (
+        <p className="muted" style={{ marginTop: 12 }}>
+          Nothing to count — no {noun}s match the filters.
+        </p>
       )}
     </Card>
   );
@@ -452,7 +501,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
         )}
       </Banner>
 
-      {!isOrder && <RequisitionCounts documents={documents} />}
+      <StatusCounts documents={documents} kind={kind} />
 
       <Card
         span="c12"
