@@ -239,10 +239,11 @@ export function orderAction(document) {
 // ones that are finished - the same "what needs me" shape the requisition list has.
 const ORDER_BANDS = ['critical', 'high', 'medium', 'low'];
 
+// Priority leads; only being finished overrides it. Mirrors
+// server/src/domain/order-priority.js, and the reasoning is written out there.
 function orderGroup(document) {
-  if (document.status === 'pending') return 0;
-  if (document.status === 'approved' && document.shipmentStage !== 'received') return 1;
-  return 2;
+  const finished = document.status === 'rejected' || document.shipmentStage === 'received';
+  return finished ? 1 : 0;
 }
 
 export function byOrderPriority(documents) {

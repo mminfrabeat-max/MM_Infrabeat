@@ -121,13 +121,21 @@ function bandRank(document) {
 // Critical first, then High, Medium, Low; within a band the one due soonest, and where two
 // fall on the same day the larger one first, because that is the one worth a phone call.
 //
-// Orders still needing a signature lead the list, for the same reason requisitions do: the
-// question this screen answers is what needs you, and a released order needs watching rather
-// than deciding.
+// Priority leads, and needing your signature does not.
+//
+// It used to: anything still waiting to be signed came before anything already released,
+// which buried the one order on the list that had actually gone wrong. A nine day old
+// overdue delivery sat seventh, under six orders that were merely due next month, because
+// those six still wanted a signature. The most urgent row on the screen was the one you
+// had to scroll to find.
+//
+// The only thing that still overrides the band is being finished. An order booked into
+// stock is not competing for attention, however long ago its date went by - and without
+// this it would compete hard, since the tie-break inside a band is the earliest date and
+// theirs are the oldest of all.
 function actionGroup(document) {
-  if (document.status === 'pending') return 0;
-  if (document.status === 'approved' && document.shipmentStage !== 'received') return 1;
-  return 2;
+  const finished = document.status === 'rejected' || document.shipmentStage === 'received';
+  return finished ? 1 : 0;
 }
 
 export function byOrderPriority(documents) {
