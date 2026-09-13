@@ -475,9 +475,7 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
   const [state, setState] = useState('all');
 
   const all = documentsOfKind(data.documents, plant, kind);
-  const documents = isOrder
-    ? all.filter((d) => withinPeriod(d, period) && matchesApprovalState(d, state))
-    : all;
+  const documents = all.filter((d) => withinPeriod(d, period) && matchesApprovalState(d, state));
   const hidden = all.length - documents.length;
   const noun = isOrder ? 'order' : 'requisition';
 
@@ -509,19 +507,16 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
         icon={isOrder ? 'doc' : 'box'}
         tone={isOrder ? 'warn' : 'neg'}
         title={isOrder ? 'Purchase orders' : 'Purchase requisitions'}
-        subtitle={
-          isOrder
-            ? `${plural(documents.length, 'order')}${hidden ? `, ${hidden} hidden by the filters` : ''}`
-            : 'most urgent first'
-        }
+        subtitle={`${plural(documents.length, noun)}${
+          hidden ? `, ${hidden} hidden by the filters` : isOrder ? '' : ', most urgent first'
+        }`}
         action={
-          isOrder ? (
-            <div className="filters">
+          <div className="filters">
               <select
                 className="sel"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                aria-label="Show orders raised within"
+                aria-label={`Show ${noun}s raised within`}
               >
                 {PERIODS.map((p) => (
                   <option key={p.key} value={p.key}>{p.label}</option>
@@ -531,20 +526,19 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
                 className="sel"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                aria-label="Show orders at status"
+                aria-label={`Show ${noun}s at status`}
               >
                 {APPROVAL_STATES.map((a) => (
                   <option key={a.key} value={a.key}>{a.label}</option>
                 ))}
-              </select>
-            </div>
-          ) : undefined
+            </select>
+          </div>
         }
       >
         {documents.length === 0 ? (
           <p className="muted rowpad">
-            {isOrder && all.length > 0
-              ? 'No orders match these filters. Widen the period or the status to see the rest.'
+            {all.length > 0
+              ? `No ${noun}s match these filters. Widen the period or the status to see the rest.`
               : `No ${noun}s here for ${plant === 'all' ? 'any plant' : plant}.`}
           </p>
         ) : (

@@ -28,8 +28,24 @@ function round1(n) {
 // year is sometimes absent and has to be assumed. Anything raised is in the past, which
 // is the one thing that makes the assumption safe.
 function raisedDate(document) {
-  const when = parseWhen(document.createdBy?.when);
+  const text = String(document.createdBy?.when || '');
+
+  // Two hands write this field. Seeded rows are prose - "28 Aug, 11:20" - and anything
+  // raised through the dashboard is a local timestamp, "11/9/2026, 3:45:07 pm", day first.
+  // Only the first was ever parsed, so a requisition raised today had no date the filters
+  // could see and fell out of every window except "any time" - the newest row on the list
+  // being the one a date filter could not find.
+  const numeric = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(text.trim());
+  if (numeric) {
+    const when = new Date(Number(numeric[3]), Number(numeric[2]) - 1, Number(numeric[1]));
+    return Number.isNaN(when.getTime()) ? null : when.toISOString();
+  }
+
+  const when = parseWhen(text);
   if (!when) return null;
+
+  // A bare "28 Aug" with no year is assumed to be this year, which reads as the future for
+  // anything raised late in December. Nothing is raised tomorrow.
   const now = new Date();
   if (when > now) when.setFullYear(when.getFullYear() - 1);
   return when.toISOString();
