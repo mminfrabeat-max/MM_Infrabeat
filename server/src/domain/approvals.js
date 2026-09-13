@@ -95,6 +95,25 @@ export function outcomeOf(document, action) {
 //
 // `holder` is null when it is the signed-in manager: the screen says "you", and the name
 // of whoever is signed in is not this rule's business.
+// Has anybody signed this document’s approval chain yet?
+//
+// Not the same question as "is there somebody in the `prev` block". Two things are
+// recorded there and they are not alike. One is an approval at a step: "Step 1 of 2",
+// or on a requisition the cost centre owner who signs before purchasing. The other is a
+// technical endorsement from a department - a logistics head confirming a rake is
+// available, a maintenance head saying a part is due for replacement - which is written
+// against orders whose own step reads "Step 1 of 1", meaning yours is the only approval
+// there is.
+//
+// So the document’s own step is what is trusted. Where it is numbered, being past the
+// first means the first has been signed. Where it is named, as requisitions are, the
+// levels in `prev` are chain steps and their presence is the signature.
+function chainAlreadySigned(document) {
+  const numbered = /step\s+(\d+)\s+of\s+(\d+)/i.exec(String(document.step || ''));
+  if (numbered) return Number(numbered[1]) > 1;
+  return Boolean(document.prev && document.prev.name);
+}
+
 // Where a document stands, and separately, whose turn it is.
 //
 // These were one thing and should never have been. "Partially approved" is a fact about
@@ -137,10 +156,7 @@ export function approvalStateOf(document) {
   const holder = passedOn ? document.next.name : null;
   const holderTitle = passedOn ? document.next.title || '' : '';
 
-  // One signature is enough to make it partly approved, from either side: one you gave, or
-  // one already on it when it reached you. `prev` is that earlier signature - it is what the
-  // order page lists under "Who has approved so far".
-  const signedAlready = alreadyDecided(document) || Boolean(document.prev && document.prev.name);
+  const signedAlready = alreadyDecided(document) || chainAlreadySigned(document);
 
   return {
     state: signedAlready ? 'partial' : 'waiting',
