@@ -696,25 +696,16 @@ th.rt, td.rt { text-align: right; }
 }
 /* ============ the assistant panel ============ */
 
-/* The page gives up width instead of being covered.
-   The questions worth asking are about what is on the screen, so dimming the screen to ask
-   them is self-defeating: you read a figure, open the panel, and the figure you wanted to
-   ask about is behind a grey sheet. Below 1100px there is no width to give up, so the panel
-   goes back to sitting over the page - on a phone it is the only thing that can happen. */
-@media (min-width: 1100px) {
-  /* Eased, not jumped. The same movement done instantly reads as the page breaking rather
-     than as something opening beside it, and the eye loses its place on whatever was being
-     read. Matched to the panel so the two look like one movement. */
-  body { transition: padding-right .24s cubic-bezier(.4, 0, .2, 1); }
-  body.asst-open { padding-right: 448px; }
-  body.asst-open .scrim { display: none; }
-}
+/* The panel floats over the page, and the page does not move.
 
-/* Somebody who has asked for less movement gets none of it. */
-@media (prefers-reduced-motion: reduce) {
-  body { transition: none; }
-}
+   It used to push the layout left so nothing was ever covered. That worked, but shifting
+   everything somebody was reading in order to open a side panel is a large movement to pay
+   for a small guarantee, and it was the first thing anybody noticed. So it floats.
 
+   What it does NOT do is dim the page behind it. That is the part worth keeping: the
+   questions worth asking are about what is on the screen, and greying out the figure you
+   are asking about is self-defeating. Two thirds of the page stay bright and readable,
+   including the tiles - only the right-hand strip goes behind the panel. */
 /* The panel slides in from its own edge rather than appearing already there. */
 .asst { animation: asstin .24s cubic-bezier(.4, 0, .2, 1); }
 @keyframes asstin {

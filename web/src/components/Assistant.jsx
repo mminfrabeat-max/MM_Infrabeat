@@ -68,13 +68,19 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
     if (open) input.current?.focus();
   }, [open]);
 
-  // Tells the page to make room. A class on the body rather than a prop threaded through
-  // the layout, so opening the panel changes no other component - and the cleanup means a
-  // panel that unmounts while open cannot leave the page permanently narrowed.
+  // Escape closes it.
+  //
+  // It floats over the page with nothing dimmed behind it, so there is no grey sheet to
+  // click on to get rid of it - which leaves the small x in the corner as the only way out
+  // unless this is here.
   useEffect(() => {
-    document.body.classList.toggle('asst-open', open);
-    return () => document.body.classList.remove('asst-open');
-  }, [open]);
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
   async function send(question) {
     const asked = String(question || '').trim();
