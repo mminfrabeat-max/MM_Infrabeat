@@ -236,6 +236,62 @@ function StatusCounts({ documents, kind }) {
 // the order, which clicking the row also does - they are here because a column of
 // next steps that goes blank on half its rows stops being read at all, and because the
 // row being clickable is not something anybody discovers.
+// What to do with a requisition next, as a cell.
+//
+// The button has to say what pressing it does, and the two here do very different things.
+// "View PO" moves you to a document. "Raise PO" asks a person to make one, and asking a
+// person is not the same as it being done - so the row still reads "no order yet"
+// afterwards, because that is still true until the buyer acts.
+function RequisitionAction({ documents, document, onOpenDocument, onRaisePO }) {
+  const next = requisitionAction(documents, document);
+
+  if (next.state === 'ordered') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenDocument(next.order.id);
+          }}
+        >
+          <Icon name="doc" size={12} />
+          View PO
+        </button>
+        <div className="sub n">{next.order.id}</div>
+      </>
+    );
+  }
+
+  if (next.state === 'to-order') {
+    return (
+      <>
+        <button
+          type="button"
+          className="btn sm emph"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRaisePO(document);
+          }}
+        >
+          <Icon name="mail" size={12} />
+          Raise PO
+        </button>
+        <div className="sub">no order yet</div>
+      </>
+    );
+  }
+
+  if (next.state === 'closed') {
+    return <span className="sub">back with {document.createdBy ? document.createdBy.name : 'the raiser'}</span>;
+  }
+
+  // Still being approved. The row itself opens it, so a button here would be a second way
+  // to do the same thing, and two ways to do one thing is how people end up doing neither.
+  return <span className="sub">waiting for approval</span>;
+}
+
 function OrderAction({ document, onOpenDocument, onChase }) {
   const next = orderAction(document);
 
