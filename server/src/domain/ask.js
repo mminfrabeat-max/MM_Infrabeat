@@ -54,6 +54,11 @@ export const TOOLS = [
 const MENTIONS_PR = /\b(requisitions?|prs?)\b/i;
 const MENTIONS_PO = /\b(purchase orders?|pos?)\b/i;
 
+// Asking what is part-signed is asking about things still open. It is not asking what
+// has been decided, even though it is spelled with the word approved - so the history
+// branch stands aside for it.
+const MENTIONS_PART_SIGNED = /\b(partially|part approved|part signed|part-signed)\b/i;
+
 function plantIn(text) {
   if (/mumbai/i.test(text)) return 'Mumbai';
   if (/nagpur/i.test(text)) return 'Nagpur';
@@ -90,6 +95,36 @@ function vendorIn(text, vendors) {
     vendors.find((v) => lower.includes(String(v.name).toLowerCase().split(' ')[0])) ||
     null
   );
+}
+
+// Worst first, by the same bands the screens rank on. A document with no priority
+// worked out sorts last rather than first, which is what indexOf would have given.
+const BANDS = ['critical', 'high', 'medium', 'low'];
+
+function bandRank(document) {
+  const at = BANDS.indexOf(document.priority?.band);
+  return at === -1 ? BANDS.length : at;
+}
+
+function byBand(a, b) {
+  const rank = bandRank(a) - bandRank(b);
+  if (rank !== 0) return rank;
+
+  // Inside a band, something that has already gone wrong comes before something only
+  // predicted to. The scores themselves cannot settle it: a requisition is scored on
+  // stock cover and an order on days past a date, by two different modules, so putting
+  // them in one list by score ranks nothing - it just looks as though it does.
+  const broken = Number(Boolean(b.priority?.overdue)) - Number(Boolean(a.priority?.overdue));
+  if (broken !== 0) return broken;
+
+  return (b.priority?.score || 0) - (a.priority?.score || 0);
+}
+
+// "10 Sep 2026, 09:30 am" as something sortable. Anything unreadable sorts oldest,
+// so a date we cannot parse never claims to be the most recent thing signed.
+function whenOf(text) {
+  const when = Date.parse(String(text || '').replace(',', ''));
+  return Number.isNaN(when) ? 0 : when;
 }
 
 // --- Answers -------------------------------------------------------------------
@@ -192,7 +227,17 @@ function parseIntent(question, context) {
   // --- Actions ---------------------------------------------------------------
 
   // Approve or send back, by document number.
-  const decideVerb = /\b(approve|release|sign|reject|send back|send it back|turn down)\b/i.exec(lower);
+  // Telling, not asking.
+  //
+  // "What did I approve today" and "which ones have I signed" carry the same verbs as
+  // "approve 4500178401" and mean the opposite: one is a record of what happened, the
+  // other changes something. The question word and the past tense are the tell, and
+  // without this Ask answered a question about yesterday with an offer to release money.
+  const asking =
+    /^(what|which|who|when|why|how)\b/i.test(lower) || /\b(did|have)\s+(i|we|you)\b/i.test(lower);
+
+  const decideVerb =
+    !asking && /\b(approve|release|sign|reject|send back|send it back|turn down)\b/i.exec(lower);
   if (decideVerb) {
     const id = documentIn(q);
     if (!id) {
@@ -337,11 +382,229 @@ function parseIntent(question, context) {
   if (id) {
     const document = documents.find((d) => d.id === id);
     if (!document) return answer(`I cannot find ${id}.`);
+    // Who is holding it is the thing most often asked and was the thing missing. A
+    // released or rejected document is with nobody, so it says nothing rather than
+    // naming the last person to touch it as though they still had it.
+    const state = document.approvalState;
+    const finished = state?.state === 'approved' || state?.state === 'rejected';
+    const holder = finished ? null : state?.withYou ? 'you' : state?.holder;
+
     return answer(
       `**${document.kind} ${document.id}**\n${document.material}, ${document.supplierName}, ${document.plant}.\n` +
-        `${inr(document.total)}, ${document.status}${document.decidedBy ? ` by ${document.decidedBy}` : ''}.\n` +
+        `${inr(document.total)}, ${String(state?.label || document.status).toLowerCase()}` +
+        `${state?.signedBy ? `, signed by ${state.signedBy}` : ''}.\n` +
+        (holder ? `Now with ${holder}.\n` : '') +
+        (document.priority ? `${document.priority.label} — ${document.priority.advice}.\n` : '') +
         (isTrackable(document) ? `Shipment: ${stageByKey(currentStage(document))?.label}.` : ''),
       { openDocument: id }
+    );
+  }
+
+  // --- What to do first ------------------------------------------------------
+  //
+  // The one question a buyer actually opens the morning with, and Ask could not answer it.
+  // Every document already carries a priority worked out by the same rules the screens
+  // rank on, so this is not a second opinion - it is the same order, read out.
+  // "First" on its own is not enough. "What will run out first" is a stock question and
+  // this branch swallowed it, which broke a chip that had worked since the beginning - so
+  // the phrase has to be about doing something, and anything about stock stands aside.
+  const ASKING_WHAT_FIRST =
+    /\b(urgent|priority|pressing|what should i do|where do i start|do first|start with|look at first|deal with first)/i;
+
+  if (ASKING_WHAT_FIRST.test(lower) && !/\b(run out|runs out|short|stock|inventory|cover)/i.test(lower)) {
+    const kindWanted = MENTIONS_PR.test(lower) ? 'PR' : MENTIONS_PO.test(lower) ? 'PO' : null;
+    const live = documents
+      .filter((d) => d.status !== 'rejected' && (!kindWanted || d.kind === kindWanted))
+      .filter((d) => d.priority && d.priority.band !== 'low')
+      .sort(byBand);
+
+    if (live.length === 0) {
+      return answer('Nothing is pressing. Everything on the list is either finished or not due for a while.');
+    }
+
+    const top = live.slice(0, 6);
+    return answer(
+      `**${plural(top.length, 'thing')} to look at, worst first:**\n` +
+        top
+          .map(
+            (d) =>
+              `• **${d.priority.label}** — ${d.kind} ${d.id}, ${d.material}, ${d.supplierName}, ${inr(d.total)}\n` +
+              `  ${d.priority.advice}. ${(d.priority.reasons || [])[0] || ''}`
+          )
+          .join('\n') +
+        (live.length > top.length ? `\n\nAnd ${live.length - top.length} more below that.` : ''),
+      { goTo: kindWanted === 'PR' ? 'requisitions' : 'approvals' }
+    );
+  }
+
+  // --- What is late, and whose fault it is -----------------------------------
+  //
+  // Kept apart on purpose. An order past its date because the vendor has not delivered is
+  // a phone call to the vendor; one past its date because nobody has told the vendor yet
+  // is a phone call to ourselves. Chasing a vendor over an order they have never seen is
+  // how you lose a vendor, so Ask says which it is rather than lumping them together.
+  if (/\b(late|overdue|past due|behind|slipped|chase|expedite|delayed)/i.test(lower)) {
+    const late = documents.filter((d) => d.priority && d.priority.overdue).sort(byBand);
+    if (late.length === 0) return answer('Nothing is past its delivery date.', { goTo: 'shipments' });
+
+    const theirs = late.filter((d) => d.priority.lateOnVendor);
+    const ours = late.filter((d) => !d.priority.lateOnVendor);
+    const line = (d) =>
+      `• ${d.kind} ${d.id}, ${d.material}, ${d.supplierName}, ${inr(d.total)}\n` +
+      `  ${Math.abs(d.priority.daysUntilDue)} days past the date. ${(d.priority.reasons || [])[0] || ''}`;
+
+    const parts = [];
+    if (theirs.length) {
+      parts.push(`**${plural(theirs.length, 'order')} to chase the vendor on:**\n` + theirs.map(line).join('\n'));
+    }
+    if (ours.length) {
+      parts.push(
+        `**${plural(ours.length, 'document')} late on our side** — the vendor has not been told to start:\n` +
+          ours.map(line).join('\n')
+      );
+    }
+
+    return answer(parts.join('\n\n'), { goTo: theirs.length ? 'shipments' : 'approvals' });
+  }
+
+  // --- What has already been decided -----------------------------------------
+  //
+  // This used to be read as an instruction. "What did I approve today" contains the word
+  // approve, the parser tested actions before questions, and the answer was an offer to
+  // release something - a question about the past producing a proposal to change the
+  // future. It is a question, and it now gets an answer.
+  // Two spellings of the same tense. "What did I approve" puts the past into the
+  // auxiliary and leaves the verb bare, so matching on "approved" alone misses it and
+  // the question falls through to the list of what is still waiting - which reads as an
+  // answer, and is not one.
+  const decidedVerb = /\b(approved|signed|rejected|sent back|decided)\b/i.test(lower);
+  const askedInPast =
+    /\b(did|have|has)\s+(i|we|you|he|she|they)\b/i.test(lower) &&
+    /\b(approve|sign|reject|send back|decide)\b/i.test(lower);
+
+  if (
+    (decidedVerb || askedInPast) &&
+    /\b(what|which|who|when|show|list|did|have)\b/i.test(lower) &&
+    !MENTIONS_PART_SIGNED.test(lower)
+  ) {
+    const mine = /\b(i|me|my)\b/i.test(lower);
+    const decided = documents
+      .filter((d) => d.decidedAt && (!mine || d.decidedBy === manager))
+      .sort((a, b) => whenOf(b.decidedAt) - whenOf(a.decidedAt));
+
+    if (decided.length === 0) {
+      return answer(mine ? 'You have not signed anything yet.' : 'Nothing has been decided yet.');
+    }
+
+    // Asked about today, answer about today. Handing back everything signed this month
+    // in reply to "what did I approve today" is a list that looks like an answer and
+    // quietly is not - and "nothing today" is a perfectly good thing to be told.
+    if (/\b(today|this morning)\b/i.test(lower)) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const onDay = decided.filter((d) => whenOf(d.decidedAt) >= start.getTime());
+
+      if (onDay.length === 0) {
+        const last = decided[0];
+        return answer(
+          `${mine ? 'You have not' : 'Nobody has'} signed anything today.` +
+            (last
+              ? `\nThe last was ${last.kind} ${last.id}, ${last.supplierName}, ${inr(last.total)}, on ${last.decidedAt}.`
+              : ''),
+          { goTo: 'approvals' }
+        );
+      }
+
+      return answer(
+        `**${plural(onDay.length, 'document')} signed today:**\n` +
+          onDay
+            .map((d) => `• ${d.kind} ${d.id}, ${d.supplierName}, ${inr(d.total)} — ${d.approvalState?.label || d.status}`)
+            .join('\n'),
+        { goTo: 'approvals' }
+      );
+    }
+
+    return answer(
+      `**${plural(decided.length, 'document')} ${mine ? 'you have signed' : 'decided'}, most recent first:**\n` +
+        decided
+          .slice(0, 8)
+          .map(
+            (d) =>
+              `• ${d.kind} ${d.id}, ${d.supplierName}, ${inr(d.total)} — ${d.approvalState?.label || d.status}` +
+              `${mine ? '' : `, ${d.decidedBy}`}, ${d.decidedAt}`
+          )
+          .join('\n'),
+      { goTo: 'approvals' }
+    );
+  }
+
+  // --- Part-signed, and who is sitting on it ---------------------------------
+  if (MENTIONS_PART_SIGNED.test(lower) || /\b(with whom|who has|whose desk|sitting with|holding)/i.test(lower)) {
+    const partial = documents.filter((d) => d.approvalState?.state === 'partial');
+    if (partial.length === 0) {
+      return answer('Nothing is part-signed. Everything waiting is still at its first step.', { goTo: 'approvals' });
+    }
+
+    return answer(
+      `**${plural(partial.length, 'document')} part-signed:**\n` +
+        partial
+          .map(
+            (d) =>
+              `• ${d.kind} ${d.id}, ${d.supplierName}, ${inr(d.total)}\n` +
+              `  ${
+                d.approvalState.withYou
+                  ? 'Now with you.'
+                  : `Now with ${d.approvalState.holder || 'the next approver'}.`
+              }${d.approvalState.signedBy ? ` Signed by ${d.approvalState.signedBy}.` : ''}`
+          )
+          .join('\n'),
+      { goTo: 'approvals' }
+    );
+  }
+
+  // --- Requisitions released but never turned into an order ------------------
+  //
+  // The gap the requirement document calls out: a requisition is approved and then sits,
+  // because approving it is not the same as placing the order and nothing on the old
+  // screens said so.
+  if (MENTIONS_PR.test(lower) && /\b(po|purchase orders?|convert|raise|placed)\b/i.test(lower)) {
+    const raised = new Set(
+      documents.filter((d) => d.kind === 'PO' && d.sourceDocument).map((d) => d.sourceDocument)
+    );
+    const toRaise = documents.filter((d) => d.kind === 'PR' && d.status === 'approved' && !raised.has(d.id));
+
+    if (toRaise.length === 0) {
+      return answer('Every released requisition has an order against it.', { goTo: 'requisitions' });
+    }
+
+    return answer(
+      `**${plural(toRaise.length, 'released requisition')} with no order raised yet:**\n` +
+        toRaise
+          .map((d) => `• PR ${d.id}, ${d.material}, ${d.plant}, ${inr(d.total)} — released ${d.decidedAt || 'earlier'}`)
+          .join('\n') +
+        '\n\nOpen one and use **Raise PO** to send it to purchasing.',
+      { goTo: 'requisitions' }
+    );
+  }
+
+  // --- How much, rather than which -------------------------------------------
+  //
+  // "How much is waiting" is a question about a number. The waiting list below answers it
+  // with thirteen rows and no total, which leaves the reader doing the arithmetic.
+  if (/\b(how much|what value|total value|worth|value)\b/i.test(lower) && /\b(wait|approv|pending|held|release)/i.test(lower)) {
+    const waiting = documents.filter((d) => d.status === 'pending');
+    if (waiting.length === 0) return answer('Nothing is waiting, so nothing is held up.', { goTo: 'approvals' });
+
+    const yours = waiting.filter((d) => d.approvalState?.withYou);
+    const held = waiting.reduce((sum, d) => sum + (Number(d.total) || 0), 0);
+    const onYou = yours.reduce((sum, d) => sum + (Number(d.total) || 0), 0);
+    const biggest = waiting.reduce((worst, d) => ((Number(d.total) || 0) > (Number(worst.total) || 0) ? d : worst));
+
+    return answer(
+      `**${inr(held)}** is waiting for approval across ${plural(waiting.length, 'document')}.\n` +
+        `${inr(onYou)} of that is on your desk, across ${plural(yours.length, 'document')}.\n` +
+        `The largest single one is ${biggest.kind} ${biggest.id}, ${biggest.supplierName}, ${inr(biggest.total)}.`,
+      { goTo: 'approvals' }
     );
   }
 
