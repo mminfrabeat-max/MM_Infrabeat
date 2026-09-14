@@ -838,6 +838,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
         onClose={() => setShowAsk(false)}
         filter={{ plant, screen: tab }}
         onActed={load}
+        name={data.user?.name || APPROVER_NAME}
       />
 
       {showAsk && !assistantOn && (

@@ -19,10 +19,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
+import { firstName } from '../format.js';
+import { APPROVER_NAME } from '../brand.js';
 import { Icon } from './ui.jsx';
 import Markdown from './markdown.jsx';
 
-export default function Assistant({ open, onClose, filter, onActed }) {
+export default function Assistant({ open, onClose, filter, onActed, name = APPROVER_NAME }) {
   const [thread, setThread] = useState([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -164,9 +166,12 @@ export default function Assistant({ open, onClose, filter, onActed }) {
         {thread.length === 0 && !unavailable && (
           <>
             <div className="msg a">
-              Ask me what is waiting, what is short, or where an order has got to. I can send a reminder,
-              export a list or flag something for later — each of those I will describe first and only do
-              when you press the button.
+              <b>
+                {greeting()}, {firstName(name)}.
+              </b>{' '}
+              How can I help? Ask me what is waiting, what is short, or where an order has got to. I can
+              send a reminder, export a list or flag something for later — each of those I will describe
+              first and only do when you press the button.
             </div>
 
             {openers.length > 0 && (
@@ -287,6 +292,19 @@ function Proposal({ proposal, settled, busy, onConfirm, onCancel }) {
       )}
     </div>
   );
+}
+
+// Morning, afternoon or evening, by the clock on this computer.
+//
+// Worth getting right rather than saying "Hello" at every hour: somebody opening this at
+// half past seven in the evening and being wished good morning learns immediately that the
+// thing is not really paying attention, which is the wrong first impression for a panel
+// whose whole claim is that it knows what is going on.
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 // The single next step offered after an answer.
