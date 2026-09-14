@@ -15,7 +15,7 @@
 // and those documents are one click from here.
 
 import { useState } from 'react';
-import { inr, rupees, signed, plural, bandTone } from '../format.js';
+import { inr, rupees, signed, plural, bandTone, loosely } from '../format.js';
 import { Card, Banner, Score, Metric, Chip, Icon, TermRow, SimulatedNote } from '../components/ui.jsx';
 import { VendorCharts, Meter, toneColour } from '../components/charts.jsx';
 import { StatusChip } from './Approvals.jsx';
@@ -46,7 +46,6 @@ export default function Vendors({ data, plant, onOpenDocument }) {
   // the case are thrown away on both sides rather than made the reader’s problem. The
   // city and the category match too, because "the Rajkot one" is how people ask when the
   // name has gone.
-  const loosely = (text) => String(text || '').toLowerCase().replace(/[\s-]/g, '');
   const needle = loosely(query);
   const found = needle
     ? vendors.filter((v) =>

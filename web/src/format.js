@@ -39,6 +39,18 @@ export function plural(count, word, pluralWord) {
   return `${count} ${count === 1 ? word : many}`;
 }
 
+// Matching the way somebody types something they are reading off a document.
+//
+// Nobody types a vendor number the way it is printed. "V-10024" gets typed as 10024, or
+// "v 10024", and a purchase order copied out of an email arrives as "PO 4500178512". So the
+// case, the spaces and the punctuation are thrown away on both sides rather than made the
+// reader's problem - which leaves the digits, and the digits are what they actually have.
+export function loosely(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .replace(/[\s\-.,/#]/g, '');
+}
+
 // "Aditya Refractories" becomes "AR". Titles are stripped so "Mr. Anil Deshmukh" is "AD".
 export function initials(name) {
   const parts = String(name)

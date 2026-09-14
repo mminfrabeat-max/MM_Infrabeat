@@ -8,7 +8,7 @@
 // in between - and the counts on the tabs then mean something on their own.
 
 import { useState } from 'react';
-import { inr, num, plural, firstName } from '../format.js';
+import { inr, num, plural, firstName, loosely } from '../format.js';
 import {
   PERIODS,
   APPROVAL_STATES,
@@ -354,12 +354,51 @@ function OrderAction({ document, onOpenDocument, onChase }) {
 export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, onRaisePO, onChase }) {
   const isOrder = kind === 'PO';
 
-  // Two narrowings, kept apart: a window of time, and a place in the approval chain.
+  // Three narrowings, kept apart: a window of time, a place in the approval chain, and
+  // whatever is being looked for by hand.
   const [period, setPeriod] = useState('all');
   const [state, setState] = useState('all');
+  const [query, setQuery] = useState('');
 
   const all = documentsOfKind(data.documents, plant, kind);
-  const documents = all.filter((d) => withinPeriod(d, period) && matchesApprovalState(d, state));
+
+  // What a requisition turned into, and what an order came from.
+  //
+  // This is why the search box is worth more than a filter over the rows on screen. Somebody
+  // holding a purchase order number wants the requisition behind it, and the two numbers look
+  // nothing like each other - 4500178512 against 1000442403 - so without this they would have
+  // to know the pairing already, which is exactly what they came here to look up.
+  const partner = new Map();
+  for (const d of data.documents) {
+    if (d.kind === 'PO' && d.sourceDocument) {
+      partner.set(d.sourceDocument, d.id);
+      partner.set(d.id, d.sourceDocument);
+    }
+  }
+
+  // What was typed, and the same thing with the document word taken off the front.
+  //
+  // Numbers are copied out of mail and they come with their label attached: nobody pastes
+  // 4500178512, they paste "PO 4500178512". Both forms are tried rather than the stripped
+  // one only, so a search for a vendor whose name happens to start with one of these words
+  // still finds them.
+  const needles = [...new Set([
+    loosely(query),
+    loosely(String(query).replace(/^s*(purchases+)?(requisitions?|orders?|po|pr|req)[s:#-]*/i, ''))
+  ])].filter(Boolean);
+
+  const matches = (d) =>
+    needles.length === 0 ||
+    [d.id, d.supplierName, d.material, d.plant, d.materialCode, partner.get(d.id)].some((field) => {
+      const text = loosely(field);
+      return needles.some((needle) => text.includes(needle));
+    });
+
+  const needle = needles[0] || '';
+
+  const documents = all.filter(
+    (d) => withinPeriod(d, period) && matchesApprovalState(d, state) && matches(d)
+  );
   const hidden = all.length - documents.length;
   const noun = isOrder ? 'order' : 'requisition';
 
@@ -396,6 +435,18 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
         }`}
         action={
           <div className="filters">
+            <input
+              className="noteinput find"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                isOrder
+                  ? 'Search order or requisition number, vendor, material'
+                  : 'Search requisition or order number, vendor, material'
+              }
+              aria-label={`Search ${noun}s`}
+            />
               <select
                 className="sel"
                 value={period}
@@ -421,9 +472,11 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
       >
         {documents.length === 0 ? (
           <p className="muted rowpad">
-            {all.length > 0
-              ? `No ${noun}s match these filters. Widen the period or the status to see the rest.`
-              : `No ${noun}s here for ${plant === 'all' ? 'any plant' : plant}.`}
+            {all.length === 0
+              ? `No ${noun}s here for ${plant === 'all' ? 'any plant' : plant}.`
+              : needle
+                ? `Nothing matches "${query}". Numbers, vendors, materials and plants are all searched — and so is the ${isOrder ? 'requisition each order came from' : 'order raised from each requisition'}.`
+                : `No ${noun}s match these filters. Widen the period or the status to see the rest.`}
           </p>
         ) : (
           <table>
