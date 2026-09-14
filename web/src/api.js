@@ -102,5 +102,18 @@ export const api = {
   // is trusted from the proposal: it can only name an /api/ path, and that path applies
   // its own rules and its own sign-in check exactly as it does for a button press.
   confirmProposal: (action) => post(action.endpoint, action.body),
-  actionLog: () => request('/api/action-log')
+  actionLog: () => request('/api/action-log'),
+
+  // --- The assistant -------------------------------------------------------
+  //
+  // A separate set of calls from `ask` above, not a replacement for it. The built-in
+  // parser still answers when no model key is configured, so the dashboard keeps working
+  // - offline, on somebody else's laptop, or when the key runs out.
+  assistantStatus: () => request('/api/assistant/status'),
+  assistantOpeners: () => request('/api/assistant/openers'),
+  assistantAsk: (question, filter) => post('/api/assistant/ask', { question, filter }),
+  // Says yes or no to whatever the server is already holding. The browser cannot name
+  // the action or its arguments, which is the point.
+  assistantConfirm: (approved) => post('/api/assistant/confirm', { approved }),
+  assistantReset: () => post('/api/assistant/reset', {})
 };

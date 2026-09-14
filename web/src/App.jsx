@@ -30,6 +30,7 @@ import Commitments from './screens/Commitments.jsx';
 import Vendors from './screens/Vendors.jsx';
 import Teams from './screens/Teams.jsx';
 import Problems from './screens/Problems.jsx';
+import Assistant from './components/Assistant.jsx';
 
 // Minutes credited per action. These are assumptions about effort avoided, not measured
 // savings, which is why the log shows them per action rather than as one headline number.
@@ -58,6 +59,14 @@ export default function App() {
   const [showLog, setShowLog] = useState(false);
   const [mailDraft, setMailDraft] = useState(null);
   const [showAsk, setShowAsk] = useState(false);
+
+  // Whether there is a model key on the backend.
+  //
+  // Two panels share one button. With a key, Ask is a conversation that can look things
+  // up and offer to do them; without one it is the built-in parser, which is free, exact
+  // and offline. Asked once at startup rather than per question, so the panel opens
+  // already knowing which it is rather than flickering between them.
+  const [assistantOn, setAssistantOn] = useState(false);
   const [chat, setChat] = useState([]);
   const [askText, setAskText] = useState('');
   // What Ask was last talking about, so "approve it" and "which vendor?" mean something.
@@ -396,6 +405,21 @@ ${USER_PROFILE.role}, ${COMPANY}`
       setBusy(null);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .assistantStatus()
+      .then((status) => {
+        if (!cancelled) setAssistantOn(Boolean(status.available));
+      })
+      // A backend too old to know the route, or one with no key, simply leaves the
+      // built-in parser in place. It is not an error worth showing anybody.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Asking moved to the server when Ask learned to do things.
   //
@@ -801,7 +825,14 @@ ${USER_PROFILE.role}, ${COMPANY}`
         </Modal>
       )}
 
-      {showAsk && (
+      <Assistant
+        open={showAsk && assistantOn}
+        onClose={() => setShowAsk(false)}
+        filter={{ plant, screen: tab }}
+        onActed={load}
+      />
+
+      {showAsk && !assistantOn && (
         <>
           <div className="scrim" onClick={() => setShowAsk(false)} />
           <aside className="asst" aria-label="Ask">

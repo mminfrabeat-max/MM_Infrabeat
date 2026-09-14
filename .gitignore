@@ -44,3 +44,7 @@ InfraBeat-Dashboard-offline.html
 # the whole point of moving the directory into MAIL_DIRECTORY was to stop shipping them.
 mailbox_persona_mapping.xlsx
 *persona*mapping*.xlsx
+
+# Documents the user has flagged for their own follow-up. Their notes, not the company's
+# data, and written at runtime - so it is left out the same way .env is.
+server/data/review-flags.json
