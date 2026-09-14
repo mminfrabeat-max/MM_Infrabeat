@@ -145,10 +145,12 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
     <aside className="asst" aria-label="Ask">
       <div className="ahd">
         <span className="ai">
-          <Icon name="spark" size={16} />
+          <Icon name="bot" size={18} />
         </span>
         <span>
-          <h2>Ask</h2>
+          <h2>
+            Ask <span className="botbadge">BOT</span>
+          </h2>
           <span className="as">about any order, vendor, material or contract</span>
         </span>
         <button className="x" onClick={onClose} type="button" aria-label="Close">
@@ -158,27 +160,27 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
 
       <div className="abd">
         {unavailable && (
-          <div className="msg a">
+          <FromBot>
             <b>The assistant is not switched on.</b>
             <br />
             Add <code className="mdcode">GEMINI_API_KEY</code> to the backend&rsquo;s .env file and restart it.
             Until then the Ask box still answers from the dashboard&rsquo;s own rules — close this panel and
             use the old one.
-          </div>
+          </FromBot>
         )}
 
-        {error && <div className="msg a">{error}</div>}
+        {error && <FromBot>{error}</FromBot>}
 
         {thread.length === 0 && !unavailable && (
           <>
-            <div className="msg a">
+            <FromBot>
               <b>
                 {greeting()}, {firstName(name)}.
               </b>{' '}
               How can I help? Ask me what is waiting, what is short, or where an order has got to. I can
               send a reminder, export a list or flag something for later — each of those I will describe
               first and only do when you press the button.
-            </div>
+            </FromBot>
 
             {openers.length > 0 && (
               <div className="aopen">
@@ -204,10 +206,14 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
               onConfirm={() => settle(i, true)}
               onCancel={() => settle(i, false)}
             />
-          ) : (
-            <div key={i} className={`msg ${message.who === 'you' ? 'u' : 'a'}${message.failed ? ' bad' : ''}`}>
-              {message.who === 'you' ? message.text : <Markdown text={message.text} />}
+          ) : message.who === 'you' ? (
+            <div key={i} className="msg u">
+              {message.text}
             </div>
+          ) : (
+            <FromBot key={i} className={message.failed ? 'bad' : ''}>
+              <Markdown text={message.text} />
+            </FromBot>
           )
         )}
 
@@ -220,10 +226,10 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
         )}
 
         {busy && (
-          <div className="msg a thinking">
+          <FromBot className="thinking">
             <span className="dots"><i /><i /><i /></span>
             Checking SAP data…
-          </div>
+          </FromBot>
         )}
 
         <div ref={bottom} />
@@ -261,6 +267,22 @@ export default function Assistant({ open, onClose, filter, onActed, name = APPRO
         </button>
       )}
     </aside>
+  );
+}
+
+// Anything the assistant says, with its face beside it.
+//
+// One wrapper rather than an avatar pasted into six places, because the six include the
+// greeting, the error, the "not switched on" notice and the thinking indicator - and the
+// one that gets forgotten is always the one somebody screenshots.
+function FromBot({ children, className = '' }) {
+  return (
+    <div className="brow">
+      <span className="bav" aria-hidden="true">
+        <Icon name="bot" size={15} />
+      </span>
+      <div className={`msg a ${className}`}>{children}</div>
+    </div>
   );
 }
 

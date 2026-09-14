@@ -13,6 +13,10 @@ const PATHS = {
   bell: 'M12 3a5 5 0 0 0-5 5v3.5L5.5 14v1h13v-1L17 11.5V8a5 5 0 0 0-5-5Zm0 18a2.5 2.5 0 0 0 2.4-1.8H9.6A2.5 2.5 0 0 0 12 21Z',
   spark: 'M12 2.6l1.9 4.9 4.9 1.9-4.9 1.9L12 16.2l-1.9-4.9L5.2 9.4l4.9-1.9L12 2.6Zm6.4 10.2l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3Z',
   alert: 'M12 3.2 1.6 21h20.8L12 3.2Zm0 5.6c.6 0 1 .5 1 1.1l-.3 4.6a.7.7 0 0 1-1.4 0L11 9.9c0-.6.4-1.1 1-1.1Zm0 8.1a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Z',
+  // A robot's face. The eyes and mouth are holes, not shapes - wound the opposite way
+  // round to the head so the fill rule lifts them back out. Drawn as circles on top they
+  // would simply have filled, and the face would have come out blank.
+  bot: 'M10.5 2.7a1.5 1.5 0 0 1 3 0a1.5 1.5 0 0 1-3 0ZM11.15 3.9h1.7v2.9h-1.7ZM8.6 6.4h6.8a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4H8.6a4 4 0 0 1-4-4v-5a4 4 0 0 1 4-4ZM8.25 12.3a1.45 1.45 0 0 0 2.9 0a1.45 1.45 0 0 0-2.9 0ZM12.85 12.3a1.45 1.45 0 0 0 2.9 0a1.45 1.45 0 0 0-2.9 0ZM9.4 15.4v1.5h5.2v-1.5Z',
   check: 'M9.6 16.4 5.2 12l-1.4 1.4 5.8 5.8L20.2 8.6 18.8 7.2 9.6 16.4Z',
   clock: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6V6h-2v7.4l5 3 1-1.7-4-2.1Z',
   box: 'M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Zm0 2.3 6.3 3.2L12 10.6 5.7 7.5 12 4.3ZM5 9.3l6 3v7.1l-6-3v-7.1Zm14 0v7.1l-6 3v-7.1l6-3Z',
