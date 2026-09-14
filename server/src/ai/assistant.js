@@ -19,7 +19,7 @@ import { SYSTEM_PROMPT } from './system-prompt.js';
 import { READ_TOOLS, ACTION_TOOLS, READ_HANDLERS, isAction, describeAction, dmy } from './tools.js';
 import { ACTION_HANDLERS } from './actions.js';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const MAX_ROUNDS = 5;
 
 // Conversations are dropped after this long unused, and the oldest goes when there are too
@@ -112,6 +112,50 @@ function currentView(filter = {}) {
   return `[Dashboard is currently showing - ${parts.join('. ')}.]`;
 }
 
+// --- When the call itself fails ------------------------------------------------
+//
+// The SDK throws a wall of JSON. Somebody using the dashboard needs one sentence and,
+// where there is one, what to do about it. The free tier matters most here: it allows
+// five requests a minute and a single question spends two or three of them, so anybody
+// asking two things briskly will meet this - and "429" is not an answer to anyone.
+
+function friendlyError(problem) {
+  const raw = String(problem?.message || problem || '');
+  const said = /"message":\s*"([^"]+)"/.exec(raw);
+  const detail = said ? said[1] : raw;
+
+  if (problem?.status === 429 || /RESOURCE_EXHAUSTED|quota/i.test(raw)) {
+    const wait = /retry in ([\d.]+)s/i.exec(detail);
+    const seconds = wait ? Math.ceil(Number(wait[1])) : null;
+    return (
+      'I have hit the free usage limit for this minute. ' +
+      (seconds ? `Try again in about ${seconds} seconds.` : 'Try again in a minute.')
+    );
+  }
+
+  // Several spellings of the same thing. A plain AIza... key that is wrong says "API key
+  // not valid"; an OAuth style AQ... token that is wrong says "invalid authentication
+  // credentials" instead, and reading only the first leaves somebody with a mistyped key
+  // being told the model is unreachable.
+  if (
+    problem?.status === 401 ||
+    /API key not valid|API_KEY_INVALID|unregistered callers|invalid authentication credentials|UNAUTHENTICATED/i.test(
+      raw
+    )
+  ) {
+    return 'The key in GEMINI_API_KEY was refused. Check it in .env and restart the backend.';
+  }
+
+  if (problem?.status === 404 || /no longer available|not found/i.test(detail)) {
+    return (
+      `This account cannot use the model ${MODEL}. ` +
+      'Set GEMINI_MODEL in .env to one it can, then restart the backend.'
+    );
+  }
+
+  return `I could not reach the model just now. ${detail}`;
+}
+
 // --- The loop ------------------------------------------------------------------
 
 function textOf(response) {
@@ -147,8 +191,21 @@ async function runReadTools(calls, context) {
 
 /**
  * Ask a question. Returns either { kind: 'answer', text } or { kind: 'proposal', ... }.
+ *
+ * Never throws. A model that is out of quota, behind a bad key or simply unreachable
+ * comes back as a sentence in the conversation, because that is where the person is
+ * looking and a stack trace answers nothing.
  */
-export async function ask({ sessionId, question, filter, context }) {
+export async function ask(request) {
+  try {
+    return await askOnce(request);
+  } catch (problem) {
+    log('call failed', String(problem?.message || problem).slice(0, 200));
+    return { kind: 'answer', text: friendlyError(problem), failed: true };
+  }
+}
+
+async function askOnce({ sessionId, question, filter, context }) {
   const session = sessionFor(sessionId);
   log('question', JSON.stringify(question));
 
@@ -228,13 +285,22 @@ export async function confirm({ sessionId, approved, context }) {
   // something the browser already has.
   const { content, ...forModel } = result;
 
-  const response = await session.chat.sendMessage({
-    message: [{ functionResponse: { id: pending.id, name: pending.name, response: forModel } }]
-  });
+  let spoken = null;
+  try {
+    const response = await session.chat.sendMessage({
+      message: [{ functionResponse: { id: pending.id, name: pending.name, response: forModel } }]
+    });
+    spoken = textOf(response);
+  } catch (problem) {
+    // It has already been done. Losing the model here changes nothing about that, so
+    // the handler's own sentence is what gets said - never silence, and never a claim
+    // that it did not happen.
+    log('call failed after acting', String(problem?.message || problem).slice(0, 200));
+  }
 
   return {
     kind: 'answer',
-    text: textOf(response) || result.message,
+    text: spoken || result.message,
     result: { ...result, tool: pending.name }
   };
 }

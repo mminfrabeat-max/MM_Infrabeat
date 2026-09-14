@@ -45,7 +45,7 @@ function sessionIdFor(req) {
 assistantRouter.get('/assistant/status', (req, res) => {
   res.json({
     available: assistantConfigured(),
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
     mailEnabled: config.mail.enabled
   });
 });
