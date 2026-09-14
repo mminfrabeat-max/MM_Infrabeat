@@ -406,7 +406,15 @@ ${USER_PROFILE.role}, ${COMPANY}`
     }
   }
 
+  // Asked once signed in, not once on mount.
+  //
+  // The route is behind the same sign-in as everything else, so asking it while the
+  // session was still being checked came back 401, got swallowed by the catch below, and
+  // never ran again - leaving the old panel in place for the whole session however many
+  // times the page was refreshed. Waiting for the session is the whole fix.
   useEffect(() => {
+    if (!session || session === 'checking') return undefined;
+
     let cancelled = false;
     api
       .assistantStatus()
@@ -419,7 +427,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session]);
 
   // Asking moved to the server when Ask learned to do things.
   //
