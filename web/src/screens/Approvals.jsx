@@ -433,20 +433,18 @@ export default function Approvals({ data, plant, kind = 'PO', onOpenDocument, on
         subtitle={`${plural(documents.length, noun)}${
           hidden ? `, ${hidden} hidden by the filters` : isOrder ? '' : ', most urgent first'
         }`}
+        beside={
+          <input
+            className="noteinput find"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={isOrder ? 'Search order or requisition…' : 'Search requisition or order…'}
+            aria-label={`Search ${noun}s`}
+          />
+        }
         action={
           <div className="filters">
-            <input
-              className="noteinput find"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={
-                isOrder
-                  ? 'Search order or requisition number, vendor, material'
-                  : 'Search requisition or order number, vendor, material'
-              }
-              aria-label={`Search ${noun}s`}
-            />
               <select
                 className="sel"
                 value={period}

@@ -217,9 +217,10 @@ svg { display: block; }
    which list it applies to. Wraps on a narrow screen instead of squeezing the title. */
 .filters { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .filters .sel { font-size: 12.6px; padding: 5px 9px; }
-/* Wide enough for a ten digit document number and a word after it, and it gives up its
-   width first when the card header runs out of room. */
-.filters .find { flex: 1 1 260px; min-width: 150px; max-width: 340px; font-size: 12.6px; padding: 5px 10px; }
+/* Beside the title rather than in the corner. Wide enough for a ten digit document number
+   and a word after it, and it gives up its width first when the header runs out of room. */
+.chd .find { flex: 0 1 290px; min-width: 130px; margin-left: 14px; font-size: 12.6px; padding: 5px 10px; }
+@media (max-width: 720px) { .chd .find { margin-left: 0; flex-basis: 100%; order: 3; } }
 .chd .act:hover { background: var(--primary-soft); }
 .cbd { padding: 14px 17px 16px; flex: 1; }
 .cbd.flush { padding: 0; }

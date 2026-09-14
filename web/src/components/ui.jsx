@@ -58,7 +58,7 @@ export function Icon({ name, size = 16 }) {
 
 // `id` is what a tile scrolls to. Without one a card cannot be linked to, and the tiles at
 // the top of a screen are only summaries of the tables underneath them.
-export function Card({ id, span = 'c12', icon, tone = 'pri', title, subtitle, action, flush, children }) {
+export function Card({ id, span = 'c12', icon, tone = 'pri', title, subtitle, beside, action, flush, children }) {
   return (
     <section className={`card ${span}`} id={id}>
       <div className="chd">
@@ -71,6 +71,10 @@ export function Card({ id, span = 'c12', icon, tone = 'pri', title, subtitle, ac
           <h2>{title}</h2>
           {subtitle && <div className="cs">{subtitle}</div>}
         </div>
+        {/* Next to the name of the list, not away in the corner with the filters. A search
+            box is how you reach one row out of the list, so it reads as part of the list;
+            the dropdowns narrow the whole thing and can sit at the far end. */}
+        {beside}
         {action}
       </div>
       <div className={`cbd${flush ? ' flush' : ''}`}>{children}</div>
