@@ -91,7 +91,8 @@ export const api = {
   confirmArrival: (id, note) => post(`/api/shipments/${encodeURIComponent(id)}/arrive`, { note }),
   // `toName` is a person named on the dashboard, whose address the backend looks up and
   // never sends here. `to` is an address typed by hand, which is the sender's own business.
-  sendMail: ({ toName, to, subject, body }) => post('/api/mail', { toName, to, subject, body }),
+  sendMail: ({ toName, to, subject, body, attachments }) =>
+    post('/api/mail', { toName, to, subject, body, attachments }),
   // Looks up one person's mailbox, when the compose window opens. Deliberately not part of
   // the dashboard payload: see the route for why.
   contactAddress: (name) => request(`/api/contact/address?name=${encodeURIComponent(name)}`),

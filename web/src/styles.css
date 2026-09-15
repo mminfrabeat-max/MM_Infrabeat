@@ -721,6 +721,29 @@ th.rt, td.rt { text-align: right; }
 }
 .minp:focus, .mtxt:focus { outline: none; border-color: var(--primary); background: var(--surface); }
 .mtxt { min-height: 186px; line-height: 1.6; resize: vertical; }
+
+/* Attaching a file. The input itself is hidden because no styling survives contact with a
+   browser's own file button, and the label is what everybody clicks anyway. */
+.attbtn {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  border: 1px dashed var(--border-2); border-radius: var(--r-sm); padding: 7px 12px;
+  font-size: 12.6px; font-weight: 600; color: var(--primary); background: var(--surface);
+}
+.attbtn:hover { border-color: var(--primary); background: var(--primary-soft); }
+.attbtn input { display: none; }
+.attlist { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.att {
+  display: flex; align-items: center; gap: 8px; font-size: 12.4px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 6px 9px;
+  background: var(--surface-2);
+}
+.attn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.atts { color: var(--ink-3); font-size: 11.4px; flex: none; }
+.attx {
+  border: none; background: none; color: var(--ink-3); font-size: 17px; line-height: 1;
+  cursor: pointer; padding: 0 3px; flex: none;
+}
+.attx:hover { color: var(--neg); }
 .mft { display: flex; gap: 9px; padding: 14px 18px; border-top: 1px solid var(--border); background: var(--surface-2); align-items: center; }
 .perr { font-size: 12.4px; color: var(--neg); margin-top: 8px; }
 .logrow { display: flex; gap: 13px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--border); }

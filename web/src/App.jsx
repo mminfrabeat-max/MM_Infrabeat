@@ -373,6 +373,39 @@ ${USER_PROFILE.role}, ${COMPANY}`
     }
   }
 
+  // Reading a chosen file into something that can be posted as JSON.
+  //
+  // Base64 rather than a multipart upload, because the whole mail is one JSON post already
+  // and a second transport for the one route that has files is two things to keep working.
+  // It costs a third in size, which the 10MB cap on the server already accounts for.
+  async function attachFiles(files) {
+    const read = [...files].map(
+      (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error(`${file.name} could not be read.`));
+          reader.onload = () =>
+            resolve({
+              filename: file.name,
+              contentType: file.type || 'application/octet-stream',
+              size: file.size,
+              // "data:application/pdf;base64,JVBER..." - only the part after the comma.
+              data: String(reader.result).split(',')[1] || ''
+            });
+          reader.readAsDataURL(file);
+        })
+    );
+
+    try {
+      const attached = await Promise.all(read);
+      setMailDraft((current) =>
+        current ? { ...current, attachments: [...(current.attachments || []), ...attached] } : current
+      );
+    } catch (problem) {
+      toast('neg', 'alert', problem.message);
+    }
+  }
+
   async function sendMail() {
     const draft = mailDraft;
     setBusy('mail');
@@ -381,7 +414,13 @@ ${USER_PROFILE.role}, ${COMPANY}`
         toName: draft.toName,
         to: draft.to,
         subject: draft.subject,
-        body: draft.body
+        body: draft.body,
+        // Only what the server needs. The size is for the person looking at the list.
+        attachments: (draft.attachments || []).map(({ filename, contentType, data }) => ({
+          filename,
+          contentType,
+          data
+        }))
       });
       const who = draft.name || draft.toName || draft.to;
       setMailDraft(null);
@@ -677,7 +716,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
         )}
         {tab === 'open' && <Commitments data={data} plant={plant} />}
         {tab === 'suppliers' && (
-          <Vendors data={data} plant={plant} onOpenDocument={openDocument} />
+          <Vendors data={data} plant={plant} onOpenDocument={openDocument} onWriteMail={writeMail} />
         )}
         {tab === 'team' && (
           <Teams
@@ -823,9 +862,56 @@ ${USER_PROFILE.role}, ${COMPANY}`
             <div className="mlab">Subject</div>
             <input className="minp" value={mailDraft.subject} onChange={(e) => setMailDraft({ ...mailDraft, subject: e.target.value })} />
           </div>
-          <div className="mrow" style={{ marginBottom: 0 }}>
+          <div className="mrow">
             <div className="mlab">Message</div>
             <textarea className="mtxt" value={mailDraft.body} onChange={(e) => setMailDraft({ ...mailDraft, body: e.target.value })} />
+          </div>
+
+          {/* Attachments last, because they are what you add after the sentence is written.
+              Each one can be taken off again: choosing the wrong file is the commonest
+              thing to do here, and a list you cannot edit means starting the mail over. */}
+          <div className="mrow" style={{ marginBottom: 0 }}>
+            <div className="mlab">Attach</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <label className="attbtn">
+                <Icon name="doc" size={13} />
+                Choose a file
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.doc,.docx,.csv,.txt"
+                  onChange={(e) => {
+                    attachFiles(e.target.files);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+
+              {(mailDraft.attachments || []).length > 0 && (
+                <div className="attlist">
+                  {mailDraft.attachments.map((file, i) => (
+                    <div className="att" key={`${file.filename}-${i}`}>
+                      <Icon name="doc" size={13} />
+                      <span className="attn">{file.filename}</span>
+                      <span className="atts">{Math.max(1, Math.round(file.size / 1024))} KB</span>
+                      <button
+                        type="button"
+                        className="attx"
+                        aria-label={`Remove ${file.filename}`}
+                        onClick={() =>
+                          setMailDraft({
+                            ...mailDraft,
+                            attachments: mailDraft.attachments.filter((_, at) => at !== i)
+                          })
+                        }
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </Modal>
       )}

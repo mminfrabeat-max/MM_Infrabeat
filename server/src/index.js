@@ -32,7 +32,10 @@ if (!authConfigured) {
 
 const app = express();
 
-app.use(express.json());
+// Large enough for a mail with a scanned PDF on it. The default is 100kb, which is ample
+// for every other route here and nowhere near a document somebody attaches to a vendor
+// request - and the mail route caps the attachments themselves at 10MB regardless.
+app.use(express.json({ limit: '14mb' }));
 
 // --- Open routes -------------------------------------------------------------
 // Two things must work before anyone is signed in: checking the backend is alive, and

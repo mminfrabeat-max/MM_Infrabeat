@@ -16,9 +16,43 @@
 
 import { useState } from 'react';
 import { inr, rupees, signed, plural, bandTone, loosely } from '../format.js';
+import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { Card, Banner, Score, Metric, Chip, Icon, TermRow, SimulatedNote } from '../components/ui.jsx';
 import { VendorCharts, Meter, toneColour } from '../components/charts.jsx';
 import { StatusChip } from './Approvals.jsx';
+
+// Asking the vendor master team to set somebody up.
+//
+// A new vendor is not something this dashboard can create - the record lives in SAP and is
+// made by the people who own the vendor master, after the paperwork has been checked. What
+// the dashboard can do is ask properly: the right person, and a form of words that lists
+// everything they will need, so the request does not come back asking for the GST number.
+//
+// The blanks are left blank on purpose. A template that guesses at a vendor's PAN is worse
+// than one that asks for it.
+function vendorRequest(data) {
+  const owner = (data.teams || []).find((t) => /vendor master|contracts/i.test(t.name));
+
+  return {
+    name: owner?.lead || 'the vendor master team',
+    toName: owner?.lead || '',
+    subject: 'Request to add a new vendor',
+    body:
+      `Hello ${owner?.lead || 'team'},\n\n` +
+      'Please set up the following vendor in the vendor master.\n\n' +
+      '  Vendor name      :\n' +
+      '  Contact person   :\n' +
+      '  Phone and email  :\n' +
+      '  City and state   :\n' +
+      '  Material or trade:\n' +
+      '  GST number       :\n' +
+      '  PAN              :\n' +
+      '  Bank details     : as per the attached\n\n' +
+      'Their registration papers are attached. Could you create the record and send me the ' +
+      'vendor number once it is set up, so the first order can be raised against it.\n\n' +
+      `Thanks,\n${APPROVER_NAME}\n${USER_PROFILE.role}, ${COMPANY}`
+  };
+}
 
 // The soft background matching a tone, for the panel that explains the score. The chip
 // colours are already spoken for; this is the same hue at a weight a paragraph can sit on.
@@ -29,7 +63,7 @@ function softFor(tone) {
   return 'var(--primary-soft)';
 }
 
-export default function Vendors({ data, plant, onOpenDocument }) {
+export default function Vendors({ data, plant, onOpenDocument, onWriteMail }) {
   // Unscored vendors sort last rather than first. They are not good and not bad; they have
   // no record yet, and the top of a worst-first list would say otherwise.
   const vendors = [...data.suppliers].sort(
@@ -104,6 +138,12 @@ export default function Vendors({ data, plant, onOpenDocument }) {
           icon="truck"
           title="Vendors"
           subtitle={needle ? `${plural(found.length, 'match', 'matches')} of ${vendors.length}` : 'worst standing first'}
+          action={
+            <button className="btn sm emph" type="button" onClick={() => onWriteMail(vendorRequest(data))}>
+              <Icon name="mail" size={12} />
+              Request a new vendor
+            </button>
+          }
           flush
         >
           <div className="vsearch">

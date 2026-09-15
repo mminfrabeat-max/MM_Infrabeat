@@ -584,7 +584,7 @@ export async function sendDeliveryReceived({ document, receivedBy, note }) {
   }
 }
 
-export async function sendPlainEmail({ to, subject, body, from }) {
+export async function sendPlainEmail({ to, subject, body, from, attachments = [] }) {
   if (!mailConfigured()) {
     return { sent: false, to, status: 'Not sent: email is not configured in .env' };
   }
@@ -596,6 +596,13 @@ export async function sendPlainEmail({ to, subject, body, from }) {
       // So a reply goes to the person who wrote it, not the dashboard's own mailbox.
       replyTo: from,
       subject,
+      // Decoded here rather than in the route, so the base64 a browser produced stays a
+      // string right up to the point something needs the bytes.
+      attachments: attachments.map((file) => ({
+        filename: file.filename,
+        content: Buffer.from(file.data, 'base64'),
+        contentType: file.contentType
+      })),
       text: body,
       html: `<div style="font-family:'Segoe UI',Arial,sans-serif;font-size:14px;line-height:1.6;color:#0F1A26;white-space:pre-wrap">${escapeHtml(body)}</div>`
     });

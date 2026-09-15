@@ -503,7 +503,60 @@ actionsRouter.post(
 
 // --- Writing a mail ----------------------------------------------------------
 
-// POST /api/mail   { toName, to, subject, body }
+// What a browser may attach to a mail.
+//
+// Three rules, and the reason for each. A short list of types, because this is a
+// procurement dashboard and the things people attach to a vendor request are a PDF, a
+// scan or a spreadsheet - anything else is more likely a mistake than a need, and an
+// allowlist is the only kind of file check worth writing. A size cap, because a mail
+// server will refuse a large one anyway and failing here says so in words. And a count,
+// because nobody assembles a twelve-file mail from a dashboard.
+const ATTACHABLE = new Set([
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/csv',
+  'text/plain'
+]);
+
+const MAX_FILES = 4;
+const MAX_BYTES = 10 * 1024 * 1024;
+
+function attachmentsFrom(raw) {
+  if (!raw) return { files: [] };
+  if (!Array.isArray(raw)) return { error: 'The attachments were not sent as a list.' };
+  if (raw.length > MAX_FILES) return { error: `A mail can carry at most ${MAX_FILES} files.` };
+
+  const files = [];
+  let total = 0;
+
+  for (const file of raw) {
+    const filename = String(file?.filename || '').trim();
+    const contentType = String(file?.contentType || '').trim();
+    const data = String(file?.data || '');
+
+    if (!filename || !data) return { error: 'An attachment arrived with no name or no content.' };
+    if (!ATTACHABLE.has(contentType)) {
+      return { error: `${filename} is a ${contentType || 'unknown'} file, which cannot be attached. PDFs, images, spreadsheets and documents can.` };
+    }
+
+    // The length of the base64 tells us the size without decoding it.
+    total += Math.floor((data.length * 3) / 4);
+    if (total > MAX_BYTES) {
+      return { error: `Those files come to more than ${MAX_BYTES / 1024 / 1024} MB together, which is more than a mail will carry.` };
+    }
+
+    files.push({ filename, contentType, data });
+  }
+
+  return { files };
+}
+
+// POST /api/mail   { toName, to, subject, body, attachments }
 //
 // Two ways to say who it goes to, and the order matters.
 //
@@ -522,6 +575,17 @@ actionsRouter.post(
     const subject = String(req.body?.subject || '').trim();
     const body = String(req.body?.body || '').trim();
 
+    // What came with it, checked before it is trusted.
+    //
+    // A browser can send any three strings it likes, so the count, the size and the type
+    // are all decided here. The cap is per mail rather than per file: two files at nine
+    // megabytes each is the same problem as one at eighteen, and most mail servers refuse
+    // anything over about twenty-five anyway.
+    const attachments = attachmentsFrom(req.body?.attachments);
+    if (attachments.error) {
+      return res.status(400).json({ error: attachments.error });
+    }
+
     const resolved = typed ? { address: typed, real: true, name: '' } : recipientFor(toName);
 
     // Somebody with no mailbox on file resolves to no address at all, rather than to a
@@ -536,6 +600,7 @@ actionsRouter.post(
 
     const mail = await sendPlainEmail({
       to,
+      attachments: attachments.files,
       subject,
       body: redirected
         ? `[Meant for ${resolved.name}. There is no mailbox on file for them, so this came ` +
