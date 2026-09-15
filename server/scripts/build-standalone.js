@@ -187,6 +187,14 @@ function buildShim(data) {
 
   var realFetch = window.fetch.bind(window);
 
+  // Tasks given out by hand, kept for the life of the page.
+  //
+  // Like every other change in this copy they go on a refresh, which the strip along the
+  // bottom already says. What matters is that they work at all while the page is open: the
+  // point of giving a task out is watching it land on somebody, and a button that silently
+  // did nothing would be the one broken thing in a demonstration.
+  var GIVEN = [];
+
   window.fetch = function (input, init) {
     var url = typeof input === "string" ? input : (input && input.url) || "";
     if (url.indexOf("/api") === -1) return realFetch(input, init);
@@ -208,6 +216,45 @@ function buildShim(data) {
     if (url.indexOf("/api/health") === 0) return reply(DATA.health);
     if (url.indexOf("/api/dashboard") === 0) return reply(DATA.dashboard);
     if (url.indexOf("/api/action-log") === 0) return reply(DATA.actionLog);
+
+    if (url.indexOf("/api/team-tasks") === 0) {
+      var method = (init && init.method) || "GET";
+      var id = url.split("/api/team-tasks/")[1];
+      id = id ? decodeURIComponent(id) : null;
+
+      if (method === "GET") return reply({ tasks: GIVEN, statuses: ["open", "in progress", "blocked", "done"] });
+
+      if (method === "POST") {
+        if (!body.title || !body.assignedTo) return reply({ error: "A task needs a title and somebody to do it." }, 400);
+        var task = {
+          id: "TT-" + Date.now().toString(36).toUpperCase(),
+          title: body.title, detail: body.detail || "", assignedTo: body.assignedTo,
+          teamId: body.teamId || "", kpi: body.kpi || "other", plant: body.plant || "",
+          due: body.due || "", status: "open", createdBy: DATA.dashboard.user.name,
+          createdAt: new Date().toISOString(), doneAt: null
+        };
+        GIVEN.unshift(task);
+        return reply({ task: task }, 201);
+      }
+
+      var found = null;
+      for (var g = 0; g < GIVEN.length; g++) if (GIVEN[g].id === id) found = GIVEN[g];
+
+      if (method === "PATCH") {
+        if (!found) return reply({ error: "There is no task " + id + "." }, 404);
+        if (body.status) {
+          found.status = body.status;
+          found.doneAt = body.status === "done" ? new Date().toISOString() : null;
+        }
+        return reply({ task: found });
+      }
+
+      if (method === "DELETE") {
+        if (!found) return reply({ error: "There is no task " + id + "." }, 404);
+        GIVEN.splice(GIVEN.indexOf(found), 1);
+        return reply({ removed: id });
+      }
+    }
 
     var approve = url.match(/\\/api\\/approvals\\/([^/]+)\\/approve/);
     if (approve) return decide(decodeURIComponent(approve[1]), "approved", body.note);

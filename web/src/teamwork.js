@@ -333,7 +333,18 @@ export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
         purchaseGroup: team.purchaseGroup,
         purchaseGroupName: team.purchaseGroupName,
         members,
-        tasks: open.sort((a, b) => (b.hours || 0) - (a.hours || 0)),
+        // Given work first, then whatever has waited longest.
+        //
+        // Not simply oldest-first, which is what it was. A task handed out a moment ago is
+        // the youngest thing on the card by definition, so it sorted to the bottom and
+        // landed behind "1 more with Rahul" - somebody gave a person a job and the screen
+        // appeared to do nothing. These are also the only rows that can be acted on here,
+        // which is a second reason for them to be the ones in view.
+        tasks: open.sort((a, b) => {
+          const kind = Number(Boolean(b.assigned)) - Number(Boolean(a.assigned));
+          if (kind !== 0) return kind;
+          return (b.hours || 0) - (a.hours || 0);
+        }),
         finished: done,
         open: open.length,
         done: done.length,

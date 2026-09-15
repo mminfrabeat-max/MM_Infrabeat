@@ -666,6 +666,39 @@ th.rt, td.rt { text-align: right; }
 .kpiv.pos { color: var(--pos); } .kpiv.warn { color: var(--warn); }
 .kpiv.neg { color: var(--neg); } .kpiv.pri { color: var(--primary); } .kpiv.mut { color: var(--ink-3); }
 .kpis2 { font-size: 11.2px; color: var(--ink-3); }
+
+/* The manager name, which is also the way into the detail. */
+.asname {
+  background: none; border: none; padding: 0; cursor: pointer; color: inherit; font: inherit;
+  font-size: 14.4px; font-weight: 650; letter-spacing: -.1px;
+}
+.asname:hover { color: var(--primary); }
+.asname svg { transform: rotate(-90deg); opacity: .5; }
+.asname:hover svg { opacity: 1; }
+
+/* Everything about one manager. */
+.dsub { font-size: 12.6px; color: var(--ink-3); margin: 0 0 14px; }
+.dh {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-3); margin: 20px 0 9px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.dkpis { display: flex; flex-direction: column; gap: 11px; }
+.dkpi { border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; }
+.dkpitop { display: flex; align-items: baseline; gap: 9px; }
+.dkpitop .kpiv { font-size: 15px; }
+.dkpih { margin: 5px 0 0; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+.dlist { display: flex; flex-direction: column; gap: 6px; }
+.dlist .mgrtask { width: 100%; }
+.mgrtask.isdone { opacity: .62; }
+.dnone { font-size: 12.6px; }
+.dperson {
+  display: flex; gap: 14px; align-items: flex-start; justify-content: space-between;
+  border: 1px solid var(--border); border-radius: var(--r-md); padding: 9px 12px;
+}
+.dperson .t1 { font-size: 12.8px; font-weight: 650; }
+.dperson .t2 { font-size: 11.6px; color: var(--ink-3); }
+.dpt { text-align: right; font-size: 12.2px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.dptask { display: flex; align-items: center; gap: 7px; }
 .bandl b { color: var(--ink); font-weight: 700; }
 
 .mgrtasks { padding: 0 17px 14px 66px; display: flex; flex-direction: column; gap: 5px; }

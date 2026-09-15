@@ -36,6 +36,7 @@ export default function Teams({
   const [kpi, setKpi] = useState('all');
   const [expanded, setExpanded] = useState(null);
   const [giving, setGiving] = useState(null);
+  const [opened, setOpened] = useState(null);
 
   const counts = countsByKpi(data, plant, assigned);
   const managers = managersFrom(data, plant, kpi, assigned);
@@ -108,6 +109,7 @@ export default function Teams({
                 onWriteMail={onWriteMail}
                 onTeams={onTeams}
                 onGive={() => setGiving({ team: m })}
+                onOpen={() => setOpened(m.id)}
                 onSetStatus={onSetStatus}
                 onDropTask={onDropTask}
                 busy={busy}
@@ -116,6 +118,23 @@ export default function Teams({
           )}
         </Card>
       </div>
+
+      {opened && (
+        <ManagerDetail
+          manager={managers.find((m) => m.id === opened) || managersFrom(data, plant, 'all', assigned).find((m) => m.id === opened)}
+          busy={busy}
+          onClose={() => setOpened(null)}
+          onOpenDocument={onOpenDocument}
+          onSetStatus={onSetStatus}
+          onDropTask={onDropTask}
+          onWriteMail={onWriteMail}
+          onGive={() => {
+            const m = managers.find((x) => x.id === opened);
+            setOpened(null);
+            setGiving({ team: m });
+          }}
+        />
+      )}
 
       {giving && (
         <GiveTask
@@ -132,6 +151,201 @@ export default function Teams({
         />
       )}
     </>
+  );
+}
+
+// Everything about one manager, including what the indicators are made of.
+//
+// The card outside shows four items and three numbers. This is where the rest goes: every
+// open item, everything finished, every person under them with what they are carrying - and
+// underneath each indicator, the sentence saying what was counted to get it.
+//
+// That last part is the reason this exists. A number with a threshold on it invites exactly
+// one question, which is "counted how?", and a dashboard that cannot answer it teaches
+// people to distrust the numbers that ARE right.
+function ManagerDetail({ manager, busy, onClose, onOpenDocument, onSetStatus, onDropTask, onWriteMail, onGive }) {
+  if (!manager) return null;
+
+  const given = [...manager.tasks, ...manager.finished].filter((t) => t.assigned);
+  const derived = manager.tasks.filter((t) => !t.assigned);
+  const givenDone = given.filter((t) => t.done);
+
+  const HOW = {
+    ageing: 'Anything on this card still open after three days, whether it came off a document or was given out by hand. Nothing finished counts.',
+    oldest: 'The longest any single open item has waited - measured from when the document arrived at this desk, or from when the task was given out.',
+    given: 'Only the tasks somebody typed in and handed to this team. Work read off documents is not counted here, because it is finished on its own screen rather than on this one.'
+  };
+
+  return (
+    <Modal
+      icon="people"
+      title={manager.name}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn emph" type="button" onClick={() => onWriteMail(reminderFor(manager))}>
+            <Icon name="mail" size={13} /> Send reminder
+          </button>
+          <button className="btn q" type="button" onClick={onGive}>
+            <Icon name="doc" size={13} /> Give a task
+          </button>
+          <button className="btn q" type="button" onClick={onClose}>
+            Close
+          </button>
+        </>
+      }
+    >
+      <p className="dsub">
+        {manager.team} &middot; {manager.plant}
+        {manager.purchaseGroup ? ` · purchase group ${manager.purchaseGroup}` : ''}
+        {manager.purchaseGroupName ? ` (${manager.purchaseGroupName})` : ''}
+      </p>
+
+      <div className="bandw" style={{ maxWidth: 'none' }}>
+        <div className="bandtop">
+          <span className="bandk">Bandwidth</span>
+          <span className={`bandv ${manager.load.tone}`}>{manager.load.label}</span>
+          <span className="bandf">
+            {manager.open} of {manager.load.capacity}
+            {manager.load.free > 0 ? ` · room for ${manager.load.free} more` : ' · nothing more today'}
+          </span>
+        </div>
+        <div className="bandbar">
+          <span className={`fill ${manager.load.tone}`} style={{ width: `${manager.load.percent}%` }} />
+        </div>
+      </div>
+
+      {/* Each indicator, and under it what was counted. */}
+      <h4 className="dh">How this team is measured</h4>
+      <div className="dkpis">
+        {manager.kpis.map((k) => (
+          <div className="dkpi" key={k.key}>
+            <div className="dkpitop">
+              <span className="kpil">{k.label}</span>
+              <span className={`kpiv ${k.tone}`}>{k.value}</span>
+              <span className="kpis2">{k.sub}</span>
+            </div>
+            <p className="dkpih">{HOW[k.key]}</p>
+          </div>
+        ))}
+        {manager.signed > 0 && (
+          <div className="dkpi">
+            <div className="dkpitop">
+              <span className="kpil">Signed</span>
+              <span className="kpiv pri">{manager.signed}</span>
+              <span className="kpis2">decisions</span>
+            </div>
+            <p className="dkpih">
+              Requisitions and orders this person has actually approved, counted from the documents
+              themselves rather than from anything entered here.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <h4 className="dh">
+        Given to this team &mdash; {givenDone.length} of {given.length} finished
+      </h4>
+      {given.length === 0 ? (
+        <p className="muted dnone">Nothing has been handed to them by hand yet.</p>
+      ) : (
+        <div className="dlist">
+          {given.map((task) => (
+            <div className={`mgrtask given${task.done ? ' isdone' : ''}`} key={task.id}>
+              <span className="mgrwhat">
+                <span className="t1">{task.title}</span>
+                <span className="t2">
+                  {task.what}
+                  {task.member ? <span className="tgiven">with {task.member}</span> : null}
+                </span>
+              </span>
+              <span className="rt">
+                <Chip tone={task.tone}>{task.status}</Chip>
+                <select
+                  className="sel tiny"
+                  value={task.rawStatus}
+                  disabled={busy === 'task'}
+                  onChange={(e) => onSetStatus(task.id, e.target.value)}
+                  aria-label={`Status of ${task.title}`}
+                >
+                  <option value="open">To do</option>
+                  <option value="in progress">In progress</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="done">Done</option>
+                </select>
+                <button
+                  type="button"
+                  className="attx"
+                  aria-label={`Remove ${task.title}`}
+                  disabled={busy === 'task'}
+                  onClick={() => onDropTask(task.id)}
+                >
+                  &times;
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h4 className="dh">Off the documents &mdash; {plural(derived.length, 'item')}</h4>
+      {derived.length === 0 ? (
+        <p className="muted dnone">Nothing from the documents sits with them right now.</p>
+      ) : (
+        <div className="dlist">
+          {derived.map((task) => (
+            <button
+              type="button"
+              className={`mgrtask${task.documentId ? ' opens' : ''}`}
+              key={task.id}
+              disabled={!task.documentId}
+              onClick={() => {
+                if (!task.documentId) return;
+                onClose();
+                onOpenDocument(task.documentId);
+              }}
+            >
+              <span className="mgrwhat">
+                <span className="t1">{task.title}</span>
+                <span className="t2">{task.what}</span>
+              </span>
+              <span className="rt">
+                <Chip tone={task.tone}>{task.status}</Chip>
+                {task.hours ? <span className="t3">{ageOf(task.hours)}</span> : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(manager.members || []).length > 0 && (
+        <>
+          <h4 className="dh">The people under them</h4>
+          <div className="dlist">
+            {manager.members.map((person) => (
+              <div className="dperson" key={person.id || person.name}>
+                <div>
+                  <div className="t1">{person.name}</div>
+                  <div className="t2">{person.role}</div>
+                </div>
+                <div className="dpt">
+                  {person.open === 0 ? (
+                    <span className="muted">nothing on</span>
+                  ) : (
+                    person.tasks.map((t) => (
+                      <div className="dptask" key={t.id}>
+                        {t.title} <Chip tone={t.tone}>{t.status}</Chip>
+                      </div>
+                    ))
+                  )}
+                  {person.done > 0 && <div className="t3">{person.done} finished</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }
 
@@ -271,7 +485,7 @@ function GiveTask({ managers, start, member, plant, busy, onClose, onSave }) {
 // what you ring them about.
 const SHOWN = 4;
 
-function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onTeams, onGive, onSetStatus, onDropTask, busy }) {
+function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onTeams, onGive, onOpen, onSetStatus, onDropTask, busy }) {
   const shown = expanded ? manager.tasks : manager.tasks.slice(0, SHOWN);
   const more = manager.tasks.length - shown.length;
 
@@ -281,7 +495,12 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
         <span className={`tav${manager.load.tone === 'neg' ? ' nudge' : ''}`}>{initialsOf(manager.name)}</span>
 
         <div style={{ flex: 1, minWidth: 220 }}>
-          <div className="tname">{manager.name}</div>
+          {/* The name is the way in. Everything else on the card is a shortcut to one
+              thing; this opens the whole picture, including what the indicators count. */}
+          <button className="tname asname" type="button" onClick={onOpen}>
+            {manager.name}
+            <Icon name="chevron" size={14} />
+          </button>
           <div className="tsub">
             {manager.team}, {manager.plant}
             {manager.people ? `, ${plural(manager.people, 'person', 'people')}` : ''}
