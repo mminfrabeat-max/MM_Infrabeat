@@ -18,6 +18,7 @@ import { GoogleGenAI } from '@google/genai';
 import { SYSTEM_PROMPT } from './system-prompt.js';
 import { READ_TOOLS, ACTION_TOOLS, READ_HANDLERS, isAction, describeAction, dmy } from './tools.js';
 import { ACTION_HANDLERS } from './actions.js';
+import { readIntent } from '../domain/ask.js';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const MAX_ROUNDS = 5;
@@ -125,6 +126,20 @@ function friendlyError(problem) {
   const detail = said ? said[1] : raw;
 
   if (problem?.status === 429 || /RESOURCE_EXHAUSTED|quota/i.test(raw)) {
+    // The two free-tier limits need different sentences. A per-minute one clears while you
+    // read the message; the daily one does not clear until midnight, and telling somebody
+    // to try again in forty seconds when the answer is "tomorrow" wastes their afternoon.
+    // The quota id is the only thing in the reply that says which it was.
+    const perDay = /PerDay/i.test(raw);
+    const limit = /"quotaValue":\s*"(\d+)"/.exec(raw);
+
+    if (perDay) {
+      return (
+        `The free daily allowance for the model has run out${limit ? ` (${limit[1]} requests a day)` : ''}, ` +
+        'and it does not reset until tomorrow. Answering from the dashboard rules instead.'
+      );
+    }
+
     const wait = /retry in ([\d.]+)s/i.exec(detail);
     const seconds = wait ? Math.ceil(Number(wait[1])) : null;
     return (
@@ -201,8 +216,44 @@ export async function ask(request) {
     return await askOnce(request);
   } catch (problem) {
     log('call failed', String(problem?.message || problem).slice(0, 200));
-    return { kind: 'answer', text: friendlyError(problem), failed: true };
+    return { kind: 'answer', ...withoutTheModel(problem, request), failed: true };
   }
+}
+
+// What to say when the model cannot be reached.
+//
+// Saying only "I could not reach the model" would be honest and useless. The dashboard's
+// own parser is still here - free, exact, offline, and it already answers what is waiting,
+// what is short, what is late, what is part-signed and where an order has got to. So the
+// question gets asked of that instead, and the person is told which answered.
+//
+// This matters most on the free tier, which allows twenty requests a DAY. A demo that goes
+// dead halfway through an afternoon is worse than one that never had a model at all.
+function withoutTheModel(problem, { question, filter, context }) {
+  const note = friendlyError(problem);
+
+  try {
+    const fallback = readIntent(question, {
+      documents: context.documents,
+      materials: context.materials,
+      vendors: context.vendors,
+      plant: filter?.plant || 'all',
+      manager: context.manager,
+      memory: {}
+    });
+
+    // Only its answers. A proposal from the parser names an endpoint for the browser to
+    // call, which is a different confirmation path from the one this panel uses - and two
+    // ways to authorise an action is exactly the thing not to improvise here.
+    if (fallback?.kind === 'answer' && fallback.text) {
+      log('answered without the model', JSON.stringify(fallback.text.slice(0, 120)));
+      return { text: `_${note}_\n\n${fallback.text}` };
+    }
+  } catch (alsoFailed) {
+    log('fallback failed too', String(alsoFailed?.message || alsoFailed).slice(0, 160));
+  }
+
+  return { text: note };
 }
 
 async function askOnce({ sessionId, question, filter, context }) {

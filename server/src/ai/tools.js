@@ -64,6 +64,21 @@ export const READ_TOOLS = [
     }
   },
   {
+    name: 'list_late_deliveries',
+    description:
+      'Orders past their delivery date, separated by whose side the delay is on: the vendor ' +
+      'has the order and has not delivered, or the order has not been sent to the vendor yet. ' +
+      'Use this for anything about late, overdue, delayed, slipped or chasing a delivery. It ' +
+      'is NOT the same as an order waiting for approval - use list_blocked_pos for that.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        plant: { type: 'STRING', description: 'Plant name. Omit for all plants.' }
+      },
+      required: []
+    }
+  },
+  {
     name: 'get_stock',
     description:
       'The stock position for a material: what is on hand, what is on order, what has been ' +
@@ -270,6 +285,47 @@ export const READ_HANDLERS = {
         held_by: d.approvalState?.withYou ? 'the person you are talking to' : d.approvalState?.holder || null,
         delivery_date: dmy(d.deliveryDate)
       }))
+    };
+  },
+
+  // Late, and whose fault.
+  //
+  // The split is the whole answer. An order past its date because the vendor has not
+  // delivered is a phone call to the vendor; one past its date because nobody has sent it
+  // to them yet is a phone call to ourselves - and chasing somebody over an order they have
+  // never seen is how a vendor is lost. Both come from the same priority worked out for the
+  // screens, so the assistant cannot disagree with what the dashboard shows.
+  list_late_deliveries({ plant }, { documents }) {
+    const late = documents
+      .filter((d) => d.priority?.overdue)
+      .filter((d) => atPlant(d, plant))
+      .sort((a, b) => (a.priority.daysUntilDue ?? 0) - (b.priority.daysUntilDue ?? 0));
+
+    const row = (d) => ({
+      number: d.id,
+      kind: d.kind === 'PR' ? 'requisition' : 'purchase order',
+      material: d.material,
+      vendor: d.supplierName,
+      plant: d.plant,
+      value: inr(d.total),
+      delivery_date: dmy(d.deliveryDate),
+      days_past_the_date: Math.abs(d.priority.daysUntilDue),
+      shipment: isTrackable(d) ? stageByKey(currentStage(d))?.label || null : null,
+      why: d.priority.reasons?.[0] || null
+    });
+
+    const theirs = late.filter((d) => d.priority.lateOnVendor);
+    const ours = late.filter((d) => !d.priority.lateOnVendor);
+
+    return {
+      count: late.length,
+      plant: plant || 'all plants',
+      message:
+        late.length === 0
+          ? 'Nothing is past its delivery date.'
+          : `${late.length} past the delivery date.`,
+      late_on_the_vendor: { count: theirs.length, note: 'They have the order and it has not arrived. Chase them.', orders: theirs.map(row) },
+      late_on_us: { count: ours.length, note: 'The date has gone and the vendor has not been told to start. Ours to fix.', orders: ours.map(row) }
     };
   },
 
