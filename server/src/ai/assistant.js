@@ -19,9 +19,32 @@ import { SYSTEM_PROMPT } from './system-prompt.js';
 import { READ_TOOLS, ACTION_TOOLS, READ_HANDLERS, isAction, describeAction, dmy } from './tools.js';
 import { ACTION_HANDLERS } from './actions.js';
 import { readIntent } from '../domain/ask.js';
+import { createGroqChat } from './groq.js';
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+// Which model answers, and how to reach it.
+//
+// Two providers rather than one, because the free tiers differ by a factor of fifty: Gemini
+// allows twenty requests a day and Groq a thousand, and a demonstration that goes quiet
+// after seven questions is not a demonstration. Everything above this line is the same
+// either way - the tools, the prompt, the confirm step, the panel.
+const PROVIDER = (process.env.AI_PROVIDER || 'gemini').toLowerCase();
+
+const DEFAULT_MODEL = { gemini: 'gemini-3.6-flash', groq: 'openai/gpt-oss-120b' };
+
+const MODEL =
+  (PROVIDER === 'groq' ? process.env.GROQ_MODEL : process.env.GEMINI_MODEL) ||
+  DEFAULT_MODEL[PROVIDER] ||
+  DEFAULT_MODEL.gemini;
+
 const MAX_ROUNDS = 5;
+
+function apiKey() {
+  return PROVIDER === 'groq' ? process.env.GROQ_API_KEY : process.env.GEMINI_API_KEY;
+}
+
+export function assistantProvider() {
+  return { provider: PROVIDER, model: MODEL };
+}
 
 // Conversations are dropped after this long unused, and the oldest goes when there are too
 // many. Both are here so a demo left open overnight cannot quietly hold the process's
@@ -30,15 +53,15 @@ const IDLE_MINUTES = 90;
 const MAX_SESSIONS = 50;
 
 export function assistantConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY);
+  return Boolean(apiKey());
 }
 
 let client = null;
 
 function genai() {
   if (!client) {
-    if (!assistantConfigured()) throw new Error('GEMINI_API_KEY is not set.');
-    client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    if (!assistantConfigured()) throw new Error('No API key is set for the assistant.');
+    client = new GoogleGenAI({ apiKey: apiKey() });
   }
   return client;
 }
@@ -78,13 +101,24 @@ function sessionFor(id) {
     return existing;
   }
 
-  const chat = genai().chats.create({
-    model: MODEL,
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      tools: [{ functionDeclarations: [...READ_TOOLS, ...ACTION_TOOLS] }]
-    }
-  });
+  // Both return the same thing to the loop below: an object with sendMessage({ message })
+  // resolving to { text, functionCalls }. The loop has never needed to know which.
+  const chat =
+    PROVIDER === 'groq'
+      ? createGroqChat({
+          apiKey: apiKey(),
+          model: MODEL,
+          systemInstruction: SYSTEM_PROMPT,
+          tools: [...READ_TOOLS, ...ACTION_TOOLS],
+          log
+        })
+      : genai().chats.create({
+          model: MODEL,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            tools: [{ functionDeclarations: [...READ_TOOLS, ...ACTION_TOOLS] }]
+          }
+        });
 
   const session = { chat, lastUsed: Date.now(), pending: null };
   sessions.set(id, session);
@@ -130,7 +164,9 @@ function friendlyError(problem) {
     // read the message; the daily one does not clear until midnight, and telling somebody
     // to try again in forty seconds when the answer is "tomorrow" wastes their afternoon.
     // The quota id is the only thing in the reply that says which it was.
-    const perDay = /PerDay/i.test(raw);
+    // Gemini names the quota in a quotaId; Groq says "per day" in prose. Either way the
+    // question is the same one: does this clear in a minute, or tomorrow?
+    const perDay = /PerDay|per day/i.test(raw);
     const limit = /"quotaValue":\s*"(\d+)"/.exec(raw);
 
     if (perDay) {
@@ -178,6 +214,26 @@ function textOf(response) {
   return text.trim();
 }
 
+// Nothing empty goes to the model.
+//
+// A tool result carrying "signed_by": null, "why": null and "shipment": null on each of
+// thirteen rows is paying, in tokens, to say nothing thirty-nine times. On a tier metered
+// at eight thousand tokens a minute that is the difference between four questions and one.
+//
+// Absent and null read the same to anybody, so the empties are dropped.
+export function compact(value) {
+  if (Array.isArray(value)) return value.map(compact);
+  if (!value || typeof value !== 'object') return value;
+
+  const out = {};
+  for (const [key, inner] of Object.entries(value)) {
+    if (inner === null || inner === undefined || inner === '') continue;
+    if (Array.isArray(inner) && inner.length === 0) continue;
+    out[key] = compact(inner);
+  }
+  return out;
+}
+
 async function runReadTools(calls, context) {
   const parts = [];
 
@@ -198,7 +254,7 @@ async function runReadTools(calls, context) {
     }
 
     log('tool result', `${call.name} -> ${JSON.stringify(result).slice(0, 300)}`);
-    parts.push({ functionResponse: { id: call.id, name: call.name, response: result } });
+    parts.push({ functionResponse: { id: call.id, name: call.name, response: compact(result) } });
   }
 
   return parts;

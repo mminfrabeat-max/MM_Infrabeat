@@ -12,7 +12,7 @@ import { Router } from 'express';
 import { asyncHandler } from './helpers.js';
 import { getEverything } from '../data-service.js';
 import { config } from '../config.js';
-import { ask, confirm, openers, resetSession, assistantConfigured } from '../ai/assistant.js';
+import { ask, confirm, openers, resetSession, assistantConfigured, assistantProvider } from '../ai/assistant.js';
 import { readFlags } from '../ai/actions.js';
 
 export const assistantRouter = Router();
@@ -45,7 +45,7 @@ function sessionIdFor(req) {
 assistantRouter.get('/assistant/status', (req, res) => {
   res.json({
     available: assistantConfigured(),
-    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
+    ...assistantProvider(),
     mailEnabled: config.mail.enabled
   });
 });
@@ -78,8 +78,11 @@ assistantRouter.post(
     }
 
     if (!assistantConfigured()) {
+      const { provider } = assistantProvider();
       res.status(503).json({
-        error: 'The assistant is not switched on. Set GEMINI_API_KEY in .env and restart the backend.',
+        error:
+          `The assistant is not switched on. Set ${provider === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY'} ` +
+          'in .env and restart the backend.',
         available: false
       });
       return;
