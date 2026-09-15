@@ -20,7 +20,6 @@ import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { KPIS, managersFrom, countsByKpi } from '../teamwork.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
 import { Modal } from '../components/shell-bits.jsx';
-import Gauge from '../components/gauge.jsx';
 
 export default function Teams({
   data,
@@ -216,43 +215,8 @@ function ManagerDetail({ manager, busy, onClose, onOpenDocument, onSetStatus, on
         </div>
       </div>
 
-      <h4 className="dh">How they are doing</h4>
-      <div className="dperf">
-        <Gauge
-          score={manager.performance.score}
-          tone={manager.performance.tone}
-          label={manager.performance.label}
-          size={150}
-        />
-        <div className="dperfw">
-          {manager.performance.reasons.length === 0 ? (
-            <p className="dkpih">
-              {manager.performance.measurable
-                ? 'Nothing has come off. Every item is moving and anything handed out has come back.'
-                : 'Nothing has come off - but none of the items on this desk carries a date, so there is nothing here that could age. Read this as no evidence against them rather than as a clean sheet.'}
-            </p>
-          ) : (
-            <>
-              <p className="dkpih">Starts at 100. What came off, and why:</p>
-              <ul className="dwhy">
-                {manager.performance.reasons.map((r) => (
-                  <li key={r.what}>
-                    <b>&minus;{r.points}</b> {r.what}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-          <p className="dkpih">
-            It does not count how much work they have. A manager holding nine things scores the
-            same as one holding two, as long as neither is going stale &mdash; how much is on
-            somebody is what the bandwidth bar above says.
-          </p>
-        </div>
-      </div>
-
       {/* Each indicator, and under it what was counted. */}
-      <h4 className="dh">What goes into it</h4>
+      <h4 className="dh">How this team is measured</h4>
       <div className="dkpis">
         {manager.kpis.map((k) => (
           <div className="dkpi" key={k.key}>
@@ -592,13 +556,6 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
             )}
           </div>
         </div>
-
-        <Gauge
-          score={manager.performance.score}
-          tone={manager.performance.tone}
-          label={manager.performance.measurable ? manager.performance.label : 'nothing to age'}
-          size={104}
-        />
 
         <div className="tacts">
           <button
