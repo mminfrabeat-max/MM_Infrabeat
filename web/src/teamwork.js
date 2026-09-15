@@ -192,6 +192,73 @@ export function openTaskCount(data, plant = 'all', assigned = []) {
   return tasksFrom(data, plant, assigned).filter((t) => !t.done && t.with !== 'you').length;
 }
 
+// How a team is doing, as one number out of a hundred.
+//
+// A gauge needs a single figure, and a single figure about people is the easiest thing on
+// a dashboard to get wrong - so this one is built to be argued with. It starts at a hundred
+// and takes points off for things that are true, and every deduction is kept alongside the
+// score so the detail view can print the arithmetic. Nobody has to trust it; they can read
+// it and disagree.
+//
+// What it does NOT measure is how much work somebody has. A manager holding nine things
+// scores the same as one holding two, provided neither is going stale. Volume is what the
+// bandwidth bar is for, and mixing the two would mean a busy team looking bad for being
+// busy - which is how a measure stops being used and starts being gamed.
+export function performanceOf({ open, given, givenDone, ageing, oldestHours, capacity, dated }) {
+  const reasons = [];
+  let score = 100;
+
+  function take(points, what) {
+    if (points <= 0) return;
+    score -= points;
+    reasons.push({ points, what });
+  }
+
+  // Work going stale is the main thing, and it is counted twice on purpose: once for how
+  // many items have gone stale, and once for how badly the worst one has. Five items three
+  // days old and one item three weeks old are different problems.
+  take(Math.min(ageing * 12, 40), ageing === 1 ? '1 item has been open over 3 days' : `${ageing} items have been open over 3 days`);
+
+  const daysOver = Math.max(0, Math.round((oldestHours || 0) / 24) - 3);
+  take(Math.min(daysOver * 2, 20), daysOver > 0 ? `the oldest has been waiting ${daysOver} days longer than it should` : '');
+
+  // Past a full desk, things stop moving whatever anybody intends.
+  take(open > capacity ? 10 : 0, `${open} items open against a full desk of ${capacity}`);
+
+  // Only counted where tasks were actually handed out. A team nobody has given anything to
+  // is not failing to finish it.
+  if (given > 0) {
+    const unfinished = given - givenDone;
+    take(Math.round((unfinished / given) * 20), unfinished > 0 ? `${unfinished} of ${given} given tasks not finished` : '');
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  // How much of this was actually measurable.
+  //
+  // Not every row carries a date. A vendor whose record is slipping has no moment at which
+  // it started slipping, so nothing about it can age - which means a desk holding four of
+  // them and nothing else scores a hundred, and a hundred is a claim this has not earned.
+  // The score stands, because there is no evidence against it, but it says so.
+  const measurable = open === 0 || dated > 0;
+
+  const band =
+    score >= 85
+      ? { label: 'Good', tone: 'pos' }
+      : score >= 70
+        ? { label: 'Steady', tone: 'pos' }
+        : score >= 50
+          ? { label: 'Slipping', tone: 'warn' }
+          : { label: 'Behind', tone: 'neg' };
+
+  return {
+    score,
+    ...band,
+    measurable,
+    reasons: reasons.filter((r) => r.what)
+  };
+}
+
 // A comfortable number of open items for one manager to be carrying.
 //
 // A judgement, not a measurement, and it is the only number on this screen that is. It has
@@ -281,6 +348,16 @@ export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
       const given = mine.filter((t) => t.assigned);
       const givenDone = given.filter((t) => t.done).length;
 
+      const performance = performanceOf({
+        open: open.length,
+        given: given.length,
+        givenDone,
+        ageing,
+        oldestHours: oldest,
+        capacity: COMFORTABLE,
+        dated: open.filter((t) => t.hours).length
+      });
+
       const kpis = [
         {
           key: 'ageing',
@@ -330,6 +407,7 @@ export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
         people: team.people,
         reminderReaches: team.reminderReaches,
         kpis,
+        performance,
         purchaseGroup: team.purchaseGroup,
         purchaseGroupName: team.purchaseGroupName,
         members,
