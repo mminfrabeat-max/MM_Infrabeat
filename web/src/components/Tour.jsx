@@ -12,7 +12,7 @@
 //
 // It appears by itself once, and never again unless the question mark is pressed.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from './ui.jsx';
 
 const SEEN = 'infrabeat.tour.seen';
@@ -130,11 +130,20 @@ export default function Tour({ open, onClose, onGoTo }) {
 
   // Each step drives the dashboard to the screen it describes, so what is being read about
   // is what is on the screen behind it.
+  //
+  // The navigator is held in a ref rather than listed as a dependency, and that is not
+  // tidiness. It arrives as a fresh function on every render of the parent, so depending on
+  // it ran this effect on every render - which navigated, which rendered, which navigated.
+  // The tab was pinned to whatever step the tour was on and no other tab could be reached
+  // while it was open. Only the step number and whether it is open should move it.
+  const goTo = useRef(onGoTo);
+  goTo.current = onGoTo;
+
   useEffect(() => {
     if (!open) return;
     const step = STEPS[at];
-    if (step?.tab) onGoTo(step.tab);
-  }, [at, open, onGoTo]);
+    if (step?.tab) goTo.current(step.tab);
+  }, [at, open]);
 
   // Arrow keys and Escape, because a walkthrough somebody is clicking through ten times is
   // a walkthrough they will want to get out of quickly.

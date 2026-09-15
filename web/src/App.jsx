@@ -146,12 +146,14 @@ export default function App() {
     }
   }
 
-  function navigate(nextTab) {
+  // Stable across renders. Half a dozen screens take this as a prop and one effect used to
+  // depend on it; a function rebuilt every render makes all of those re-run for no reason.
+  const navigate = useCallback((nextTab) => {
     setTab(nextTab);
     setOpenDocumentId(null);
     setDecideError(null);
     window.scrollTo(0, 0);
-  }
+  }, []);
 
   function openDocument(id) {
     // Orders and requisitions are on separate tabs now, so opening one has to land on the
