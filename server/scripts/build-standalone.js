@@ -429,6 +429,13 @@ const BANNER = `
   }
   .snapshot-note b { font-weight: 700; }
   body { padding-bottom: 34px; }
+  /* The strip sits along the bottom, which is where the walkthrough button and the
+     assistant also live. They move up by exactly the height of the strip rather than
+     being half hidden behind it - and only in this copy, since the live dashboard has no
+     strip to avoid. */
+  .tourbtn { bottom: 52px; }
+  .tour { bottom: 52px; }
+  .asst { bottom: 48px; }
 </style>
 <div class="snapshot-note">
   <b>Offline copy.</b> Everything works and nothing is kept &mdash; approvals are not saved

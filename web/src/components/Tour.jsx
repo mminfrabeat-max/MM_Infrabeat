@@ -117,8 +117,7 @@ export function TourButton({ onClick, hidden }) {
   if (hidden) return null;
   return (
     <button className="tourbtn" type="button" onClick={onClick} aria-label="Show me around">
-      <Icon name="spark" size={18} />
-      <span>?</span>
+      ?
     </button>
   );
 }
