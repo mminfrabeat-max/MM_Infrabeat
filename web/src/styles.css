@@ -760,6 +760,45 @@ th.rt, td.rt { text-align: right; }
   background: var(--surface); border-radius: var(--r-lg); z-index: 50;
   display: flex; flex-direction: column; box-shadow: var(--sh-3); overflow: hidden;
 }
+/* ============ the walkthrough ============ */
+
+/* Bottom right, over everything, and out of the way of the content. It hides while the
+   assistant is open, because that panel lives in the same corner and two round things
+   stacked on each other is how a screen starts to look untrustworthy. */
+.tourbtn {
+  position: fixed; right: 18px; bottom: 18px; z-index: 44;
+  width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--hero-2), var(--violet)); color: #fff;
+  box-shadow: var(--sh-3); display: grid; place-items: center;
+  transition: transform .16s ease;
+}
+.tourbtn span { position: absolute; font-size: 10px; font-weight: 800; bottom: 7px; right: 9px; }
+.tourbtn:hover { transform: translateY(-2px) scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .tourbtn { transition: none; } }
+
+.tour {
+  position: fixed; right: 18px; bottom: 18px; z-index: 56; width: min(380px, calc(100% - 36px));
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  box-shadow: var(--sh-3); padding: 15px 17px 13px;
+  animation: tourin .2s cubic-bezier(.4, 0, .2, 1);
+}
+@keyframes tourin { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tour { animation: none; } }
+.tourhd { display: flex; align-items: center; margin-bottom: 7px; }
+.tourn { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--primary); }
+.tourx { margin-left: auto; border: none; background: none; font-size: 19px; line-height: 1; color: var(--ink-3); cursor: pointer; padding: 0 2px; }
+.tourx:hover { color: var(--ink); }
+.tour h3 { margin: 0 0 6px; font-size: 15px; font-weight: 650; letter-spacing: -.1px; }
+.tour p { margin: 0; font-size: 13px; line-height: 1.58; color: var(--ink-2); }
+.tourdots { display: flex; gap: 5px; margin: 13px 0 11px; }
+.tourdot {
+  width: 7px; height: 7px; border-radius: 50%; border: none; padding: 0; cursor: pointer;
+  background: var(--border-2);
+}
+.tourdot.past { background: var(--primary-soft); }
+.tourdot.on { background: var(--primary); width: 20px; border-radius: 999px; }
+.tourft { display: flex; align-items: center; gap: 7px; }
+
 /* ============ the assistant panel ============ */
 
 /* The panel floats over the page, and the page does not move.

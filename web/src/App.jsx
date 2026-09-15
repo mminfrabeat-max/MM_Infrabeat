@@ -31,6 +31,7 @@ import Vendors from './screens/Vendors.jsx';
 import Teams from './screens/Teams.jsx';
 import Problems from './screens/Problems.jsx';
 import Assistant from './components/Assistant.jsx';
+import Tour, { TourButton, shouldOfferTour } from './components/Tour.jsx';
 
 // Minutes credited per action. These are assumptions about effort avoided, not measured
 // savings, which is why the log shows them per action rather than as one headline number.
@@ -67,6 +68,10 @@ export default function App() {
   // and offline. Asked once at startup rather than per question, so the panel opens
   // already knowing which it is rather than flickering between them.
   const [assistantOn, setAssistantOn] = useState(false);
+
+  // The walkthrough. Offered by itself the first time somebody opens this in a browser,
+  // and available from the question mark for ever afterwards.
+  const [showTour, setShowTour] = useState(false);
   const [chat, setChat] = useState([]);
   const [askText, setAskText] = useState('');
   // What Ask was last talking about, so "approve it" and "which vendor?" mean something.
@@ -451,6 +456,12 @@ ${USER_PROFILE.role}, ${COMPANY}`
   // session was still being checked came back 401, got swallowed by the catch below, and
   // never ran again - leaving the old panel in place for the whole session however many
   // times the page was refreshed. Waiting for the session is the whole fix.
+  // Offered once the dashboard is actually on screen, not while it is still loading - a
+  // tour of a spinner explains nothing.
+  useEffect(() => {
+    if (data && shouldOfferTour()) setShowTour(true);
+  }, [data]);
+
   useEffect(() => {
     if (!session || session === 'checking') return undefined;
 
@@ -915,6 +926,9 @@ ${USER_PROFILE.role}, ${COMPANY}`
           </div>
         </Modal>
       )}
+
+      <TourButton onClick={() => setShowTour(true)} hidden={showAsk || showTour} />
+      <Tour open={showTour} onClose={() => setShowTour(false)} onGoTo={navigate} />
 
       <Assistant
         open={showAsk && assistantOn}
