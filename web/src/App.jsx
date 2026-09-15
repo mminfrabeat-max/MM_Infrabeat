@@ -684,6 +684,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
             data={data}
             plant={plant}
             onWriteMail={writeMail}
+            onOpenDocument={openDocument}
             onTeams={(t, mode) => {
               // The backend turns the name into a Teams deep link and redirects. Opening it
               // in a new tab keeps the dashboard where it was, and means the address never

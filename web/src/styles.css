@@ -639,6 +639,41 @@ th.rt, td.rt { text-align: right; }
 
 .tmet .v { font-size: 15px; font-weight: 700; }
 .tmet .l { font-size: 11.8px; color: var(--ink-3); margin-top: 1px; }
+
+/* ============ who owes what ============ */
+.mgr { border-bottom: 1px solid var(--border); }
+.mgr:last-child { border-bottom: none; }
+.mgrhd { display: flex; align-items: flex-start; gap: 13px; padding: 15px 17px 12px; flex-wrap: wrap; }
+
+/* How much is on somebody, drawn against the busiest of the four. */
+.bandw { margin-top: 9px; max-width: 420px; }
+.bandbar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.bandbar .fill { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.bandbar .fill.pos { background: var(--pos); }
+.bandbar .fill.warn { background: var(--warn); }
+.bandbar .fill.neg { background: var(--neg); }
+.bandl { font-size: 11.8px; color: var(--ink-3); margin-top: 5px; }
+.bandl b { color: var(--ink); font-weight: 700; }
+
+.mgrtasks { padding: 0 17px 14px 66px; display: flex; flex-direction: column; gap: 5px; }
+.mgrtask {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface); font: inherit; color: var(--ink);
+}
+.mgrtask.opens { cursor: pointer; }
+.mgrtask.opens:hover { border-color: var(--primary); background: var(--primary-soft); }
+.mgrtask .t1 { font-weight: 650; font-size: 12.8px; flex: none; min-width: 112px; }
+.mgrtask .t2 { font-size: 12.4px; color: var(--ink-2); flex: 1; min-width: 0; }
+.mgrtask .rt { display: flex; align-items: center; gap: 9px; flex: none; }
+.mgrtask .t3 { font-size: 11.4px; color: var(--ink-3); white-space: nowrap; }
+.mgrmore {
+  align-self: flex-start; background: none; border: none; font: inherit; font-size: 12px;
+  color: var(--primary); font-weight: 600; padding: 6px 2px; cursor: pointer;
+}
+.mgrmore:hover { text-decoration: underline; }
+.mgrempty { padding: 0 17px 14px 66px; font-size: 12.4px; }
+@media (max-width: 720px) { .mgrtasks, .mgrempty { padding-left: 17px; } }
 .tacts { margin-left: auto; display: flex; gap: 8px; flex: none; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ============ profile ============ */
