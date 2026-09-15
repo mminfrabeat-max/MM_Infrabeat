@@ -637,7 +637,6 @@ th.rt, td.rt { text-align: right; }
 .statmoney .l { font-size: 11.6px; color: var(--ink-3); }
 .statmoney .v { font-size: 19px; font-weight: 700; letter-spacing: -.6px; margin-top: 1px; }
 
-.tmets { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 12px; }
 .tmet .v { font-size: 15px; font-weight: 700; }
 .tmet .l { font-size: 11.8px; color: var(--ink-3); margin-top: 1px; }
 .tacts { margin-left: auto; display: flex; gap: 8px; flex: none; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }

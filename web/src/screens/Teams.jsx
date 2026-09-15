@@ -10,7 +10,7 @@ import { byPlant, teamsNeedingNudge } from '../selectors.js';
 import { Card, Banner, Tile, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
 import { SparkArea, toneColour } from '../components/charts.jsx';
 
-export default function Teams({ data, plant, onWriteMail, onTeams, onAddTask }) {
+export default function Teams({ data, plant, onWriteMail, onTeams }) {
   const teams = byPlant(data.teams, plant);
   const nudge = teamsNeedingNudge(data.teams, plant);
   const sum = (field) => teams.reduce((total, t) => total + t[field], 0);
@@ -105,13 +105,6 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onAddTask }) 
                   <div className="tline"><b>Doing now:</b> {t.now}</div>
                   <div className="tline fu"><b>Follow up:</b> {t.follow}</div>
 
-                  <div className="tmets">
-                    <div className="tmet"><div className="v n">{t.tasks}</div><div className="l">tasks with them</div></div>
-                    <div className="tmet"><div className="v n">{t.done}</div><div className="l">completed</div></div>
-                    <div className="tmet"><div className="v n">{t.mailsWaiting}</div><div className="l">mails awaiting reply</div></div>
-                    <div className="tmet"><div className="v">{t.replyTime}</div><div className="l">usual reply time</div></div>
-                    <div className="tmet"><div className="v">{t.lastSeen}</div><div className="l">last update</div></div>
-                  </div>
                 </div>
 
                 <div className="tacts">
@@ -150,9 +143,6 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onAddTask }) 
                     onClick={() => onTeams(t, 'call')}
                   >
                     <Icon name="phone" size={13} /> Teams call
-                  </button>
-                  <button className="btn q" type="button" onClick={() => onAddTask(t)}>
-                    <Icon name="doc" size={13} /> Add task
                   </button>
                 </div>
               </div>

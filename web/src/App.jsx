@@ -700,10 +700,6 @@ ${USER_PROFILE.role}, ${COMPANY}`
                 `Opening Teams to ${mode === 'call' ? 'call' : 'message'} ${t.lead}. Their usual reply time by mail is ${t.replyTime}.`
               );
             }}
-            onAddTask={(t) => {
-              credit(`Added a task for ${t.name}`, 4);
-              toast('pos', 'check', `Task added for ${t.name}. ${t.follow}`);
-            }}
           />
         )}
         {tab === 'situations' && (
