@@ -116,8 +116,11 @@ export const STEPS = [
 export function TourButton({ onClick, hidden }) {
   if (hidden) return null;
   return (
+    // A compass rather than a question mark. A question mark offers to answer a question
+    // you have already got; this offers to show you round, which is the thing on the other
+    // side of it. Swap the line below back to a plain ? if the mark reads better.
     <button className="tourbtn" type="button" onClick={onClick} aria-label="Show me around">
-      ?
+      <Icon name="compass" size={27} />
     </button>
   );
 }

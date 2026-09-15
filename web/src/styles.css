@@ -774,7 +774,7 @@ th.rt, td.rt { text-align: right; }
 }
 /* The mark itself is the button. Nudged up by a hair because a question mark sits low in
    its own line box and centres optically about a pixel above where the maths puts it. */
-.tourbtn { font-size: 25px; font-weight: 800; line-height: 1; padding-bottom: 3px; font-family: inherit; }
+.tourbtn { font-size: 25px; font-weight: 800; line-height: 1; font-family: inherit; }
 .tourbtn:hover { transform: translateY(-2px) scale(1.04); }
 @media (prefers-reduced-motion: reduce) { .tourbtn { transition: none; } }
 

@@ -16,6 +16,10 @@ const PATHS = {
   // A robot's face. The eyes and mouth are holes, not shapes - wound the opposite way
   // round to the head so the fill rule lifts them back out. Drawn as circles on top they
   // would simply have filled, and the face would have come out blank.
+  // A compass. The ring is a ring because the inner circle is wound the other way, and the
+  // needle is one stroke across the middle rather than two triangles, which at sixteen
+  // pixels is the difference between a compass and a smudge.
+  compass: 'M12 2.4a9.6 9.6 0 1 1 0 19.2a9.6 9.6 0 0 1 0-19.2ZM12 4.6a7.4 7.4 0 0 0 0 14.8a7.4 7.4 0 0 0 0-14.8ZM16.6 7.4 13.5 13.5 7.4 16.6 10.5 10.5Z',
   bot: 'M10.5 2.7a1.5 1.5 0 0 1 3 0a1.5 1.5 0 0 1-3 0ZM11.15 3.9h1.7v2.9h-1.7ZM8.6 6.4h6.8a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4H8.6a4 4 0 0 1-4-4v-5a4 4 0 0 1 4-4ZM8.25 12.3a1.45 1.45 0 0 0 2.9 0a1.45 1.45 0 0 0-2.9 0ZM12.85 12.3a1.45 1.45 0 0 0 2.9 0a1.45 1.45 0 0 0-2.9 0ZM9.4 15.4v1.5h5.2v-1.5Z',
   check: 'M9.6 16.4 5.2 12l-1.4 1.4 5.8 5.8L20.2 8.6 18.8 7.2 9.6 16.4Z',
   clock: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6V6h-2v7.4l5 3 1-1.7-4-2.1Z',
