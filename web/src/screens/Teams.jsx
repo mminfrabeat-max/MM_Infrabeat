@@ -82,7 +82,6 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
               <Manager
                 key={m.id}
                 manager={m}
-                busiest={managers[0].open || 1}
                 expanded={expanded === m.id}
                 onToggle={() => setExpanded(expanded === m.id ? null : m.id)}
                 onOpenDocument={onOpenDocument}
@@ -104,7 +103,7 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
 // what you ring them about.
 const SHOWN = 4;
 
-function Manager({ manager, busiest, expanded, onToggle, onOpenDocument, onWriteMail, onTeams }) {
+function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onTeams }) {
   const shown = expanded ? manager.tasks : manager.tasks.slice(0, SHOWN);
   const more = manager.tasks.length - shown.length;
 
@@ -114,10 +113,7 @@ function Manager({ manager, busiest, expanded, onToggle, onOpenDocument, onWrite
         <span className={`tav${manager.load.tone === 'neg' ? ' nudge' : ''}`}>{initialsOf(manager.name)}</span>
 
         <div style={{ flex: 1, minWidth: 220 }}>
-          <div className="tname">
-            {manager.name}
-            <Chip tone={manager.load.tone}>{manager.load.label}</Chip>
-          </div>
+          <div className="tname">{manager.name}</div>
           <div className="tsub">
             {manager.team}, {manager.plant}
             {manager.people ? `, ${plural(manager.people, 'person', 'people')}` : ''}
@@ -128,22 +124,32 @@ function Manager({ manager, busiest, expanded, onToggle, onOpenDocument, onWrite
             )}
           </div>
 
-          {/* How much is on them, drawn against the busiest of the four so the bars can be
-              compared, and said in words so the busiest of four idle people does not read
-              as somebody drowning. */}
+          {/* How much room is left, against a full load rather than against each other.
+              Drawn and said, because the number a manager acts on is not how busy somebody
+              is but whether anything more can go to them today. */}
           <div className="bandw">
+            <div className="bandtop">
+              <span className="bandk">Bandwidth</span>
+              <span className={`bandv ${manager.load.tone}`}>{manager.load.label}</span>
+              <span className="bandf">
+                {manager.open} of {manager.load.capacity}
+                {manager.load.free > 0 ? ` · room for ${manager.load.free} more` : ' · nothing more today'}
+              </span>
+            </div>
             <div className="bandbar">
-              <span
-                className={`fill ${manager.load.tone}`}
-                style={{ width: `${Math.round((manager.open / busiest) * 100)}%` }}
-              />
+              <span className={`fill ${manager.load.tone}`} style={{ width: `${manager.load.percent}%` }} />
             </div>
-            <div className="bandl">
-              <b>{manager.open}</b> open
-              {manager.done > 0 && <> &middot; {manager.done} finished</>}
-              {manager.signed > 0 && <> &middot; {plural(manager.signed, 'decision')} signed</>}
-              {manager.oldest && <> &middot; oldest {manager.oldest}</>}
-            </div>
+            {(manager.done > 0 || manager.signed > 0 || manager.oldest) && (
+              <div className="bandl">
+                {[
+                  manager.done > 0 ? `${manager.done} finished` : null,
+                  manager.signed > 0 ? plural(manager.signed, 'decision') + ' signed' : null,
+                  manager.oldest ? `oldest ${manager.oldest}` : null
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            )}
           </div>
         </div>
 

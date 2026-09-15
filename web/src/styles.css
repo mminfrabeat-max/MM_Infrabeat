@@ -646,7 +646,12 @@ th.rt, td.rt { text-align: right; }
 .mgrhd { display: flex; align-items: flex-start; gap: 13px; padding: 15px 17px 12px; flex-wrap: wrap; }
 
 /* How much is on somebody, drawn against the busiest of the four. */
-.bandw { margin-top: 9px; max-width: 420px; }
+.bandw { margin-top: 10px; max-width: 460px; }
+.bandtop { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+.bandk { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.bandv { font-size: 12.4px; font-weight: 700; }
+.bandv.pos { color: var(--pos); } .bandv.warn { color: var(--warn); } .bandv.neg { color: var(--neg); }
+.bandf { font-size: 11.8px; color: var(--ink-3); margin-left: auto; }
 .bandbar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
 .bandbar .fill { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
 .bandbar .fill.pos { background: var(--pos); }

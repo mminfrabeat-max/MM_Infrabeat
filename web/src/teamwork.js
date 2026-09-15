@@ -152,15 +152,34 @@ export function tasksFrom(data, plant = 'all') {
   return tasks;
 }
 
-// How loaded somebody is.
+// A comfortable number of open items for one manager to be carrying.
 //
-// Counted in open tasks, and said in words as well as drawn, because a bar on its own only
-// compares people to each other - it cannot say whether the busiest of four is busy.
+// A judgement, not a measurement, and it is the only number on this screen that is. It has
+// to be something: bandwidth means how much room is left, and room is only meaningful
+// against a full load. Drawing the bar against the busiest of the four instead - which is
+// what it did first - answers a different question and a much less useful one, because four
+// people with nothing to do still produce one full bar.
+//
+// Six because beyond that a person is deciding what NOT to look at today. Change it here.
+export const COMFORTABLE = 6;
+
+// How much room somebody has left.
 function loadOf(open) {
-  if (open === 0) return { label: 'Clear', tone: 'pos' };
-  if (open <= 2) return { label: 'Light', tone: 'pos' };
-  if (open <= 5) return { label: 'Steady', tone: 'warn' };
-  return { label: 'Heavy', tone: 'neg' };
+  const free = Math.max(0, COMFORTABLE - open);
+  const percent = Math.min(100, Math.round((open / COMFORTABLE) * 100));
+
+  const band =
+    open === 0
+      ? { label: 'Free', tone: 'pos' }
+      : open <= 2
+        ? { label: 'Room to spare', tone: 'pos' }
+        : open <= 5
+          ? { label: 'Steady', tone: 'warn' }
+          : open <= COMFORTABLE
+            ? { label: 'Full', tone: 'neg' }
+            : { label: 'Over capacity', tone: 'neg' };
+
+  return { ...band, free, percent, capacity: COMFORTABLE };
 }
 
 /**
