@@ -1,0 +1,76 @@
+{
+  "note": "Purchase groups and the people in each team. Kept apart from teams.json because that one is mirrored into the workbook a row at a time, and a spreadsheet row cannot hold a list of people. Demonstration data: the names are invented, the purchase group codes follow SAP's three-character convention.",
+  "teams": [
+    {
+      "teamId": "T1",
+      "purchaseGroup": "P01",
+      "purchaseGroupName": "Direct materials, Pune",
+      "members": [
+        { "id": "T1-1", "name": "Nikhil Shirke", "role": "Senior buyer" },
+        { "id": "T1-2", "name": "Deepa Ghorpade", "role": "Buyer" },
+        { "id": "T1-3", "name": "Manish Rao", "role": "Buyer" }
+      ]
+    },
+    {
+      "teamId": "T2",
+      "purchaseGroup": "P02",
+      "purchaseGroupName": "Raw materials",
+      "members": [
+        { "id": "T2-1", "name": "Rohit Iyer", "role": "Senior buyer" },
+        { "id": "T2-2", "name": "Sneha Kulkarni", "role": "Buyer" },
+        { "id": "T2-3", "name": "Amit Pawar", "role": "Buyer" },
+        { "id": "T2-4", "name": "Farhan Qureshi", "role": "Sourcing analyst" }
+      ]
+    },
+    {
+      "teamId": "T3",
+      "purchaseGroup": "P03",
+      "purchaseGroupName": "Spares and refractories",
+      "members": [
+        { "id": "T3-1", "name": "Vikram Salunkhe", "role": "Senior buyer" },
+        { "id": "T3-2", "name": "Anjali Deodhar", "role": "Buyer" },
+        { "id": "T3-3", "name": "Imran Shaikh", "role": "Buyer" }
+      ]
+    },
+    {
+      "teamId": "T4",
+      "purchaseGroup": "P04",
+      "purchaseGroupName": "Logistics and freight",
+      "members": [
+        { "id": "T4-1", "name": "Sameer Bhatia", "role": "Freight coordinator" },
+        { "id": "T4-2", "name": "Pooja Nandgaonkar", "role": "Import desk" },
+        { "id": "T4-3", "name": "Ravi Menon", "role": "Coordinator" }
+      ]
+    },
+    {
+      "teamId": "T5",
+      "purchaseGroup": "P05",
+      "purchaseGroupName": "Packing materials",
+      "members": [
+        { "id": "T5-1", "name": "Kavita Sane", "role": "Buyer" },
+        { "id": "T5-2", "name": "Girish Tambe", "role": "Buyer" }
+      ]
+    },
+    {
+      "teamId": "T6",
+      "purchaseGroup": "P06",
+      "purchaseGroupName": "Stores and receiving",
+      "members": [
+        { "id": "T6-1", "name": "Balu Jadhav", "role": "Stores in-charge" },
+        { "id": "T6-2", "name": "Shabana Ansari", "role": "Goods receipt clerk" },
+        { "id": "T6-3", "name": "Prakash Warang", "role": "Inspection" },
+        { "id": "T6-4", "name": "Dinesh Kamble", "role": "Stores assistant" }
+      ]
+    },
+    {
+      "teamId": "T7",
+      "purchaseGroup": "P07",
+      "purchaseGroupName": "Contracts and vendor master",
+      "members": [
+        { "id": "T7-1", "name": "Priya Kamat", "role": "Vendor master" },
+        { "id": "T7-2", "name": "Arun Nadkarni", "role": "Contracts" },
+        { "id": "T7-3", "name": "Meghna Rane", "role": "Compliance" }
+      ]
+    }
+  ]
+}

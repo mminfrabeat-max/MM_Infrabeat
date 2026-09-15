@@ -16,6 +16,7 @@ import { authRouter } from './routes/auth.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { actionsRouter } from './routes/actions.js';
 import { assistantRouter } from './routes/assistant.js';
+import { teamTasksRouter } from './routes/team-tasks.js';
 
 // Refuse to start rather than serve procurement data to anyone who finds the port.
 if (!authConfigured) {
@@ -52,6 +53,7 @@ app.use('/api', requireSignIn);
 app.use('/api', dashboardRouter);
 app.use('/api', actionsRouter);
 app.use('/api', assistantRouter);
+app.use('/api', teamTasksRouter);
 
 // Any unknown /api/... URL returns JSON, not an HTML error page. Without this, fetch() in
 // the browser would try to parse HTML as JSON and give you a confusing error.

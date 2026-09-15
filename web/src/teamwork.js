@@ -33,7 +33,11 @@ export const KPIS = [
   { key: 'po', label: 'Purchase order creation' },
   { key: 'tracking', label: 'Order tracking & expediting' },
   { key: 'receipt', label: 'Goods receipt & inspection' },
-  { key: 'vendor', label: 'Vendor management' }
+  { key: 'vendor', label: 'Vendor management' },
+  // Given out by hand, and not about any one document: ring a vendor, chase a quotation,
+  // collect a form. It has no rule that could derive it, which is the whole reason a person
+  // has to be able to type it in.
+  { key: 'other', label: 'Given out by hand' }
 ];
 
 // Who owns each kind of work when no document names a person.
@@ -73,7 +77,7 @@ function hoursSince(text) {
 /**
  * Every outstanding piece of work, with the person it sits with.
  */
-export function tasksFrom(data, plant = 'all') {
+export function tasksFrom(data, plant = 'all', assigned = []) {
   const documents = (data.documents || []).filter((d) => atPlant(d, plant));
   const tasks = [];
 
@@ -149,7 +153,43 @@ export function tasksFrom(data, plant = 'all') {
     });
   }
 
+  // 6. And the ones somebody typed in and gave to a person.
+  //
+  // These are the only tasks here that can be finished by pressing something, because they
+  // are the only ones with nowhere else to be finished. A requisition leaves this board when
+  // it is approved on its own screen; "ring the vendor" leaves it when somebody says so.
+  for (const task of assigned) {
+    if (plant !== 'all' && task.plant && task.plant !== plant) continue;
+
+    tasks.push({
+      id: task.id,
+      kpi: task.kpi || 'other',
+      title: task.title,
+      what: [task.detail, task.due ? `due ${task.due}` : null].filter(Boolean).join(' · '),
+      status: statusLabel(task.status),
+      tone: task.status === 'done' ? 'pos' : task.status === 'blocked' ? 'neg' : task.status === 'in progress' ? 'pri' : 'warn',
+      hours: hoursSince(task.createdAt),
+      with: task.assignedTo,
+      teamId: task.teamId,
+      member: task.assignedTo,
+      assigned: true,
+      rawStatus: task.status,
+      done: task.status === 'done'
+    });
+  }
+
   return tasks;
+}
+
+function statusLabel(status) {
+  return { open: 'To do', 'in progress': 'In progress', blocked: 'Blocked', done: 'Done' }[status] || 'To do';
+}
+
+/**
+ * How much is open on the board, for the number beside the tab name.
+ */
+export function openTaskCount(data, plant = 'all', assigned = []) {
+  return tasksFrom(data, plant, assigned).filter((t) => !t.done && t.with !== 'you').length;
 }
 
 // A comfortable number of open items for one manager to be carrying.
@@ -189,8 +229,8 @@ function loadOf(open) {
  * they already have two screens of their own - this one is about the people you would have
  * to ring.
  */
-export function managersFrom(data, plant = 'all', kpi = 'all') {
-  const everything = tasksFrom(data, plant);
+export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
+  const everything = tasksFrom(data, plant, assigned);
   const tasks = kpi === 'all' ? everything : everything.filter((t) => t.kpi === kpi);
   const teams = data.teams || [];
 
@@ -211,9 +251,13 @@ export function managersFrom(data, plant = 'all', kpi = 'all') {
       const team = teams.find((t) => t.name === teamName);
       if (!team) return null;
 
-      const mine = tasks.filter(
-        (t) => t.with === teamName || (t.with && t.with !== 'you' && surname(t.with) === surname(team.lead))
-      );
+      const mine = tasks.filter((t) => {
+        // Given out inside this team, whoever it was given to.
+        if (t.assigned) return t.teamId === team.id;
+        // Otherwise it is the manager's, either because the work belongs to their desk or
+        // because a document names them.
+        return t.with === teamName || (t.with && t.with !== 'you' && surname(t.with) === surname(team.lead));
+      });
 
       const open = mine.filter((t) => !t.done);
       const done = mine.filter((t) => t.done);
@@ -225,6 +269,23 @@ export function managersFrom(data, plant = 'all', kpi = 'all') {
 
       const oldest = open.reduce((worst, t) => Math.max(worst, t.hours || 0), 0);
 
+      // The people under this manager, each with what has been given to them.
+      //
+      // Only hand-assigned work is counted. A requisition waiting for the manager's own
+      // signature is not on a buyer's desk, and putting it there would make somebody look
+      // busy with something they cannot act on.
+      const members = (team.members || []).map((person) => {
+        const theirs = tasks.filter((t) => t.assigned && t.member === person.name);
+        const theirOpen = theirs.filter((t) => !t.done);
+        return {
+          ...person,
+          tasks: theirOpen,
+          open: theirOpen.length,
+          done: theirs.length - theirOpen.length,
+          load: loadOf(theirOpen.length)
+        };
+      });
+
       return {
         id: team.id,
         name: team.lead,
@@ -232,6 +293,9 @@ export function managersFrom(data, plant = 'all', kpi = 'all') {
         plant: team.plant,
         people: team.people,
         reminderReaches: team.reminderReaches,
+        purchaseGroup: team.purchaseGroup,
+        purchaseGroupName: team.purchaseGroupName,
+        members,
         tasks: open.sort((a, b) => (b.hours || 0) - (a.hours || 0)),
         finished: done,
         open: open.length,
@@ -255,8 +319,8 @@ export function managersFrom(data, plant = 'all', kpi = 'all') {
 //
 // Counting only what the board will show. Your own items are not on it, so counting them
 // here would promise seven requisitions under a heading and then show three.
-export function countsByKpi(data, plant = 'all') {
-  const tasks = tasksFrom(data, plant).filter((t) => t.with !== 'you');
+export function countsByKpi(data, plant = 'all', assigned = []) {
+  const tasks = tasksFrom(data, plant, assigned).filter((t) => t.with !== 'you');
   const counts = { all: tasks.length };
   for (const t of tasks) counts[t.kpi] = (counts[t.kpi] || 0) + 1;
   return counts;

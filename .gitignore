@@ -48,3 +48,7 @@ mailbox_persona_mapping.xlsx
 # Documents the user has flagged for their own follow-up. Their notes, not the company's
 # data, and written at runtime - so it is left out the same way .env is.
 server/data/review-flags.json
+
+# Tasks somebody assigned by hand on the team board. Their own working notes, written at
+# runtime, not a mirror of anything in SAP.
+server/data/team-tasks.json

@@ -116,5 +116,20 @@ export const api = {
   // Says yes or no to whatever the server is already holding. The browser cannot name
   // the action or its arguments, which is the point.
   assistantConfirm: (approved) => post('/api/assistant/confirm', { approved }),
-  assistantReset: () => post('/api/assistant/reset', {})
+  assistantReset: () => post('/api/assistant/reset', {}),
+
+  // --- Tasks given to people -----------------------------------------------
+  //
+  // The only work on the team board that is stored. Everything else there is read off the
+  // documents and needs no saving, because the document is the record.
+  teamTasks: () => request('/api/team-tasks'),
+  addTeamTask: (task) => post('/api/team-tasks', task),
+  updateTeamTask: (id, changes) =>
+    request(`/api/team-tasks/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(changes)
+    }),
+  removeTeamTask: (id) =>
+    request(`/api/team-tasks/${encodeURIComponent(id)}`, { method: 'DELETE' })
 };

@@ -91,7 +91,7 @@ export const STEPS = [
   },
   {
     tab: 'team',
-    title: 'Who owes what',
+    title: 'Team tasks',
     text:
       'Four managers and the work sitting with each of them, taken from the documents rather ' +
       'than a task list. The bandwidth bar says whether anything more can go to them today.'

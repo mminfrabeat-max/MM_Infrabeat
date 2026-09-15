@@ -19,13 +19,26 @@ import { plural } from '../format.js';
 import { APPROVER_NAME, COMPANY, USER_PROFILE } from '../brand.js';
 import { KPIS, managersFrom, countsByKpi } from '../teamwork.js';
 import { Card, Banner, Chip, Icon, SimulatedNote } from '../components/ui.jsx';
+import { Modal } from '../components/shell-bits.jsx';
 
-export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocument }) {
+export default function Teams({
+  data,
+  plant,
+  onWriteMail,
+  onTeams,
+  onOpenDocument,
+  assigned = [],
+  onAssign,
+  onSetStatus,
+  onDropTask,
+  busy
+}) {
   const [kpi, setKpi] = useState('all');
   const [expanded, setExpanded] = useState(null);
+  const [giving, setGiving] = useState(null);
 
-  const counts = countsByKpi(data, plant);
-  const managers = managersFrom(data, plant, kpi);
+  const counts = countsByKpi(data, plant, assigned);
+  const managers = managersFrom(data, plant, kpi, assigned);
   const chosen = KPIS.find((k) => k.key === kpi) || KPIS[0];
 
   const open = managers.reduce((total, m) => total + m.open, 0);
@@ -34,15 +47,16 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
   return (
     <>
       <Banner icon="people">
-        Every row here comes from a document, not from a task list somebody keeps. A
+        Two kinds of work, on one board. Most of it is read off the documents &mdash; a
         requisition waiting for a signature, one released with no order raised, a load on the
-        road, a vendor whose record is slipping &mdash; each sits with whoever owes the next
-        move. Approve it or raise it and the row leaves by itself.
+        road, a vendor whose record is slipping &mdash; and each leaves by itself once it is
+        approved or raised. The rest is what you hand out here: anything with no document
+        behind it, given to a named person and finished when they say so.
       </Banner>
 
       <SimulatedNote>
-        Team names, plants and head counts are demonstration data. The work on each card is
-        real, and comes from the same documents the other screens show.
+        Team names, the people in them and the purchase group codes are demonstration data.
+        The work read off documents is real, and tasks you give out are saved for real.
       </SimulatedNote>
 
       <div className="grid">
@@ -70,6 +84,12 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
               ))}
             </select>
           }
+          action={
+            <button className="btn sm emph" type="button" onClick={() => setGiving({ team: managers[0] })}>
+              <Icon name="doc" size={12} />
+              Give out a task
+            </button>
+          }
           flush
         >
           {managers.length === 0 || open + done === 0 ? (
@@ -87,12 +107,160 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
                 onOpenDocument={onOpenDocument}
                 onWriteMail={onWriteMail}
                 onTeams={onTeams}
+                onGive={() => setGiving({ team: m })}
+                onSetStatus={onSetStatus}
+                onDropTask={onDropTask}
+                busy={busy}
               />
             ))
           )}
         </Card>
       </div>
+
+      {giving && (
+        <GiveTask
+          managers={managersFrom(data, plant, 'all', assigned)}
+          start={giving.team}
+          member={giving.member}
+          plant={plant}
+          busy={busy}
+          onClose={() => setGiving(null)}
+          onSave={async (task) => {
+            await onAssign(task);
+            setGiving(null);
+          }}
+        />
+      )}
     </>
+  );
+}
+
+// Giving a piece of work to somebody.
+//
+// Four things and no more: who it is for, what it is, any detail, and when it is wanted.
+// Everything else a task could carry - a priority, an estimate, a category chosen from
+// twelve - is a field somebody has to fill in every time and nobody reads afterwards.
+//
+// The person comes first because it is the decision. The rest is describing what you have
+// already decided to give them.
+function GiveTask({ managers, start, member, plant, busy, onClose, onSave }) {
+  const [teamId, setTeamId] = useState(start?.id || managers[0]?.id || '');
+  const [assignedTo, setAssignedTo] = useState(member || '');
+  const [title, setTitle] = useState('');
+  const [detail, setDetail] = useState('');
+  const [due, setDue] = useState('');
+  const [kpi, setKpi] = useState('other');
+
+  const team = managers.find((m) => m.id === teamId) || managers[0];
+  const people = team ? [{ name: team.name, role: 'Manager' }, ...(team.members || [])] : [];
+
+  // Changing team changes who is on the list, so a name from the old team cannot be left
+  // selected - it would be sent as the assignee and belong to nobody.
+  function chooseTeam(id) {
+    setTeamId(id);
+    setAssignedTo('');
+  }
+
+  const ready = title.trim() && assignedTo;
+
+  return (
+    <Modal
+      icon="doc"
+      title="Give out a task"
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            className="btn emph"
+            type="button"
+            disabled={!ready || busy === 'task'}
+            onClick={() =>
+              onSave({
+                title: title.trim(),
+                detail: detail.trim(),
+                assignedTo,
+                teamId,
+                kpi,
+                plant: plant === 'all' ? '' : plant,
+                due: due.trim()
+              })
+            }
+          >
+            <Icon name="check" size={13} />
+            {busy === 'task' ? 'Saving…' : 'Give it out'}
+          </button>
+          <button className="btn q" type="button" onClick={onClose}>
+            Cancel
+          </button>
+        </>
+      }
+    >
+      <div className="mrow">
+        <div className="mlab">Team</div>
+        <select className="minp" value={teamId} onChange={(e) => chooseTeam(e.target.value)}>
+          {managers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.team}
+              {m.purchaseGroup ? ` — ${m.purchaseGroup}` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mrow">
+        <div className="mlab">To</div>
+        <select className="minp" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
+          <option value="">Choose somebody</option>
+          {people.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.name} — {p.role}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mrow">
+        <div className="mlab">Task</div>
+        <input
+          className="minp"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Ring Bharat Bearings about the mill bearing delivery"
+        />
+      </div>
+
+      <div className="mrow">
+        <div className="mlab">Detail</div>
+        <textarea
+          className="mtxt"
+          style={{ minHeight: 92 }}
+          value={detail}
+          onChange={(e) => setDetail(e.target.value)}
+          placeholder="Anything they need to know to start. Optional."
+        />
+      </div>
+
+      <div className="mrow">
+        <div className="mlab">Kind</div>
+        <select className="minp" value={kpi} onChange={(e) => setKpi(e.target.value)}>
+          {KPIS.filter((k) => k.key !== 'all').map((k) => (
+            <option key={k.key} value={k.key}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mrow" style={{ marginBottom: 0 }}>
+        <div className="mlab">Wanted by</div>
+        <input
+          className="minp"
+          value={due}
+          onChange={(e) => setDue(e.target.value)}
+          placeholder="Friday, or 22 Sep. Optional."
+        />
+      </div>
+    </Modal>
   );
 }
 
@@ -103,7 +271,7 @@ export default function Teams({ data, plant, onWriteMail, onTeams, onOpenDocumen
 // what you ring them about.
 const SHOWN = 4;
 
-function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onTeams }) {
+function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onTeams, onGive, onSetStatus, onDropTask, busy }) {
   const shown = expanded ? manager.tasks : manager.tasks.slice(0, SHOWN);
   const more = manager.tasks.length - shown.length;
 
@@ -117,6 +285,11 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
           <div className="tsub">
             {manager.team}, {manager.plant}
             {manager.people ? `, ${plural(manager.people, 'person', 'people')}` : ''}
+            {manager.purchaseGroup && (
+              <span className="pgrp" title={manager.purchaseGroupName || 'Purchase group'}>
+                {manager.purchaseGroup}
+              </span>
+            )}
             {!manager.reminderReaches && (
               <span className="tmail none" title="Add them to MAIL_DIRECTORY in .env to have reminders delivered.">
                 <Icon name="alert" size={11} /> no mailbox on file
@@ -167,6 +340,9 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
           <button className="btn q" type="button" disabled={!manager.reminderReaches} onClick={() => onTeams(manager, 'call')}>
             <Icon name="phone" size={13} /> Teams call
           </button>
+          <button className="btn q" type="button" onClick={onGive}>
+            <Icon name="doc" size={13} /> Give a task
+          </button>
         </div>
       </div>
 
@@ -175,20 +351,55 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
       ) : (
         <div className="mgrtasks">
           {shown.map((task) => (
-            <button
-              key={task.id}
-              type="button"
-              className={`mgrtask${task.documentId ? ' opens' : ''}`}
-              onClick={() => task.documentId && onOpenDocument(task.documentId)}
-              disabled={!task.documentId}
-            >
-              <span className="t1">{task.title}</span>
-              <span className="t2">{task.what}</span>
+            <div className={`mgrtask${task.assigned ? ' given' : ''}`} key={task.id}>
+              <button
+                type="button"
+                className={`mgrwhat${task.documentId ? ' opens' : ''}`}
+                onClick={() => task.documentId && onOpenDocument(task.documentId)}
+                disabled={!task.documentId}
+              >
+                <span className="t1">{task.title}</span>
+                <span className="t2">
+                  {task.what}
+                  {task.assigned && task.member ? <span className="tgiven">with {task.member}</span> : null}
+                </span>
+              </button>
+
               <span className="rt">
                 <Chip tone={task.tone}>{task.status}</Chip>
                 {task.hours ? <span className="t3">{ageOf(task.hours)}</span> : null}
+
+                {/* Only work given out by hand can be finished here, because it is the only
+                    work with nowhere else to be finished. A requisition leaves this board
+                    when it is approved on its own screen. */}
+                {task.assigned && (
+                  <>
+                    <select
+                      className="sel tiny"
+                      value={task.rawStatus}
+                      disabled={busy === 'task'}
+                      onChange={(e) => onSetStatus(task.id, e.target.value)}
+                      aria-label={`Status of ${task.title}`}
+                    >
+                      <option value="open">To do</option>
+                      <option value="in progress">In progress</option>
+                      <option value="blocked">Blocked</option>
+                      <option value="done">Done</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="attx"
+                      title="Take this task off the board"
+                      aria-label={`Remove ${task.title}`}
+                      disabled={busy === 'task'}
+                      onClick={() => onDropTask(task.id)}
+                    >
+                      &times;
+                    </button>
+                  </>
+                )}
               </span>
-            </button>
+            </div>
           ))}
 
           {(more > 0 || expanded) && (
@@ -198,6 +409,44 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
           )}
         </div>
       )}
+
+      <Members manager={manager} />
+    </div>
+  );
+}
+
+// The people under a manager, and what each is carrying.
+//
+// Only work that was given to them by name. A requisition waiting for the manager's own
+// signature is not on a buyer's desk, and counting it here would show somebody as busy with
+// something they have no way to act on.
+function Members({ manager }) {
+  const members = manager.members || [];
+  if (members.length === 0) return null;
+
+  return (
+    <div className="mbrs">
+      <div className="mbrh">
+        {plural(members.length, 'person', 'people')} under {firstOf(manager.name)}
+      </div>
+      <div className="mbrrow">
+        {members.map((person) => (
+          <div className="mbr" key={person.id || person.name}>
+            <div className="mbrn">{person.name}</div>
+            <div className="mbrr">{person.role}</div>
+            <div className="mbrbar">
+              <span
+                className={`fill ${person.load.tone}`}
+                style={{ width: `${Math.max(person.open ? 8 : 0, person.load.percent)}%` }}
+              />
+            </div>
+            <div className="mbrl">
+              {person.open === 0 ? 'nothing on' : plural(person.open, 'task')}
+              {person.done > 0 ? ` · ${person.done} done` : ''}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

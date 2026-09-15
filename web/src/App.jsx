@@ -32,6 +32,7 @@ import Teams from './screens/Teams.jsx';
 import Problems from './screens/Problems.jsx';
 import Assistant from './components/Assistant.jsx';
 import Tour, { TourButton, shouldOfferTour } from './components/Tour.jsx';
+import { openTaskCount } from './teamwork.js';
 
 // Minutes credited per action. These are assumptions about effort avoided, not measured
 // savings, which is why the log shows them per action rather than as one headline number.
@@ -72,6 +73,10 @@ export default function App() {
   // The walkthrough. Offered by itself the first time somebody opens this in a browser,
   // and available from the question mark for ever afterwards.
   const [showTour, setShowTour] = useState(false);
+
+  // Work somebody gave to a person by hand. The rest of the team board is worked out from
+  // the documents and arrives with them; this is the only part that has to be fetched.
+  const [assigned, setAssigned] = useState([]);
   const [chat, setChat] = useState([]);
   const [askText, setAskText] = useState('');
   // What Ask was last talking about, so "approve it" and "which vendor?" mean something.
@@ -462,6 +467,19 @@ ${USER_PROFILE.role}, ${COMPANY}`
     if (data && shouldOfferTour()) setShowTour(true);
   }, [data]);
 
+  const loadAssigned = useCallback(async () => {
+    try {
+      const result = await api.teamTasks();
+      setAssigned(result.tasks || []);
+    } catch {
+      // An older backend has no such route. The board still shows everything it derives.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session && session !== 'checking') loadAssigned();
+  }, [session, loadAssigned]);
+
   useEffect(() => {
     if (!session || session === 'checking') return undefined;
 
@@ -529,6 +547,49 @@ ${USER_PROFILE.role}, ${COMPANY}`
     setChat((c) => c.map((m, i) => (i === index ? { ...m, cancelled: true } : m)));
   }
 
+  // Giving a task out, moving it on, and taking it off again.
+  //
+  // Each one re-reads the list rather than patching the copy in hand. It is one small
+  // request, and it means two tabs open on the same board cannot drift apart.
+  async function assignTask(task) {
+    setBusy('task');
+    try {
+      await api.addTeamTask(task);
+      await loadAssigned();
+      credit(`Gave ${task.assignedTo} a task`, 3);
+      toast('pos', 'check', `${task.assignedTo} has it: ${task.title}`);
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function setTaskStatus(id, status) {
+    setBusy('task');
+    try {
+      await api.updateTeamTask(id, { status });
+      await loadAssigned();
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function dropTask(id) {
+    setBusy('task');
+    try {
+      await api.removeTeamTask(id);
+      await loadAssigned();
+      toast('pri', 'check', 'Task taken off the board.');
+    } catch (error) {
+      toast('neg', 'alert', error.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function signOut() {
     try {
       await api.logout();
@@ -567,7 +628,7 @@ ${USER_PROFILE.role}, ${COMPANY}`
     { key: 'stock', label: 'Stock risk', icon: 'box', count: shortMaterials(data.materials, plant).length },
     { key: 'open', label: 'Open orders and contracts', icon: 'file', count: contractsToWatch(data.contracts, plant).length },
     { key: 'suppliers', label: 'Vendors', icon: 'truck' },
-    { key: 'team', label: 'Team performance', icon: 'people', count: teamsNeedingNudge(data.teams, plant).length },
+    { key: 'team', label: 'Team tasks', icon: 'people', count: openTaskCount(data, plant, assigned) },
     { key: 'situations', label: 'Problems found', icon: 'alert', count: openSituations(data.situations, plant).length }
   ];
 
@@ -735,6 +796,11 @@ ${USER_PROFILE.role}, ${COMPANY}`
             plant={plant}
             onWriteMail={writeMail}
             onOpenDocument={openDocument}
+            assigned={assigned}
+            onAssign={assignTask}
+            onSetStatus={setTaskStatus}
+            onDropTask={dropTask}
+            busy={busy}
             onTeams={(t, mode) => {
               // The backend turns the name into a Teams deep link and redirects. Opening it
               // in a new tab keeps the dashboard where it was, and means the address never

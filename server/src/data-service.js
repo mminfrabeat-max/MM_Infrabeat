@@ -15,6 +15,10 @@ import { assessAllContracts } from './domain/contracts.js';
 import { enrichAllDocuments } from './domain/documents.js';
 import { recipientFor } from './domain/recipients.js';
 
+import { promises as nodeFs } from 'node:fs';
+import nodePath from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 // Fetches several things at once and fails with a clear message naming what broke.
 // Promise.all runs them in parallel, which matters once these are real network calls.
 async function loadFrom(provider, methods) {
@@ -77,19 +81,43 @@ export async function getTeams() {
   return getTeams;
 }
 
+// The people in each team, and the purchase group they buy under.
+//
+// Read straight off a file rather than through a provider, because it is neither SAP data
+// nor something the workbook can hold: teams.json is mirrored into a spreadsheet one row
+// per team, and a row cannot carry a list of people. Keeping it here means adding somebody
+// to a team is editing one file, and means the workbook stays a mirror of SAP rather than
+// half a mirror and half an address book.
+const rosterFile = nodePath.join(nodePath.dirname(fileURLToPath(import.meta.url)), '../data/team-roster.json');
+let rosterCache = null;
+
+async function getRoster() {
+  if (rosterCache) return rosterCache;
+  try {
+    const parsed = JSON.parse(await nodeFs.readFile(rosterFile, 'utf8'));
+    rosterCache = parsed.teams || [];
+  } catch {
+    // A missing or broken roster leaves every team with no members and no purchase group,
+    // which is exactly how the screens behaved before it existed. Nothing breaks.
+    rosterCache = [];
+  }
+  return rosterCache;
+}
+
 // Everything the dashboard needs, in one call.
 //
 // One request rather than seven, for a real reason: the plant selector re-filters every
 // screen at once, so the browser needs the whole picture in hand. Seven separate calls
 // would also mean seven chances to show half a page.
 export async function getEverything() {
-  const [documents, materials, scoresById, situations, commitments, teams] = await Promise.all([
+  const [documents, materials, scoresById, situations, commitments, teams, roster] = await Promise.all([
     getDocuments(),
     getStock(),
     getSupplierScores(),
     getSituations(),
     getCommitments(),
-    getTeams()
+    getTeams(),
+    getRoster()
   ]);
 
   return {
@@ -100,7 +128,15 @@ export async function getEverything() {
     openOrders: commitments.openOrders,
     openRequests: commitments.openRequests,
     contracts: commitments.contracts,
-    teams: teams.map(withReminderMailbox),
+    teams: teams.map(withReminderMailbox).map((team) => {
+      const extra = roster.find((r) => r.teamId === team.id);
+      return {
+        ...team,
+        purchaseGroup: extra?.purchaseGroup || '',
+        purchaseGroupName: extra?.purchaseGroupName || '',
+        members: extra?.members || []
+      };
+    }),
     worstSupplier: lowestScoring(scoresById)
   };
 }

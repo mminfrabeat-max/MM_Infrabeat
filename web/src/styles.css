@@ -668,7 +668,44 @@ th.rt, td.rt { text-align: right; }
 }
 .mgrtask.opens { cursor: pointer; }
 .mgrtask.opens:hover { border-color: var(--primary); background: var(--primary-soft); }
+.mgrtask.given { border-left: 3px solid var(--primary); }
+.mgrwhat {
+  display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-align: left;
+  background: none; border: none; font: inherit; color: inherit; padding: 0;
+}
+.mgrwhat.opens { cursor: pointer; }
 .mgrtask .t1 { font-weight: 650; font-size: 12.8px; flex: none; min-width: 112px; }
+.tgiven { color: var(--primary); font-weight: 600; margin-left: 8px; }
+.sel.tiny { font-size: 11.4px; padding: 3px 6px; border-radius: 7px; }
+
+/* The purchase group, the way SAP would print it. */
+.pgrp {
+  display: inline-block; margin-left: 8px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .05em; color: var(--ink-3); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;
+}
+
+/* The people under a manager. A row of small cards rather than a list, because what is
+   being compared is how loaded they are, and that comparison is made across, not down. */
+.mbrs { padding: 0 17px 15px 66px; }
+.mbrh {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 7px;
+}
+.mbrrow { display: flex; gap: 9px; flex-wrap: wrap; }
+.mbr {
+  flex: 1 1 165px; min-width: 150px; border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 9px 11px; background: var(--surface);
+}
+.mbrn { font-size: 12.6px; font-weight: 650; }
+.mbrr { font-size: 11.4px; color: var(--ink-3); margin-bottom: 7px; }
+.mbrbar { height: 4px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.mbrbar .fill { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+.mbrbar .fill.pos { background: var(--pos); }
+.mbrbar .fill.warn { background: var(--warn); }
+.mbrbar .fill.neg { background: var(--neg); }
+.mbrl { font-size: 11.4px; color: var(--ink-3); margin-top: 5px; }
+@media (max-width: 720px) { .mbrs { padding-left: 17px; } }
 .mgrtask .t2 { font-size: 12.4px; color: var(--ink-2); flex: 1; min-width: 0; }
 .mgrtask .rt { display: flex; align-items: center; gap: 9px; flex: none; }
 .mgrtask .t3 { font-size: 11.4px; color: var(--ink-3); white-space: nowrap; }
