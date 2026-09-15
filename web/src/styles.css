@@ -658,6 +658,14 @@ th.rt, td.rt { text-align: right; }
 .bandbar .fill.warn { background: var(--warn); }
 .bandbar .fill.neg { background: var(--neg); }
 .bandl { font-size: 11.8px; color: var(--ink-3); margin-top: 5px; }
+
+/* Whether the work is moving, as against how much of it there is. */
+.kpis { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 11px; }
+.kpil { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+.kpiv { font-size: 16px; font-weight: 700; margin-top: 1px; }
+.kpiv.pos { color: var(--pos); } .kpiv.warn { color: var(--warn); }
+.kpiv.neg { color: var(--neg); } .kpiv.pri { color: var(--primary); } .kpiv.mut { color: var(--ink-3); }
+.kpis2 { font-size: 11.2px; color: var(--ink-3); }
 .bandl b { color: var(--ink); font-weight: 700; }
 
 .mgrtasks { padding: 0 17px 14px 66px; display: flex; flex-direction: column; gap: 5px; }

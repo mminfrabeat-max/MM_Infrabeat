@@ -312,6 +312,18 @@ function Manager({ manager, expanded, onToggle, onOpenDocument, onWriteMail, onT
             <div className="bandbar">
               <span className={`fill ${manager.load.tone}`} style={{ width: `${manager.load.percent}%` }} />
             </div>
+            {/* The indicators, beside the load rather than under the tasks. Load says how
+                much is on somebody; these say whether it is moving. */}
+            <div className="kpis">
+              {manager.kpis.map((k) => (
+                <div className="kpi" key={k.key}>
+                  <div className="kpil">{k.label}</div>
+                  <div className={`kpiv ${k.tone}`}>{k.value}</div>
+                  <div className="kpis2">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+
             {(manager.done > 0 || manager.signed > 0 || manager.oldest) && (
               <div className="bandl">
                 {[

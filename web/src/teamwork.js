@@ -269,6 +269,42 @@ export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
 
       const oldest = open.reduce((worst, t) => Math.max(worst, t.hours || 0), 0);
 
+      // Three indicators, chosen so that they are fair across four teams doing different
+      // work - which ruled out the obvious one.
+      //
+      // "Cleared", done against everything, looks like the natural measure and is not:
+      // stores books deliveries in and finishes six things a week, the vendor desk reviews
+      // suppliers and finishes almost nothing, and a percentage would read as one team
+      // working and the other idling. What is comparable is whether work is ageing on
+      // somebody, and that is the same question whatever the work is.
+      const ageing = open.filter((t) => (t.hours || 0) >= 72).length;
+      const given = mine.filter((t) => t.assigned);
+      const givenDone = given.filter((t) => t.done).length;
+
+      const kpis = [
+        {
+          key: 'ageing',
+          label: 'Ageing',
+          value: ageing,
+          sub: ageing === 1 ? 'item over 3 days' : 'items over 3 days',
+          tone: ageing === 0 ? 'pos' : ageing <= 2 ? 'warn' : 'neg'
+        },
+        {
+          key: 'oldest',
+          label: 'Oldest',
+          value: ageOf(oldest || null) || '—',
+          sub: oldest ? 'waiting' : 'nothing ageing',
+          tone: !oldest ? 'pos' : oldest >= 168 ? 'neg' : oldest >= 72 ? 'warn' : 'pos'
+        },
+        {
+          key: 'given',
+          label: 'Given out',
+          value: given.length ? `${givenDone}/${given.length}` : '—',
+          sub: given.length ? 'finished' : 'none given yet',
+          tone: !given.length ? 'mut' : givenDone === given.length ? 'pos' : 'pri'
+        }
+      ];
+
       // The people under this manager, each with what has been given to them.
       //
       // Only hand-assigned work is counted. A requisition waiting for the manager's own
@@ -293,6 +329,7 @@ export function managersFrom(data, plant = 'all', kpi = 'all', assigned = []) {
         plant: team.plant,
         people: team.people,
         reminderReaches: team.reminderReaches,
+        kpis,
         purchaseGroup: team.purchaseGroup,
         purchaseGroupName: team.purchaseGroupName,
         members,
