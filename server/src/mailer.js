@@ -548,9 +548,77 @@ export async function sendVendorOrder({ document, releasedBy }) {
 //
 // Sent after the delivery is written down, never before - a mail asking somebody to book in
 // goods we have not recorded arriving is the wrong way round.
-// Who gets told to book goods in. A name rather than an address, like every other
-// recipient here - the mailbox behind it lives in MAIL_DIRECTORY and never reaches a browser.
+// Who gets told to book goods in, and who gets asked to raise a requisition. Names rather
+// than addresses, like every other recipient here - the mailbox behind each lives in
+// MAIL_DIRECTORY and never reaches a browser.
 const WAREHOUSE = 'Warehouse team';
+const REQUISITION_DESK = 'Requisition desk';
+
+// Asking somebody to raise a requisition against a material that is running short.
+//
+// The dashboard cannot raise a requisition - that is a document in SAP, made by a buyer who
+// has checked the figures. What it can do is put every number they will need in front of
+// them, so the reply is a requisition rather than a question about how short it actually is.
+//
+// So the mail carries the arithmetic, not just the conclusion: what is on hand, what has
+// been asked for, how many days of cover that leaves, and how long a new load takes to
+// arrive. Somebody can disagree with the suggested quantity from the mail itself.
+export async function sendRequisitionRequest({ material, quantity, raisedBy }) {
+  const target = addressee(REQUISITION_DESK);
+  const to = target.box || config.mail.to || config.mail.user;
+
+  if (!mailConfigured()) {
+    return { sent: false, to, status: 'Not sent: email is not configured in .env' };
+  }
+
+  const number = (value) => Number(value || 0).toLocaleString('en-IN');
+  const cover = Number(material.daysOfCover);
+
+  const lines = [
+    ...redirectLineText(REQUISITION_DESK, target),
+    `${material.name} at the ${material.plant} plant is running short. Please raise a purchase`,
+    'requisition for it.',
+    '',
+    `Material        ${material.name} (${material.code})`,
+    `Plant           ${material.plant}`,
+    `Suggested       ${number(quantity)} ${material.unit}`,
+    `Usual vendor    ${material.supplierName || 'not on file'}`,
+    '',
+    'How it stands:',
+    `  On hand       ${number(material.onHand)} ${material.unit}`,
+    `  On order      ${number(material.openOrderQuantity)} ${material.unit}`,
+    `  Asked for     ${number(material.totalNeeded)} ${material.unit}`,
+    `  Short by      ${number(material.shortBy)} ${material.unit}`,
+    `  Cover left    ${Number.isFinite(cover) ? `${cover} days` : 'not known'}`,
+    `  Lead time     ${material.leadTimeDays} days for a new load`,
+    ...(material.neededFrom ? [`  Needed from   ${material.neededFrom}`] : []),
+    ...(material.kiln ? ['', 'This one feeds the kiln.'] : []),
+    '',
+    Number.isFinite(cover) && cover < Number(material.leadTimeDays)
+      ? 'Cover is shorter than the lead time, so the plant runs dry before a new load can land even if the requisition goes in today.'
+      : 'Raising it now keeps the cover ahead of the lead time.',
+    '',
+    `Asked by ${raisedBy} from the procurement dashboard.`
+  ];
+
+  try {
+    const info = await getTransport().sendMail({
+      from: config.mail.from || config.mail.user,
+      to,
+      subject: `Please raise a requisition: ${material.name} at ${material.plant}`,
+      text: lines.join('\n')
+    });
+    return {
+      sent: true,
+      to,
+      delivered: !target.redirected,
+      status: `Sent ${info.messageId || ''}`.trim(),
+      preview: previewLink(info)
+    };
+  } catch (error) {
+    return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
+  }
+}
 
 export async function sendGoodsReceiptNotice({ document, receivedBy, note }) {
   const target = addressee(WAREHOUSE);

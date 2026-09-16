@@ -24,7 +24,8 @@ import {
   sendPlainEmail,
   sendVendorOrder,
   sendDeliveryReceived,
-  sendGoodsReceiptNotice
+  sendGoodsReceiptNotice,
+  sendRequisitionRequest
 } from '../mailer.js';
 import { canDecide, outcomeOf, outcomeSentence, whoseTurn } from '../domain/approvals.js';
 import { canAdvanceTo, currentStage, isTrackable, LAST_STAGE, STAGES } from '../domain/shipment.js';
@@ -242,7 +243,24 @@ actionsRouter.post(
       raisedByAddress: req.user.username
     });
 
-    res.json({ code: material.code, plant: material.plant, quantity, unit: material.unit, raisedAt: at });
+    // Somebody is asked to turn this into a requisition. After the record, never before -
+    // the dashboard cannot raise a requisition itself, so the mail is the whole of the
+    // action as far as anybody outside this screen is concerned, and a mail that went out
+    // against a request we had not written down would be the wrong way round.
+    const requestMail = await sendRequisitionRequest({
+      material,
+      quantity,
+      raisedBy: req.user.name
+    });
+
+    res.json({
+      code: material.code,
+      plant: material.plant,
+      quantity,
+      unit: material.unit,
+      raisedAt: at,
+      email: withoutAddress(requestMail)
+    });
   })
 );
 
