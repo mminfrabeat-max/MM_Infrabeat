@@ -79,6 +79,47 @@ export const READ_TOOLS = [
     }
   },
   {
+    name: 'whats_on_today',
+    description:
+      'Everything needing attention now, ranked worst first, across requisitions and orders ' +
+      'together - what is overdue, what runs the plant dry, what is waiting on a signature. ' +
+      'Use this for "what needs my attention", "what should I do first", "what is urgent".',
+    parameters: {
+      type: 'OBJECT',
+      properties: { plant: { type: 'STRING', description: 'Plant name. Omit for all plants.' } },
+      required: []
+    }
+  },
+  {
+    name: 'list_slipping_vendors',
+    description:
+      'Vendors with a pattern of late delivery - their score, how many days late on average, ' +
+      'which way the record is moving, and what is open with them now. Use for "who keeps ' +
+      'delivering late", "which suppliers have repeated delays", "which vendors are a risk".',
+    parameters: {
+      type: 'OBJECT',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'team_capacity',
+    description:
+      'Who could take a piece of work: every team, the people in it, their role, how many ' +
+      'tasks each already has and how much room is left. Use before suggesting anybody, and ' +
+      'for "who has bandwidth", "who could handle this", "who is free".',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        role: {
+          type: 'STRING',
+          description: 'Narrow to people whose role mentions this word, e.g. "buyer", "vendor", "freight", "stores".'
+        }
+      },
+      required: []
+    }
+  },
+  {
     name: 'get_stock',
     description:
       'The stock position for a material: what is on hand, what is on order, what has been ' +
@@ -127,6 +168,24 @@ export const ACTION_TOOLS = [
         po_number: { type: 'STRING', description: 'The document number the reminder is about.' }
       },
       required: ['approver', 'po_number']
+    }
+  },
+  {
+    name: 'assign_task',
+    description:
+      'Give a piece of follow-up work to a named person and mail them about it. Use when the ' +
+      'person asks to assign, allocate or hand something to somebody. Call team_capacity first ' +
+      'so the suggestion is somebody who actually has room.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        assigned_to: { type: 'STRING', description: 'Exactly the name team_capacity returned.' },
+        title: { type: 'STRING', description: 'What to do, in one line.' },
+        detail: { type: 'STRING', description: 'Why, and anything they need to start. Name the document.' },
+        due: { type: 'STRING', description: 'When it is wanted, e.g. "Friday" or "22 Sep".' },
+        notify: { type: 'BOOLEAN', description: 'Mail them about it. Defaults to yes.' }
+      },
+      required: ['assigned_to', 'title']
     }
   },
   {
@@ -329,6 +388,118 @@ export const READ_HANDLERS = {
     };
   },
 
+  // What is worth doing now, both kinds of document in one list.
+  //
+  // The screens already rank these - requisitions on how soon a plant runs dry, orders on
+  // how far past a date they are - so this reads the same ranking rather than inventing a
+  // second one. A dashboard whose assistant disagrees with its own screens is worse than a
+  // dashboard with no assistant.
+  whats_on_today({ plant }, { documents }) {
+    const BANDS = ['critical', 'high', 'medium', 'low'];
+    const live = documents
+      .filter((d) => d.status !== 'rejected' && d.shipmentStage !== 'delivered')
+      .filter((d) => atPlant(d, plant))
+      .filter((d) => d.priority && d.priority.band !== 'low')
+      .sort((a, b) => {
+        const band = BANDS.indexOf(a.priority.band) - BANDS.indexOf(b.priority.band);
+        if (band !== 0) return band;
+        // Something already broken beats something only predicted to break.
+        return Number(Boolean(b.priority.overdue)) - Number(Boolean(a.priority.overdue));
+      });
+
+    return {
+      count: live.length,
+      plant: plant || 'all plants',
+      items: live.slice(0, 10).map((d) => ({
+        number: d.id,
+        kind: d.kind === 'PR' ? 'requisition' : 'purchase order',
+        material: d.material,
+        vendor: d.supplierName,
+        plant: d.plant,
+        value: inr(d.total),
+        urgency: d.priority.label,
+        what_to_do: d.priority.advice,
+        why: d.priority.reasons?.[0] || null,
+        waiting_with: d.approvalState?.withYou ? 'you' : d.approvalState?.holder || null,
+        delivery_date: dmy(d.deliveryDate)
+      }))
+    };
+  },
+
+  // Vendors with a pattern, not a single bad delivery.
+  list_slipping_vendors(args, { vendors, documents }) {
+    const slipping = vendors
+      .filter((v) => v.scored)
+      .filter((v) => v.trend === 'getting worse' || Number(v.averageDaysLate) >= 2 || Number(v.onTimePercent) < 70)
+      .sort((a, b) => a.total - b.total);
+
+    return {
+      count: slipping.length,
+      note: 'Judged on the delivery record across their last orders, not on one late load.',
+      vendors: slipping.map((v) => {
+        const open = documents.filter((d) => d.supplierId === v.supplierId && d.status === 'pending');
+        const late = documents.filter((d) => d.supplierId === v.supplierId && d.priority?.overdue);
+        return {
+          name: v.name,
+          number: v.supplierId,
+          score: `${v.total} out of 100`,
+          standing: v.bandLabel,
+          on_time_percent: v.onTimePercent,
+          average_days_late: v.averageDaysLate,
+          trend: v.trend,
+          earlier_vs_now: `was ${v.earlierDaysLate} days late, now ${v.recentDaysLate}`,
+          quality_accepted_percent: v.averageQuality,
+          rate_against_contract_percent: v.percentOverContract,
+          open_with_them: open.length,
+          open_value: inr(open.reduce((sum, d) => sum + (Number(d.total) || 0), 0)),
+          currently_overdue: late.length
+        };
+      })
+    };
+  },
+
+  // Who could take something on.
+  //
+  // "Skills" is the word people use; what this actually has is the role each person holds,
+  // which is a reasonable proxy and is reported as what it is. Claiming a skills matrix
+  // where there is a job title would be the kind of small lie that costs a whole answer
+  // its credibility the first time somebody checks.
+  team_capacity({ role }, { teams, assigned }) {
+    const COMFORTABLE = 6;
+    const wanted = String(role || '').toLowerCase();
+
+    const load = (name) => (assigned || []).filter((t) => t.assignedTo === name && t.status !== 'done').length;
+
+    const rows = (teams || []).map((team) => {
+      const people = (team.members || [])
+        .filter((p) => !wanted || String(p.role).toLowerCase().includes(wanted))
+        .map((p) => {
+          const open = load(p.name);
+          return {
+            name: p.name,
+            role: p.role,
+            tasks_now: open,
+            room_for: Math.max(0, COMFORTABLE - open),
+            state: open === 0 ? 'free' : open <= 2 ? 'room to spare' : open <= 5 ? 'steady' : 'full'
+          };
+        });
+
+      return {
+        team: team.name,
+        manager: team.lead,
+        plant: team.plant,
+        purchase_group: team.purchaseGroup || null,
+        manager_tasks_now: load(team.lead),
+        people
+      };
+    });
+
+    return {
+      note: 'Role is the job title on the team roster, not a skills assessment. A full desk is taken as 6 open tasks.',
+      teams: role ? rows.filter((r) => r.people.length > 0) : rows
+    };
+  },
+
   get_stock({ material, plant }, { materials }) {
     const inScope = materials.filter((m) => atPlant(m, plant));
 
@@ -451,6 +622,19 @@ export function describeAction(name, args, context) {
       summary: `Export ${what} as a ${String(args.format || 'csv').toUpperCase()} file`,
       detail: ['The file downloads to this computer. Nothing is sent anywhere.'],
       confirmLabel: 'Export'
+    };
+  }
+
+  if (name === 'assign_task') {
+    const room = args.assigned_to ? `` : '';
+    return {
+      summary: `Give ${args.assigned_to} a task: ${args.title}`,
+      detail: [
+        args.detail,
+        args.due ? `Wanted by ${args.due}` : null,
+        args.notify === false ? 'They will not be mailed.' : `${args.assigned_to} will be mailed about it.`
+      ].filter(Boolean),
+      confirmLabel: 'Give it out'
     };
   }
 

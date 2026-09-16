@@ -14,6 +14,7 @@ import { getEverything } from '../data-service.js';
 import { config } from '../config.js';
 import { ask, confirm, openers, resetSession, assistantConfigured, assistantProvider } from '../ai/assistant.js';
 import { readFlags } from '../ai/actions.js';
+import { listTasks } from '../team-tasks.js';
 
 export const assistantRouter = Router();
 
@@ -23,11 +24,16 @@ export const assistantRouter = Router();
 // person approves things while the panel is open; a conversation answering from a snapshot
 // taken when it opened would confidently describe a document somebody had just released.
 async function contextFor(req) {
-  const data = await getEverything();
+  const [data, assigned] = await Promise.all([getEverything(), listTasks()]);
   return {
     documents: data.documents,
     materials: data.materials,
     vendors: data.suppliers,
+    // The teams, their people and what has been handed to each. Without these the
+    // assistant can say an order is stuck but not who could pick it up, which is half an
+    // answer to every question worth asking.
+    teams: data.teams,
+    assigned,
     manager: req.user?.name || 'the approver'
   };
 }
