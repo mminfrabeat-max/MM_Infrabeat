@@ -539,6 +539,66 @@ export async function sendVendorOrder({ document, releasedBy }) {
 // It is careful about what it claims. Confirming arrival at the gate is not the same as
 // accepting the goods - quantity and quality are checked when it is booked into stock -
 // so this says it arrived and nothing more.
+// Telling the warehouse there is something to book in.
+//
+// A second mail rather than a second name on the first one, and the difference matters. The
+// vendor is being told their delivery arrived; the warehouse is being asked to do something
+// about it. Those are different messages to different people, and a vendor copied on an
+// internal instruction reads our stock process every time material lands.
+//
+// Sent after the delivery is written down, never before - a mail asking somebody to book in
+// goods we have not recorded arriving is the wrong way round.
+// Who gets told to book goods in. A name rather than an address, like every other
+// recipient here - the mailbox behind it lives in MAIL_DIRECTORY and never reaches a browser.
+const WAREHOUSE = 'Warehouse team';
+
+export async function sendGoodsReceiptNotice({ document, receivedBy, note }) {
+  const target = addressee(WAREHOUSE);
+  const to = target.box || config.mail.to || config.mail.user;
+
+  if (!mailConfigured()) {
+    return { sent: false, to, status: 'Not sent: email is not configured in .env' };
+  }
+
+  const lines = [
+    ...redirectLineText(WAREHOUSE, target),
+    `${document.material} has arrived at the ${document.plant} plant against ${document.kind} ${document.id}.`,
+    '',
+    `Order           ${document.kind} ${document.id}`,
+    `Material        ${document.material} (${document.materialCode})`,
+    `Quantity        ${Number(document.quantity).toLocaleString('en-IN')} ${document.unit}`,
+    `Vendor          ${document.supplierName}`,
+    `Plant           ${document.plant}`,
+    `Tracking        ${document.trackingId || 'not given'}`,
+    `Confirmed by    ${receivedBy}`,
+    ...(note ? ['', `Note            ${note}`] : []),
+    '',
+    'Please go ahead with the goods receipt: check the quantity against the order, inspect',
+    'the consignment, and book it into stock. Anything short or damaged should be raised',
+    'with the vendor before the receipt is posted.',
+    '',
+    'Sent by the InfraBeat procurement dashboard.'
+  ];
+
+  try {
+    const info = await getTransport().sendMail({
+      from: config.mail.from || config.mail.user,
+      to,
+      subject: `Ready for goods receipt: ${document.material} against ${document.kind} ${document.id}`,
+      text: lines.join('\n')
+    });
+    return {
+      sent: true,
+      to,
+      delivered: !target.redirected,
+      status: `Sent ${info.messageId || ''}`.trim(),
+      preview: previewLink(info)
+    };
+  } catch (error) {
+    return { sent: false, to, status: `Not sent: ${describeMailError(error)}` };
+  }
+}
+
 export async function sendDeliveryReceived({ document, receivedBy, note }) {
   const target = addressee(document.supplierName);
   const to = target.box || config.mail.to || config.mail.user;

@@ -23,7 +23,8 @@ import {
   sendInitiatorEmail,
   sendPlainEmail,
   sendVendorOrder,
-  sendDeliveryReceived
+  sendDeliveryReceived,
+  sendGoodsReceiptNotice
 } from '../mailer.js';
 import { canDecide, outcomeOf, outcomeSentence, whoseTurn } from '../domain/approvals.js';
 import { canAdvanceTo, currentStage, isTrackable, LAST_STAGE, STAGES } from '../domain/shipment.js';
@@ -253,9 +254,14 @@ actionsRouter.post(
 // obeyed: sending it lets a stale screen say which move it thought it was making, and the
 // rule refuses if that is no longer the next one. Without it the order simply advances.
 //
-// Nothing is mailed. Every other action here tells somebody something; this one records
-// what a vendor or a gate clerk has already done, and the people who would be told are
-// the ones who told us.
+// Nothing is mailed for the stages on the way - every other action here tells somebody
+// something, but this one records what a vendor or a gate clerk has already done, and the
+// people who would be told are the ones who told us.
+//
+// Arriving is the exception, and it was missed. Reaching "delivered" by walking the stages
+// sent nothing at all, while confirming the same thing against a tracking number mailed the
+// vendor - so whether anybody heard about a delivery depended on which button had been
+// pressed. Both now say the same thing to the same people.
 actionsRouter.post(
   '/shipments/:id/advance',
   asyncHandler(async (req, res) => {
@@ -287,11 +293,23 @@ actionsRouter.post(
       recordedByAddress: req.user.username
     });
 
+    // Arriving tells the vendor and the warehouse. The stages before it tell nobody.
+    const landed = verdict.stage.key === 'delivered';
+    const told = landed
+      ? await announceDelivery(
+          (await getDocuments()).find((d) => d.id === document.id) || document,
+          req.user.name,
+          note
+        )
+      : null;
+
     res.json({
       id: document.id,
       stage: verdict.stage.key,
       label: verdict.stage.label,
       describe: verdict.stage.describe,
+      vendorEmail: told ? withoutAddress(told.vendorMail) : null,
+      warehouseEmail: told ? withoutAddress(told.warehouseMail) : null,
       at,
       complete: verdict.stage.key === LAST_STAGE
     });
@@ -361,6 +379,24 @@ actionsRouter.post(
   })
 );
 
+// Everybody who needs telling when material lands.
+//
+// Two mails, and both go out from here rather than from whichever route happened to record
+// the arrival. There are two ways to reach "delivered" - confirming it at the gate against a
+// tracking number, or walking the stages by hand - and until this existed only one of them
+// told anybody. A delivery recorded the other way was silent, which is the kind of gap that
+// is invisible until a warehouse says nobody told them.
+//
+// Neither mail can lose the delivery: the record is written first, and a send that fails
+// comes back as a status rather than an exception.
+async function announceDelivery(document, receivedBy, note) {
+  const [vendorMail, warehouseMail] = await Promise.all([
+    sendDeliveryReceived({ document, receivedBy, note }),
+    sendGoodsReceiptNotice({ document, receivedBy, note })
+  ]);
+  return { vendorMail, warehouseMail };
+}
+
 // POST /api/shipments/:id/arrive   { note }
 //
 // Confirms the consignment is at the gate, recording every stage between where it was and
@@ -418,20 +454,17 @@ actionsRouter.post(
       return res.status(409).json({ error: `${document.id} is already at ${currentStage(document)}.` });
     }
 
-    // The vendor is told their delivery arrived. After the record, never before: a mail
-    // saying we received something we had not written down is the wrong way round, and
-    // this way a mail failure cannot lose the delivery.
-    const vendorMail = await sendDeliveryReceived({
-      document,
-      receivedBy: req.user.name,
-      note
-    });
+    // The vendor is told their delivery arrived, and the warehouse is told to book it in.
+    // After the record, never before: a mail saying we received something we had not written
+    // down is the wrong way round, and this way a mail failure cannot lose the delivery.
+    const { vendorMail, warehouseMail } = await announceDelivery(document, req.user.name, note);
 
     res.json({
       id: document.id,
       recorded,
       stage: currentStage(document),
-      vendorEmail: withoutAddress(vendorMail)
+      vendorEmail: withoutAddress(vendorMail),
+      warehouseEmail: withoutAddress(warehouseMail)
     });
   })
 );
