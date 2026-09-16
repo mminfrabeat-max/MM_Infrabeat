@@ -33,7 +33,11 @@ function toJsonSchema(node) {
 
   const out = {};
   for (const [key, value] of Object.entries(node)) {
+    // A type can be a name or a list of them. Lower casing only the first form once let an
+    // upper case one through inside a list, and Groq rejected the whole tool set for it -
+    // which reads as the model being unreachable rather than as a schema being wrong.
     if (key === 'type' && typeof value === 'string') out[key] = value.toLowerCase();
+    else if (key === 'type' && Array.isArray(value)) out[key] = value.map((t) => String(t).toLowerCase());
     else out[key] = toJsonSchema(value);
   }
   return out;
