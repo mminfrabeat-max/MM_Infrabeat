@@ -18,7 +18,6 @@ import { sendPlainEmail, mailConfigured } from '../mailer.js';
 import { recipientFor, maskedAddress } from '../domain/recipients.js';
 import { money as inr } from '../domain/format.js';
 import { dmy } from './tools.js';
-import { addTask } from '../team-tasks.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dataFolder = path.resolve(here, '../../data');
@@ -213,92 +212,6 @@ export const ACTION_HANDLERS = {
       filename: `${wanted}-${dmy(new Date())}.csv`,
       content: csv,
       rows: rows.length
-    };
-  },
-
-  // Giving somebody a piece of follow-up work, and telling them.
-  //
-  // The same store the team board writes to, so a task handed out in conversation appears
-  // on the board beside one typed in there. Two lists of tasks - one the assistant keeps
-  // and one the screen keeps - is how a person ends up doing something twice.
-  //
-  // Which team it lands under is worked out here from the roster rather than asked of the
-  // model, because the model would have to be told the team ids to get it right and any
-  // answer it invented would put the task on the wrong card.
-  async assign_task({ assigned_to, title, detail, due, notify }, context) {
-    const who = String(assigned_to || '').trim();
-
-    const team = (context.teams || []).find(
-      (t) => t.lead === who || (t.members || []).some((m) => m.name === who)
-    );
-
-    if (!team) {
-      return {
-        done: false,
-        message: `There is nobody called ${who} on any team, so nothing was given out.`
-      };
-    }
-
-    const task = await addTask(
-      {
-        title,
-        detail: detail || '',
-        assignedTo: who,
-        teamId: team.id,
-        kpi: 'other',
-        due: due || ''
-      },
-      context.manager
-    );
-
-    // Told, unless asked not to. A task somebody does not know about is a task that does
-    // not get done, and the person handing it out is not the one who finds that out.
-    let mail = null;
-    if (notify !== false) {
-      if (!config.mail.enabled) {
-        mail = { sent: false, status: 'Email is switched off in this dashboard, so nobody was told.' };
-      } else {
-        const person = recipientFor(who);
-        if (!person.address) {
-          mail = { sent: false, status: `There is no mailbox on file for ${who}.` };
-        } else {
-          const sent = await sendPlainEmail({
-            to: person.address,
-            subject: `A task for you: ${title}`,
-            body:
-              `Hello ${who},
-
-` +
-              `${title}
-
-` +
-              (detail ? `${detail}
-
-` : '') +
-              (due ? `Wanted by ${due}.
-
-` : '') +
-              `It is on the team board under ${team.name}. Let me know if anything is in the way.
-
-` +
-              `${context.manager}`,
-            from: config.mail.from
-          });
-          mail = { sent: sent.sent, status: sent.sent ? `Mailed to ${maskedAddress(person.address)}` : sent.status };
-        }
-      }
-    }
-
-    return {
-      done: true,
-      message:
-        `${who} (${team.name}) has it: "${title}"` +
-        (due ? `, wanted by ${due}` : '') +
-        `. ${mail ? mail.status : 'They were not mailed.'}`,
-      task_id: task.id,
-      assigned_to: who,
-      team: team.name,
-      mailed: Boolean(mail && mail.sent)
     };
   },
 
