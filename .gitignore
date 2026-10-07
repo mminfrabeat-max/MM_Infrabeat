@@ -52,3 +52,11 @@ server/data/review-flags.json
 # Tasks somebody assigned by hand on the team board. Their own working notes, written at
 # runtime, not a mirror of anything in SAP.
 server/data/team-tasks.json
+
+# Reference material copied in for the user's own use: SAP table exports, the Excel
+# mapping sheets and the requirements document. Not part of the app.
+server/data/Dashboard Dumps/
+server/data/dashboard-excel-simple-map.xlsx
+server/data/dashboard-to-excel-mapping.xlsx
+PR_PO_Procurement_Action_Dashboard_Requirement*.docx
+.devlog.tmp
